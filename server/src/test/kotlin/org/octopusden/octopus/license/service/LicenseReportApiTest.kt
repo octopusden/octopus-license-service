@@ -8,6 +8,8 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 import org.octopusden.octopus.license.client.LicenseServiceClient
 import org.octopusden.octopus.license.client.impl.ClassicLicenseServiceClient
 import org.octopusden.octopus.license.client.impl.LicenseServiceClientParametersProvider
@@ -120,6 +122,44 @@ class LicenseReportApiTest {
     }
 
     @Test
+    @DisplayName("a request with a missing field answers 400 in the error envelope")
+    fun missingFieldIsBadRequest() {
+        val response = send(
+            HttpRequest
+                .newBuilder(URI("http://localhost:$port/rest/api/1/license-reports"))
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString("""{"component":"$COMPONENT"}""")),
+        )
+
+        assertEquals(HTTP_BAD_REQUEST, response.statusCode())
+        assertTrue(response.body().startsWith("""{"error":{"code":400,"""), response.body())
+    }
+
+    @Test
+    @DisplayName("the download is a zip attachment named after the component version")
+    fun downloadIsNamedZipAttachment() {
+        val id = awaitFinished(client.startReport(LicenseReportRequest(COMPONENT, VERSION)).id).id
+
+        val response = send(HttpRequest.newBuilder(URI("http://localhost:$port/rest/api/1/license-reports/$id/files")).GET())
+
+        assertEquals(HTTP_OK, response.statusCode())
+        assertEquals("application/zip", response.headers().firstValue("Content-Type").orElse(null))
+        assertEquals(
+            "attachment; filename=\"$COMPONENT-$VERSION-licenses.zip\"",
+            response.headers().firstValue("Content-Disposition").orElse(null),
+        )
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @ValueSource(strings = ["/actuator/health", "/actuator/prometheus"])
+    @DisplayName("the OKD probes and the metrics scrape answer 200 without credentials")
+    fun operationalEndpointsAreOpen(path: String) {
+        val response = send(HttpRequest.newBuilder(URI("http://localhost:$port$path")).GET())
+
+        assertEquals(HTTP_OK, response.statusCode(), response.body())
+    }
+
+    @Test
     @DisplayName("an unknown report id is a NotFoundException on every call")
     fun unknownIdIsNotFound() {
         assertThrows<NotFoundException> { client.getReport(UNKNOWN_ID) }
@@ -209,7 +249,9 @@ class LicenseReportApiTest {
         const val BROKEN_COMPONENT = "broken-component"
         const val VERSION = "1.2.3"
         const val UNKNOWN_ID = "00000000-0000-0000-0000-000000000000"
+        const val HTTP_OK = 200
         const val HTTP_ACCEPTED = 202
+        const val HTTP_BAD_REQUEST = 400
         const val HTTP_NOT_FOUND = 404
         const val HTTP_METHOD_NOT_ALLOWED = 405
         const val POLL_INTERVAL_MS = 50L
