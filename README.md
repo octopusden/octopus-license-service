@@ -38,7 +38,7 @@ The `dev` profile switches Spring Cloud Config off, so the service starts with n
 java -jar runner/build/libs/license-runner-*-all.jar --url http://localhost:8080 --component my-component --version 1.0.0
 ```
 
-The runner writes `license-report.json` and the zip to `--output-dir` (`license-report` by default), prints the summary and always exits 0: it only reports. Under TeamCity it prints warnings as service messages, so they show as warnings in the build log; publishing the output directory as artifacts is the build configuration's job.
+The runner writes `license-report.json` and the zip to `--output-dir` (`license-report` by default), prints the summary and always exits 0: it only reports. Problems are printed with a `WARNING:` prefix. Publishing the output directory, as TeamCity artifacts for example, is the caller's job.
 
 ## Building
 

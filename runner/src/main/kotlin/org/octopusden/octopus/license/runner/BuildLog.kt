@@ -32,17 +32,7 @@ object BuildLog {
         }
     }
 
-    /** Escaping per the TeamCity service-message format: `|` is the escape character. */
-    fun teamCityWarning(text: String): String {
-        val escaped = text
-            .replace("|", "||")
-            .replace("'", "|'")
-            .replace("\n", "|n")
-            .replace("\r", "|r")
-            .replace("[", "|[")
-            .replace("]", "|]")
-        return "##teamcity[message text='$escaped' status='WARNING']"
-    }
+    fun render(line: LogLine) = if (line.warning) "WARNING: ${line.text}" else line.text
 
     private fun summaryLines(summary: LicenseReportSummary): List<LogLine> {
         val inputs = summary.inputs

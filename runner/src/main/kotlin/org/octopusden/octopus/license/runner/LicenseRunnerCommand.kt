@@ -48,10 +48,7 @@ class LicenseRunnerCommand : CliktCommand(name = "license-runner") {
         val outcome = LicenseReportRunner(client, pollInterval, timeout, Clock.systemUTC()) { Thread.sleep(it) }
             .run(component, version)
         write(outcome)
-        val underTeamCity = System.getenv(TEAMCITY_VERSION_ENV) != null
-        BuildLog.lines(component, version, outcome).forEach {
-            echo(if (it.warning && underTeamCity) BuildLog.teamCityWarning(it.text) else it.text)
-        }
+        BuildLog.lines(component, version, outcome).forEach { echo(BuildLog.render(it)) }
     }
 
     private fun write(outcome: RunOutcome) {
@@ -65,7 +62,6 @@ class LicenseRunnerCommand : CliktCommand(name = "license-runner") {
         const val DEFAULT_POLL_INTERVAL_SECONDS = 5L
         const val DEFAULT_TIMEOUT_MINUTES = 30L
         const val REPORT_FILE = "license-report.json"
-        const val TEAMCITY_VERSION_ENV = "TEAMCITY_VERSION"
 
         val jsonMapper: JsonMapper = JsonMapper
             .builder()

@@ -90,12 +90,10 @@ class BuildLogTest {
     }
 
     @Test
-    @DisplayName("a TeamCity warning escapes the service-message characters")
-    fun teamCityWarningIsEscaped() {
-        assertEquals(
-            "##teamcity[message text='it|'s |[x|] a|||nb' status='WARNING']",
-            BuildLog.teamCityWarning("it's [x] a|\nb"),
-        )
+    @DisplayName("a warning line is printed with a WARNING prefix, any other line as it is")
+    fun renderPrefixesWarnings() {
+        assertEquals("WARNING: Trust: LOW", BuildLog.render(LogLine("Trust: LOW", warning = true)))
+        assertEquals("Libraries: none", BuildLog.render(LogLine("Libraries: none")))
     }
 
     private fun finished(summary: LicenseReportSummary) =
