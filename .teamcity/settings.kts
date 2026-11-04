@@ -157,8 +157,8 @@ object DeployToOkdProd : BuildType({
 
     params {
         text("OKD_SERVER_URL", "%OKD_SERVER_PROD_URL%", allowEmpty = false)
+        text("OKD_APPS_DOMAIN", "%OKD_APPS_DOMAIN_PROD%", allowEmpty = false)
         param("DEPLOYMENT_ENVIRONMENT", "production")
-        param("HELM_EXTRA_SERVICES_SET", "--set image.name=octopusden/%OKD_IMAGE_NAME%")
         param("BUILD_NUMBER", "${DeployToOkdQa.depParamRefs.buildNumber}")
         text("OKD_SA_TOKEN", "%OKD_SA_PROD_TOKEN%", display = ParameterDisplay.HIDDEN, allowEmpty = true)
     }
