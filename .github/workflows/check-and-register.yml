@@ -1,0 +1,20 @@
+name: Check for artifact and register release
+
+on:
+  workflow_run:
+    workflows: [ "Gradle Release" ]
+    types:
+      - completed
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    uses: octopusden/octopus-base/.github/workflows/common-check-and-register-release.yml@v3.4.1
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    with:
+      # core is published to Maven Central from the same version; the service itself ships only
+      # as a docker image and the runner goes to GitHub Packages.
+      artifact-pattern: "octopus/license/core/_VER_/core-_VER_.jar"
+    secrets: inherit
