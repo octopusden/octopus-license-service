@@ -17,9 +17,9 @@ import org.octopusden.octopus.license.core.dto.LicenseReportStatus
 import org.octopusden.octopus.license.core.exception.InvalidRequestException
 import org.octopusden.octopus.license.core.exception.LicenseFilesNotAvailableException
 import org.octopusden.octopus.license.core.exception.NotFoundException
-import org.octopusden.octopus.license.service.generation.EmptyLicenseReportGenerator
-import org.octopusden.octopus.license.service.generation.GeneratedReport
-import org.octopusden.octopus.license.service.generation.LicenseReportGenerator
+import org.octopusden.octopus.license.service.service.GeneratedReport
+import org.octopusden.octopus.license.service.service.LicenseReportGenerator
+import org.octopusden.octopus.license.service.service.impl.EmptyLicenseReportGenerator
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.info.BuildProperties
 import org.springframework.boot.test.context.SpringBootTest
@@ -108,6 +108,18 @@ class LicenseReportApiTest {
     }
 
     @Test
+    @DisplayName("Spring's own errors keep their status in the error envelope: unknown path 404, wrong method 405")
+    fun springErrorsKeepTheirStatus() {
+        val unknownPath = send(HttpRequest.newBuilder(URI("http://localhost:$port/rest/api/1/no-such-resource")).GET())
+        val wrongMethod = send(HttpRequest.newBuilder(URI("http://localhost:$port/rest/api/1/license-reports")).DELETE())
+
+        assertEquals(HTTP_NOT_FOUND, unknownPath.statusCode())
+        assertTrue(unknownPath.body().startsWith("""{"error":{"code":404,"""), unknownPath.body())
+        assertEquals(HTTP_METHOD_NOT_ALLOWED, wrongMethod.statusCode())
+        assertTrue(wrongMethod.body().startsWith("""{"error":{"code":405,"""), wrongMethod.body())
+    }
+
+    @Test
     @DisplayName("an unknown report id is a NotFoundException on every call")
     fun unknownIdIsNotFound() {
         assertThrows<NotFoundException> { client.getReport(UNKNOWN_ID) }
@@ -142,6 +154,9 @@ class LicenseReportApiTest {
         assertNull(failed.summary)
         assertThrows<LicenseFilesNotAvailableException> { client.downloadFiles(started.id) }
     }
+
+    private fun send(request: HttpRequest.Builder): HttpResponse<String> =
+        HttpClient.newHttpClient().send(request.build(), HttpResponse.BodyHandlers.ofString())
 
     private fun awaitFinished(id: String): LicenseReport {
         val deadline = Instant.now().plus(AWAIT_TIMEOUT)
@@ -195,6 +210,8 @@ class LicenseReportApiTest {
         const val VERSION = "1.2.3"
         const val UNKNOWN_ID = "00000000-0000-0000-0000-000000000000"
         const val HTTP_ACCEPTED = 202
+        const val HTTP_NOT_FOUND = 404
+        const val HTTP_METHOD_NOT_ALLOWED = 405
         const val POLL_INTERVAL_MS = 50L
         val AWAIT_TIMEOUT: Duration = Duration.ofSeconds(10)
     }

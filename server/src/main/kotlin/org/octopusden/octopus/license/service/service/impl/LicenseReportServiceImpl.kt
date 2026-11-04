@@ -5,8 +5,8 @@ import org.octopusden.octopus.license.core.dto.LicenseReportRequest
 import org.octopusden.octopus.license.core.dto.LicenseReportStatus
 import org.octopusden.octopus.license.core.exception.LicenseFilesNotAvailableException
 import org.octopusden.octopus.license.core.exception.NotFoundException
-import org.octopusden.octopus.license.service.generation.LicenseReportGenerator
 import org.octopusden.octopus.license.service.service.LicenseFiles
+import org.octopusden.octopus.license.service.service.LicenseReportGenerator
 import org.octopusden.octopus.license.service.service.LicenseReportService
 import org.octopusden.octopus.license.service.store.LicenseReportStore
 import org.octopusden.octopus.license.service.store.StoredReport
