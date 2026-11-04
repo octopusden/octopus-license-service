@@ -11,6 +11,8 @@ Generates third-party license files for a component version from JFrog Xray and 
 | `license-service` | `server/` | Spring Boot service, docker image `ghcr.io/octopusden/license-service` |
 | `license-runner` | `runner/` | Command-line runner (`-all` jar) and its TeamCity metarunner, GitHub Packages |
 
+Which module may depend on which, how a request flows and why: [docs/architecture.md](docs/architecture.md).
+
 ## API
 
 A generation can take minutes, so the caller starts it, polls it and downloads the result. A finished report is kept in memory for `license-service.report-ttl` (one hour by default), then dropped. The API needs no authorization.

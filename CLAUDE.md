@@ -12,5 +12,6 @@ Generates the third-party license files of a component version: the libraries in
 - `core` (DTOs, no dependencies), `client` (Feign), `server` (`:license-service`), `runner` (`:license-runner`, Clikt)
 
 ## Working here
+- Module rules, request flow and decisions: [docs/architecture.md](docs/architecture.md)
 - Build: `./gradlew build` · Quality gate: `./gradlew qualityCheck` · Run: `./gradlew :license-service:bootRun`
 - detekt is 2.x and configured in the root build, not by octopus-quality: 1.x cannot run on JDK 25
