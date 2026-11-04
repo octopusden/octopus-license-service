@@ -11,7 +11,7 @@ Generates third-party license files for a component version from JFrog Xray and 
 | `license-service` | `server/` | Spring Boot service, docker image `ghcr.io/octopusden/license-service` |
 | `license-runner` | `runner/` | Command-line runner (`-all` jar) and its TeamCity metarunner, GitHub Packages |
 
-Which module may depend on which, how a request flows and why: [docs/architecture.md](docs/architecture.md).
+Which module may depend on which, and how a request flows: [docs/architecture.md](docs/architecture.md).
 
 ## API
 
