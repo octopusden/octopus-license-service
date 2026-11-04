@@ -24,3 +24,6 @@ jobs:
       # Must match merge-gate.yml: a different category makes GitHub treat PR and main analyses
       # as separate configurations.
       codeql-category: /license-service-codeql
+      # Trivy cannot install while get.trivy.dev does not resolve, and this repository has no cached
+      # binary. Remove once the shared workflow installs Trivy from its GitHub release.
+      trivy-continue-on-error: true
