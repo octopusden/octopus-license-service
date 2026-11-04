@@ -1,13 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <meta-runner name="Generate License Files">
-    <description>Generate the third-party license files of a component version through the license service (report only)</description>
+    <description>
+        Generate the third-party license files of a component version through the license service (report only).
+        Requires two environment variables, set on the agent or the build configuration:
+        * env.LICENSE_SERVICE_URL - the license service base URL
+        * env.LICENSE_RUNNER_JAVA_HOME - a JDK 25 home, used to download and run the runner
+        The report and the license files are written to LICENSE_OUTPUT_DIR; publish it with the build's artifact rules.
+    </description>
     <settings>
         <parameters>
             <param name="COMPONENT_NAME" value="" spec="text description='Component name in the components registry' validationMode='not_empty' display='normal'"/>
             <param name="BUILD_VERSION" value="" spec="text description='Component version' validationMode='not_empty' display='normal'"/>
-            <param name="LICENSE_SERVICE_URL" value="%LICENSE_SERVICE_URL%" spec="text description='License service base URL' validationMode='not_empty' display='normal'"/>
-            <param name="LICENSE_OUTPUT_DIR" value="license-report" spec="text description='Directory for the report and the license files, published as build artifacts' validationMode='not_empty' display='normal'"/>
-            <param name="LICENSE_RUNNER_JAVA_HOME" value="%env.JDK_ZULU_25_x64%" spec="text description='JDK 25 home the runner runs on' validationMode='not_empty' display='normal'"/>
+            <param name="LICENSE_OUTPUT_DIR" value="license-report" spec="text description='Directory for the report and the license files' validationMode='not_empty' display='normal'"/>
             <param name="LICENSE_RUNNER_ARGS" value="" spec="text description='Extra license-runner options, e.g. --timeout PT45M' display='normal'"/>
         </parameters>
         <build-runners>
@@ -17,19 +21,22 @@
                     <param name="jvmArgs" value="-Duser.home=%teamcity.agent.jvm.user.home%"/>
                     <param name="maven.path" value="%env.BUILD_ENV%/MAVEN/3.6.3"/>
                     <param name="runnerArgs"><![CDATA[-B -Dartifact=${group}:${name}:${version}:jar:all -DoutputDirectory=.]]></param>
-                    <param name="target.jdk.home" value="%env.BUILD_ENV%/JDK/1.8"/>
+                    <param name="target.jdk.home" value="%env.LICENSE_RUNNER_JAVA_HOME%"/>
                     <param name="userSettingsSelection" value="userSettingsSelection:default"/>
                     <param name="teamcity.build.workingDir" value=".${name}"/>
                 </parameters>
             </runner>
             <runner name="Run ${name}" type="simpleRunner">
                 <parameters>
-                    <param name="script.content"><![CDATA["%LICENSE_RUNNER_JAVA_HOME%/bin/java" -jar ./.${name}/${name}-${version}-all.jar --url "%LICENSE_SERVICE_URL%" --component "%COMPONENT_NAME%" --version "%BUILD_VERSION%" --output-dir "%LICENSE_OUTPUT_DIR%" %LICENSE_RUNNER_ARGS%]]></param>
+                    <param name="script.content"><![CDATA["%env.LICENSE_RUNNER_JAVA_HOME%/bin/java" -jar ./.${name}/${name}-${version}-all.jar --url "%env.LICENSE_SERVICE_URL%" --component "%COMPONENT_NAME%" --version "%BUILD_VERSION%" --output-dir "%LICENSE_OUTPUT_DIR%" %LICENSE_RUNNER_ARGS%]]></param>
                     <param name="teamcity.step.mode" value="default"/>
                     <param name="use.custom.script" value="true"/>
                 </parameters>
             </runner>
         </build-runners>
-        <requirements/>
+        <requirements>
+            <exists name="env.LICENSE_SERVICE_URL"/>
+            <exists name="env.LICENSE_RUNNER_JAVA_HOME"/>
+        </requirements>
     </settings>
 </meta-runner>

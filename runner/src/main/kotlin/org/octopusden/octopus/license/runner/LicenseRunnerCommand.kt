@@ -52,9 +52,6 @@ class LicenseRunnerCommand : CliktCommand(name = "license-runner") {
         BuildLog.lines(component, version, outcome).forEach {
             echo(if (it.warning && underTeamCity) BuildLog.teamCityWarning(it.text) else it.text)
         }
-        if (underTeamCity) {
-            echo("##teamcity[publishArtifacts '${outputDir.toAbsolutePath()}']")
-        }
     }
 
     private fun write(outcome: RunOutcome) {
