@@ -164,14 +164,24 @@ object DeployToOkdProd : BuildType({
     }
 
     steps {
+        // GitHub Packages needs credentials and the upload reads its URL anonymously, so the zip is
+        // fetched through the agent's Maven settings first and uploaded from disk, as in
+        // octopus-sonar-automation.
+        step {
+            name = "Download Metarunners"
+            id = "Download_Metarunners"
+            type = "DownloadArtifact"
+            param("ARTIFACT_COORDINATES", "org.octopusden.octopus.license:license-runner:%BUILD_NUMBER%:zip:metarunners")
+            param("DOWNLOAD_PATH", "%teamcity.build.checkoutDir%")
+            param("UNPACK", "copy")
+        }
         step {
             name = "Upload TeamCity Metarunners"
             id = "Upload_TeamCity_Metarunners"
             type = "UploadTeamCityProjectMetarunners"
             param(
                 "TEAMCITY_METARUNNERS_ZIP_URL",
-                "https://maven.pkg.github.com/octopusden/octopus-maven-packages/org/octopusden/octopus/license/" +
-                    "license-runner/%BUILD_NUMBER%/license-runner-%BUILD_NUMBER%-metarunners.zip",
+                "file://%teamcity.build.checkoutDir%/license-runner-%BUILD_NUMBER%-metarunners.zip",
             )
             param("TEAMCITY_PROJECT_ID", "RDDepartment")
         }
