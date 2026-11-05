@@ -1,0 +1,26 @@
+name: Gradle Release
+
+on:
+  repository_dispatch:
+    types: [ release ]
+
+# contents: write to create the tag and the GitHub release; packages: write to push the docker
+# image to ghcr.io and the runner to GitHub Packages.
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  build:
+    uses: octopusden/octopus-base/.github/workflows/common-java-gradle-release.yml@v3.4.1
+    with:
+      flow-type: hybrid
+      java-version: '25'
+      commit-hash: ${{ github.event.client_payload.commit }}
+      build-version: ${{ github.event.client_payload.project_version }}
+      docker-image: license-service
+      # The runner's -all jar is resolved by coordinates from TeamCity (the metarunner), so it
+      # goes to the shared GitHub Packages registry; Central refuses fat jars.
+      github-packages-publications: ":license-runner:maven"
+      github-packages-repository: octopusden/octopus-maven-packages
+    secrets: inherit

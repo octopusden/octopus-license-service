@@ -1,0 +1,13 @@
+# The service is reached through the gateway, which strips its prefix and sends it as X-Forwarded-Prefix.
+server:
+  forward-headers-strategy: framework
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+
+license-service:
+  report-ttl: PT1H
+  generation-threads: 4
