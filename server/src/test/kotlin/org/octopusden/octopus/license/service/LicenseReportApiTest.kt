@@ -122,6 +122,37 @@ class LicenseReportApiTest {
     }
 
     @Test
+    @DisplayName("behind the gateway, the root redirects to Swagger UI under the gateway's prefix")
+    fun rootRedirectsToSwaggerUi() {
+        val response = send(
+            HttpRequest
+                .newBuilder(URI("http://localhost:$port/"))
+                .header("X-Forwarded-Prefix", "/license-service")
+                .GET(),
+        )
+
+        assertEquals(HTTP_FOUND, response.statusCode())
+        assertEquals(
+            "http://localhost:$port/license-service/swagger-ui/index.html",
+            response.headers().firstValue("Location").orElse(null),
+        )
+    }
+
+    @Test
+    @DisplayName("behind the gateway, Swagger UI loads the API docs under the gateway's prefix")
+    fun swaggerUiHonoursForwardedPrefix() {
+        val response = send(
+            HttpRequest
+                .newBuilder(URI("http://localhost:$port/v3/api-docs/swagger-config"))
+                .header("X-Forwarded-Prefix", "/license-service")
+                .GET(),
+        )
+
+        assertEquals(HTTP_OK, response.statusCode(), response.body())
+        assertTrue(response.body().contains(""""url":"/license-service/v3/api-docs""""), response.body())
+    }
+
+    @Test
     @DisplayName("a request with a missing field answers 400 in the error envelope")
     fun missingFieldIsBadRequest() {
         val response = send(
@@ -251,6 +282,7 @@ class LicenseReportApiTest {
         const val UNKNOWN_ID = "00000000-0000-0000-0000-000000000000"
         const val HTTP_OK = 200
         const val HTTP_ACCEPTED = 202
+        const val HTTP_FOUND = 302
         const val HTTP_BAD_REQUEST = 400
         const val HTTP_NOT_FOUND = 404
         const val HTTP_METHOD_NOT_ALLOWED = 405
