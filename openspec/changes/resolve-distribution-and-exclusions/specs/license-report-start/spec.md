@@ -33,7 +33,7 @@ The service SHALL create the report of an excluded component already `EXCLUDED`,
 
 #### Scenario: Documentation component
 
-- **WHEN** a client starts a report for `doc_cards_manual`
+- **WHEN** a client starts a report for `doc_user_guide`
 - **THEN** the answer carries status `EXCLUDED` and reason `Documentation component`, the generator is not called, and downloading its files answers that it has none
 
 ### Requirement: The registry URL is required

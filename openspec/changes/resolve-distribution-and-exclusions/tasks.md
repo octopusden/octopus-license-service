@@ -20,7 +20,7 @@
   - [x] 1.3.3 `DistributionParser` — `GAV` and `docker` fields to `DeclaredArtifact`s; `internal`.
   - [x] 1.3.4 `LicenseTargetDescriber` — registry facts in, `LicenseTarget` out; selects pattern entries with `VersionRangeFactory` and `NumericVersionFactory`. `RegistryComponent` and `RegistryArtifactPattern` hold the facts in the module's own terms, so the rules and the parser never see the client's DTOs.
 - [x] 1.4 Write failing tests for `RegistryLicenseTargetResolver` against a stub HTTP server (JDK `HttpServer`):
-  - [x] 1.4.1 Resolved component: three calls, target as expected. The fixtures are real answers recorded from the components registry (`dmp-bundle` 1.4.12, its `maven-artifacts`, `version-names`), with owners, VCS URL, group ids and security groups replaced, and a build version and docker field set so every field is exercised.
+  - [x] 1.4.1 Resolved component: three calls, target as expected. The fixtures keep the shape of real components-registry answers (a component version, its `maven-artifacts`, `version-names`) with every name replaced by a sample one (`sample-app`), and a build version and docker field set so every field is exercised.
   - [x] 1.4.2 Excluded component: exactly one call.
   - [x] 1.4.3 `404` from the registry: `ComponentVersionNotFoundException`.
   - [x] 1.4.4 `503` from the registry, and a closed port: `ComponentsRegistryUnavailableException`.
@@ -43,7 +43,7 @@
   - [x] 3.1.3 Not found: `404` envelope, and `NotFoundException` in the client.
   - [x] 3.1.4 Unavailable: `ServiceUnavailableException` in the client.
   - [x] 3.1.5 Blank component or version: the existing test still answers `400`; validation runs before the resolver.
-- [x] 3.2 `LicenseServiceConfigTest` (`ApplicationContextRunner`): without `license-service.components-registry-url` the context fails naming the property; with it the resolver is wired; `application.yaml` seeds 11 exclusions.
+- [x] 3.2 `LicenseServiceConfigTest` (`ApplicationContextRunner`): without `license-service.components-registry-url` the context fails naming the property; with it the resolver is wired; configured exclusions bind as component and reason pairs.
 - [x] 3.3 Implement:
   - [x] 3.3.1 `LicenseServiceProperties` — `componentsRegistryUrl` (nullable so its absence is reported by name), `exclusions`.
   - [x] 3.3.2 `LicenseServiceConfig` — a `LicenseTargetResolver` bean; `requireNotNull` on the URL fails startup.
@@ -51,7 +51,7 @@
   - [x] 3.3.4 `LicenseReportGenerator.generate(target: LicenseTarget)`; `EmptyLicenseReportGenerator` takes it and ignores it.
   - [x] 3.3.5 `ExceptionInfoHandler` — `ServiceUnavailableException` to `503`.
   - [x] 3.3.6 `LicenseReportStore` unchanged: `finish` alone stores a report that never ran, already finished.
-  - [x] 3.3.7 `application.yaml` — the seeded `exclusions`; `bootstrap-dev.yml` — the URL from `COMPONENTS_REGISTRY_URL`; tests set the URL as a property.
+  - [x] 3.3.7 `application.yaml` — no component names; `exclusions` come from Spring Cloud Config; `bootstrap-dev.yml` — the URL from `COMPONENTS_REGISTRY_URL`; tests set the URL as a property.
 - [x] 3.4 `:license-service:test`: 26 tests, 0 failures (API 18, config 3, store 5).
 
 ## 4. Documentation
@@ -67,3 +67,4 @@
 - [x] 5.4 The design's risks hold as written.
 - [x] 5.5 The runner needs no change: a start failure becomes `RunOutcome.Unavailable` with the server's message, and an `EXCLUDED` report goes through the existing "finished without download" path, both already tested.
 - [ ] 5.6 (added on review) Before deploying, Spring Cloud Config must hold `license-service.components-registry-url` for QA and Prod; without it the service does not start (Decision 9).
+- [x] 5.7 (added on review) The repository's internal-content validation flagged real component names in `application.yaml`, tests and docs. Every fixture and example now uses sample names (`sample-app`, `doc_user_guide`, `org.example.sample`); the documentation-component list moved to Spring Cloud Config (`license-service.exclusions`).

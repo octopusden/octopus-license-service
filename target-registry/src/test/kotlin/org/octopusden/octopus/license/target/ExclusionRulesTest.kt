@@ -8,7 +8,7 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 
 class ExclusionRulesTest {
-    private val rules = ExclusionRules(listOf(ConfiguredExclusion("cards_manuals", "Documentation component")))
+    private val rules = ExclusionRules(listOf(ConfiguredExclusion("test_user_guides", "Documentation component")))
 
     @Test
     @DisplayName("an external, non-archived Gradle component with no special label is not excluded")
@@ -47,7 +47,7 @@ class ExclusionRulesTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = ["doc_cards", "doc-cards", "DOC-cards-manual", "Doc_Way4"])
+    @ValueSource(strings = ["doc_guide", "doc-guide", "DOC-User-Guide", "Doc_Sample"])
     @DisplayName("a component named doc_ or doc- in any case is a documentation component")
     fun documentationByName(id: String) {
         assertEquals("Documentation component", rules.reasonFor(registryComponent(id = id)))
@@ -63,14 +63,14 @@ class ExclusionRulesTest {
     @Test
     @DisplayName("a configured component is excluded with the configured reason")
     fun configured() {
-        val rules = ExclusionRules(listOf(ConfiguredExclusion("w4web3", "Applies the old license Gradle plugin")))
-        assertEquals("Applies the old license Gradle plugin", rules.reasonFor(registryComponent(id = "w4web3")))
+        val rules = ExclusionRules(listOf(ConfiguredExclusion("legacy-plugin-app", "Applies the old license Gradle plugin")))
+        assertEquals("Applies the old license Gradle plugin", rules.reasonFor(registryComponent(id = "legacy-plugin-app")))
     }
 
     @Test
     @DisplayName("configured exclusions match the component id exactly")
     fun configuredExact() {
-        assertNull(rules.reasonFor(registryComponent(id = "cards_manuals_v2")))
+        assertNull(rules.reasonFor(registryComponent(id = "test_user_guides_v2")))
     }
 
     @Test

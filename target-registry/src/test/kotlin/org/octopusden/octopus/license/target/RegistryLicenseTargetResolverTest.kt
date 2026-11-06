@@ -42,7 +42,7 @@ class RegistryLicenseTargetResolverTest {
     fun stopRegistry() = server.stop(0)
 
     private fun resolver(url: String = "http://localhost:${server.address.port}") =
-        RegistryLicenseTargetResolver(url, listOf(ConfiguredExclusion("cards_manuals", "Documentation component")))
+        RegistryLicenseTargetResolver(url, listOf(ConfiguredExclusion("test_user_guides", "Documentation component")))
 
     private fun answer(
         path: String,
@@ -54,26 +54,26 @@ class RegistryLicenseTargetResolverTest {
     @Test
     @DisplayName("a component in scope is described from three registry calls")
     fun resolved() {
-        answer("/components/dmp-bundle/versions/1.4.12", "dmp-bundle-1.4.12.json")
-        answer("/components/dmp-bundle/maven-artifacts", "dmp-bundle-maven-artifacts.json")
+        answer("/components/sample-app/versions/1.4.12", "sample-app-1.4.12.json")
+        answer("/components/sample-app/maven-artifacts", "sample-app-maven-artifacts.json")
         answer("/common/version-names", "version-names.json")
 
-        val resolution = resolver().resolve("dmp-bundle", "1.4.12")
+        val resolution = resolver().resolve("sample-app", "1.4.12")
 
         assertEquals(
             TargetResolution.Resolved(
                 LicenseTarget(
-                    componentVersion = ComponentVersion("dmp-bundle", "1.4.12"),
+                    componentVersion = ComponentVersion("sample-app", "1.4.12"),
                     artifactVersions = listOf("1.4.12", "1.4.12-0034"),
                     buildSystem = "GRADLE",
                     labels = emptySet(),
                     distribution = DistributionSpec(
                         declared = listOf(
-                            MavenArtifact("org.example.dmp", "dmp-bundle", "zip"),
-                            MavenArtifact("org.example.dmp", "dmp-bundle-config", "yaml"),
-                            DockerImage("dmp/dmp-bundle"),
+                            MavenArtifact("org.example.sample", "sample-app", "zip"),
+                            MavenArtifact("org.example.sample", "sample-app-config", "yaml"),
+                            DockerImage("sample/sample-app"),
                         ),
-                        patterns = listOf(ArtifactPattern(listOf("org.example.dmp"), listOf("dmp-bundle"))),
+                        patterns = listOf(ArtifactPattern(listOf("org.example.sample"), listOf("sample-app"))),
                     ),
                 ),
             ),
@@ -105,8 +105,8 @@ class RegistryLicenseTargetResolverTest {
     @Test
     @DisplayName("D3: a 503 from the registry is an unavailable error")
     fun serviceUnavailable() {
-        answers["$API/components/dmp-bundle/versions/1.4.12"] = SERVICE_UNAVAILABLE to """{"errorMessage":"down"}"""
-        assertThrows<ComponentsRegistryUnavailableException> { resolver().resolve("dmp-bundle", "1.4.12") }
+        answers["$API/components/sample-app/versions/1.4.12"] = SERVICE_UNAVAILABLE to """{"errorMessage":"down"}"""
+        assertThrows<ComponentsRegistryUnavailableException> { resolver().resolve("sample-app", "1.4.12") }
     }
 
     @Test
@@ -114,7 +114,7 @@ class RegistryLicenseTargetResolverTest {
     fun unreachable() {
         val closedPort = ServerSocket(0).use { it.localPort }
         assertThrows<ComponentsRegistryUnavailableException> {
-            resolver("http://localhost:$closedPort").resolve("dmp-bundle", "1.4.12")
+            resolver("http://localhost:$closedPort").resolve("sample-app", "1.4.12")
         }
     }
 

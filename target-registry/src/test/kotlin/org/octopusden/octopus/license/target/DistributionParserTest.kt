@@ -15,8 +15,8 @@ class DistributionParserTest {
     @DisplayName("a GAV entry names group, artifact and extension")
     fun gavWithExtension() {
         assertEquals(
-            listOf(MavenArtifact("org.octopusden.dmp", "dmp-bundle", "zip")),
-            DistributionParser.parse(gav = "org.octopusden.dmp:dmp-bundle:zip", docker = null),
+            listOf(MavenArtifact("org.example.sample", "sample-app", "zip")),
+            DistributionParser.parse(gav = "org.example.sample:sample-app:zip", docker = null),
         )
     }
 
@@ -24,8 +24,8 @@ class DistributionParserTest {
     @DisplayName("a fourth GAV part is the classifier")
     fun gavWithClassifier() {
         assertEquals(
-            listOf(MavenArtifact("org.octopusden.dmp", "dmp-bundle-config", "zip", "config")),
-            DistributionParser.parse(gav = "org.octopusden.dmp:dmp-bundle-config:zip:config", docker = null),
+            listOf(MavenArtifact("org.example.sample", "sample-app-config", "zip", "config")),
+            DistributionParser.parse(gav = "org.example.sample:sample-app-config:zip:config", docker = null),
         )
     }
 
@@ -49,7 +49,7 @@ class DistributionParserTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = ["file:///share/dmp/bundle.zip", "http://host/bundle.zip", "https://host/a:b:c"])
+    @ValueSource(strings = ["file:///share/sample/bundle.zip", "http://host/bundle.zip", "https://host/a:b:c"])
     @DisplayName("D7: a GAV entry that is a file share or URL is unsupported")
     fun uriGav(entry: String) {
         val declared = DistributionParser.parse(gav = entry, docker = null).single()
@@ -67,15 +67,15 @@ class DistributionParserTest {
     @Test
     @DisplayName("a docker image without a tag")
     fun dockerWithoutTag() {
-        assertEquals(listOf(DockerImage("dmp/dmp-bundle")), DistributionParser.parse(gav = null, docker = "dmp/dmp-bundle"))
+        assertEquals(listOf(DockerImage("sample/sample-app")), DistributionParser.parse(gav = null, docker = "sample/sample-app"))
     }
 
     @Test
     @DisplayName("a docker image with a tag")
     fun dockerWithTag() {
         assertEquals(
-            listOf(DockerImage("dmp/dmp-bundle", "1.4")),
-            DistributionParser.parse(gav = null, docker = "dmp/dmp-bundle:1.4"),
+            listOf(DockerImage("sample/sample-app", "1.4")),
+            DistributionParser.parse(gav = null, docker = "sample/sample-app:1.4"),
         )
     }
 
@@ -83,8 +83,8 @@ class DistributionParserTest {
     @DisplayName("D7: a registry port stays part of the image, with a tag")
     fun dockerRegistryPortWithTag() {
         assertEquals(
-            listOf(DockerImage("registry.example:5000/dmp/dmp-bundle", "1.4")),
-            DistributionParser.parse(gav = null, docker = "registry.example:5000/dmp/dmp-bundle:1.4"),
+            listOf(DockerImage("registry.example:5000/sample/sample-app", "1.4")),
+            DistributionParser.parse(gav = null, docker = "registry.example:5000/sample/sample-app:1.4"),
         )
     }
 
@@ -92,8 +92,8 @@ class DistributionParserTest {
     @DisplayName("D7: a registry port stays part of the image, without a tag")
     fun dockerRegistryPortWithoutTag() {
         assertEquals(
-            listOf(DockerImage("registry.example:5000/dmp/dmp-bundle")),
-            DistributionParser.parse(gav = null, docker = "registry.example:5000/dmp/dmp-bundle"),
+            listOf(DockerImage("registry.example:5000/sample/sample-app")),
+            DistributionParser.parse(gav = null, docker = "registry.example:5000/sample/sample-app"),
         )
     }
 

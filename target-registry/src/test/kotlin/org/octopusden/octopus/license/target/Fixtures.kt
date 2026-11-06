@@ -1,7 +1,7 @@
 package org.octopusden.octopus.license.target
 
 internal fun registryComponent(
-    id: String = "dmp-bundle",
+    id: String = "sample-app",
     version: String = "1.4.12",
     archived: Boolean = false,
     external: Boolean = true,

@@ -34,7 +34,7 @@ The service answers every component version with an empty report, whatever the c
   - it has the registry label `test-component`;
   - it is a documentation component: its name starts with `doc_` or `doc-` (any case);
   - it is on the exclusion list in configuration, each entry with its own reason.
-- The exclusion list in configuration starts with the documentation components whose names do not follow the `doc_`/`doc-` rule. Components that still apply the old license plugins are added to it as a configuration change; nothing detects them.
+- The exclusion list lives in Spring Cloud Config, not in the repository: component names are internal. It holds the documentation components whose names do not follow the `doc_`/`doc-` rule, and the components that still apply the old license plugins; nothing detects them.
 
 ## Affected areas
 

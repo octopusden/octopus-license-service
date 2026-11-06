@@ -358,7 +358,7 @@ class LicenseReportApiTest {
         const val COMPONENT = "some-component"
         const val SLOW_COMPONENT = "slow-component"
         const val BROKEN_COMPONENT = "broken-component"
-        const val EXCLUDED_COMPONENT = "doc_cards_manual"
+        const val EXCLUDED_COMPONENT = "doc_user_guide"
         const val EXCLUSION_REASON = "Documentation component"
         const val UNKNOWN_COMPONENT = "no-such-component"
         const val REGISTRY_DOWN_COMPONENT = "registry-down-component"

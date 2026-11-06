@@ -1,12 +1,12 @@
 package org.octopusden.octopus.license.service.configuration
 
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.octopusden.octopus.license.target.ConfiguredExclusion
 import org.octopusden.octopus.license.target.LicenseTargetResolver
 import org.springframework.boot.context.properties.EnableConfigurationProperties
-import org.springframework.boot.test.context.ConfigDataApplicationContextInitializer
 import org.springframework.boot.test.context.runner.ApplicationContextRunner
 
 class LicenseServiceConfigTest {
@@ -32,22 +32,21 @@ class LicenseServiceConfigTest {
     }
 
     @Test
-    @DisplayName("application.yaml seeds the exclusions with documentation components not named doc_ or doc-")
-    fun seededExclusions() {
+    @DisplayName("configured exclusions bind as component and reason pairs")
+    fun configuredExclusionsBind() {
         contextRunner
-            .withInitializer(ConfigDataApplicationContextInitializer())
-            .withPropertyValues("license-service.components-registry-url=http://localhost:1")
-            .run { context ->
-                val exclusions = context.getBean(LicenseServiceProperties::class.java).exclusions
-                assertTrue(ConfiguredExclusion("cards_manuals", "Documentation component") in exclusions, exclusions.toString())
-                assertTrue(exclusions.size == SEEDED_EXCLUSIONS, exclusions.toString())
+            .withPropertyValues(
+                "license-service.components-registry-url=http://localhost:1",
+                "license-service.exclusions[0].component=test_user_guides",
+                "license-service.exclusions[0].reason=Documentation component",
+            ).run { context ->
+                assertEquals(
+                    listOf(ConfiguredExclusion("test_user_guides", "Documentation component")),
+                    context.getBean(LicenseServiceProperties::class.java).exclusions,
+                )
             }
     }
 
     @EnableConfigurationProperties(LicenseServiceProperties::class)
     class PropertiesConfig
-
-    private companion object {
-        const val SEEDED_EXCLUSIONS = 11
-    }
 }

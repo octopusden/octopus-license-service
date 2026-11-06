@@ -21,28 +21,28 @@ class LicenseTargetDescriberTest {
         val target = describe(
             registryComponent(
                 labels = setOf("java"),
-                gav = "org.octopusden.dmp:dmp-bundle:zip,org.octopusden.dmp:dmp-bundle-config:zip:config",
-                docker = "dmp/dmp-bundle",
+                gav = "org.example.sample:sample-app:zip,org.example.sample:sample-app-config:zip:config",
+                docker = "sample/sample-app",
                 buildVersion = "1.4.12-0034",
             ),
             mapOf(
-                "[1.0,)" to RegistryArtifactPattern("org.octopusden.dmp", "dmp-.*"),
+                "[1.0,)" to RegistryArtifactPattern("org.example.sample", "sample-.*"),
                 "(,1.0)" to RegistryArtifactPattern("org.octopusden.legacy", "legacy-.*"),
             ),
         )
         assertEquals(
             LicenseTarget(
-                componentVersion = ComponentVersion("dmp-bundle", "1.4.12"),
+                componentVersion = ComponentVersion("sample-app", "1.4.12"),
                 artifactVersions = listOf("1.4.12", "1.4.12-0034"),
                 buildSystem = "GRADLE",
                 labels = setOf("java"),
                 distribution = DistributionSpec(
                     declared = listOf(
-                        MavenArtifact("org.octopusden.dmp", "dmp-bundle", "zip"),
-                        MavenArtifact("org.octopusden.dmp", "dmp-bundle-config", "zip", "config"),
-                        DockerImage("dmp/dmp-bundle"),
+                        MavenArtifact("org.example.sample", "sample-app", "zip"),
+                        MavenArtifact("org.example.sample", "sample-app-config", "zip", "config"),
+                        DockerImage("sample/sample-app"),
                     ),
-                    patterns = listOf(ArtifactPattern(listOf("org.octopusden.dmp"), listOf("dmp-.*"))),
+                    patterns = listOf(ArtifactPattern(listOf("org.example.sample"), listOf("sample-.*"))),
                 ),
             ),
             target,

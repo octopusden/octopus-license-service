@@ -1,26 +1,26 @@
 {
-  "id": "dmp-bundle",
-  "name": "DMP Bundle",
+  "id": "sample-app",
+  "name": "Sample App",
   "componentOwner": "owner",
   "buildSystem": "GRADLE",
   "vcsSettings": {
     "versionControlSystemRoots": [
       {
         "name": "main",
-        "vcsPath": "ssh://git@vcs.example/dmp/dmp-bundle.git",
+        "vcsPath": "ssh://git@vcs.example/sample/sample-app.git",
         "type": "GIT",
-        "tag": "dmp-bundle-1.4.12",
+        "tag": "sample-app-1.4.12",
         "branch": "master"
       }
     ],
     "externalRegistry": null
   },
   "jiraComponentVersion": {
-    "name": "dmp-bundle",
+    "name": "sample-app",
     "version": "1.4.12",
     "component": {
-      "projectKey": "DMP",
-      "displayName": "DMP Bundle",
+      "projectKey": "SAMPLE",
+      "displayName": "Sample App",
       "componentVersionFormat": {
         "majorVersionFormat": "$major.$minor",
         "releaseVersionFormat": "$major.$minor.$service",
@@ -29,38 +29,38 @@
         "hotfixVersionFormat": "$major.$minor.$service-$fix"
       },
       "componentInfo": {
-        "versionPrefix": "dmp-bundle",
+        "versionPrefix": "sample-app",
         "versionFormat": "$versionPrefix-$baseVersionFormat"
       },
       "technical": false
     }
   },
   "detailedComponentVersion": {
-    "component": "DMP Bundle",
+    "component": "Sample App",
     "minorVersion": {
       "type": "MINOR",
       "version": "1.4",
-      "jiraVersion": "dmp-bundle-1.4"
+      "jiraVersion": "sample-app-1.4"
     },
     "lineVersion": {
       "type": "LINE",
       "version": "1.4",
-      "jiraVersion": "dmp-bundle-1.4"
+      "jiraVersion": "sample-app-1.4"
     },
     "buildVersion": {
       "type": "BUILD",
       "version": "1.4.12-0034",
-      "jiraVersion": "dmp-bundle-1.4.12"
+      "jiraVersion": "sample-app-1.4.12"
     },
     "rcVersion": {
       "type": "RC",
       "version": "1.4.12_RC",
-      "jiraVersion": "dmp-bundle-1.4.12_RC"
+      "jiraVersion": "sample-app-1.4.12_RC"
     },
     "releaseVersion": {
       "type": "RELEASE",
       "version": "1.4.12",
-      "jiraVersion": "dmp-bundle-1.4.12"
+      "jiraVersion": "sample-app-1.4.12"
     }
   },
   "deprecated": false,
@@ -77,13 +77,13 @@
   "distribution": {
     "explicit": true,
     "external": true,
-    "GAV": "org.example.dmp:dmp-bundle:zip,org.example.dmp:dmp-bundle-config:yaml",
+    "GAV": "org.example.sample:sample-app:zip,org.example.sample:sample-app-config:yaml",
     "securityGroups": {
       "read": [
         "Example Group"
       ]
     },
-    "docker": "dmp/dmp-bundle"
+    "docker": "sample/sample-app"
   },
   "archived": false,
   "testComponent": false,

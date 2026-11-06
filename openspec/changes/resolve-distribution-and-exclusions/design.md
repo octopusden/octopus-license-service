@@ -10,24 +10,24 @@
 
 ## Worked example
 
-An illustrative component `dmp-bundle`, version `1.4.12` (the values are made up; the shapes are the registry's):
+An illustrative component `sample-app`, version `1.4.12` (the values are made up; the shapes are the registry's):
 
-1. `GET …/components/dmp-bundle/versions/1.4.12` returns:
+1. `GET …/components/sample-app/versions/1.4.12` returns:
    - `buildSystem: GRADLE`, `archived: false`, `labels: [java]`;
-   - `distribution: {external: true, GAV: "org.octopusden.dmp:dmp-bundle:zip,org.octopusden.dmp:dmp-bundle-config:zip:config", docker: "dmp/dmp-bundle"}`;
+   - `distribution: {external: true, GAV: "org.example.sample:sample-app:zip,org.example.sample:sample-app-config:zip:config", docker: "sample/sample-app"}`;
    - `detailedComponentVersion.buildVersion.version: 1.4.12-0034`.
 2. Exclusion rules, in order: not archived, external, not WHISKEY, no `test-component` label, name does not start with `doc_`/`doc-`, not on the configured list. Not excluded.
-3. `GET …/components/dmp-bundle/maven-artifacts` returns `{"[1.0,)": {groupPattern: "org.octopusden.dmp", artifactPattern: "dmp-.*"}, "(,1.0)": {…}}`. Only `[1.0,)` holds `1.4.12`.
+3. `GET …/components/sample-app/maven-artifacts` returns `{"[1.0,)": {groupPattern: "org.example.sample", artifactPattern: "sample-.*"}, "(,1.0)": {…}}`. Only `[1.0,)` holds `1.4.12`.
 4. The license target:
-   - component version `dmp-bundle:1.4.12`; artifact versions `[1.4.12, 1.4.12-0034]`;
+   - component version `sample-app:1.4.12`; artifact versions `[1.4.12, 1.4.12-0034]`;
    - build system `GRADLE`, labels `[java]`;
    - declared artifacts:
-     - `MavenArtifact(org.octopusden.dmp, dmp-bundle, zip)`;
-     - `MavenArtifact(org.octopusden.dmp, dmp-bundle-config, zip, classifier = config)`;
-     - `DockerImage(dmp/dmp-bundle, tag = null)`;
-   - artifact patterns: `ArtifactPattern(groups = [org.octopusden.dmp], artifacts = [dmp-.*])`.
+     - `MavenArtifact(org.example.sample, sample-app, zip)`;
+     - `MavenArtifact(org.example.sample, sample-app-config, zip, classifier = config)`;
+     - `DockerImage(sample/sample-app, tag = null)`;
+   - artifact patterns: `ArtifactPattern(groups = [org.example.sample], artifacts = [sample-.*])`.
 
-For `doc_cards_manual:2.0` step 1 is the only call: the name rule matches, and the result is `Excluded("Documentation component")`.
+For `doc_user_guide:2.0` step 1 is the only call: the name rule matches, and the result is `Excluded("Documentation component")`.
 
 ## Goals / Non-Goals
 
@@ -149,7 +149,7 @@ data class ArtifactPattern(val groups: List<String>, val artifacts: List<String>
 ### 9. Configuration
 
 - `license-service.components-registry-url`: required; a missing value fails startup.
-- `license-service.exclusions`: a list of `{component, reason}`. `application.yaml` seeds it with the documentation components whose names do not follow the `doc_`/`doc-` rule.
+- `license-service.exclusions`: a list of `{component, reason}`. It lives in Spring Cloud Config only, never in this repository: the component names are internal, and the repository is public.
 
 ## Risks / Trade-offs
 

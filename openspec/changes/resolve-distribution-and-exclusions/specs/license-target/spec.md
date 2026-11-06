@@ -24,12 +24,12 @@ The service SHALL read declared artifacts from the registry's `GAV` and `docker`
 
 #### Scenario: GAV entry with extension
 
-- **WHEN** the `GAV` field is `org.octopusden.dmp:dmp-bundle:zip`
-- **THEN** the target declares a Maven artifact with group `org.octopusden.dmp`, artifact `dmp-bundle`, extension `zip` and no classifier
+- **WHEN** the `GAV` field is `org.example.sample:sample-app:zip`
+- **THEN** the target declares a Maven artifact with group `org.example.sample`, artifact `sample-app`, extension `zip` and no classifier
 
 #### Scenario: GAV entry with classifier
 
-- **WHEN** the `GAV` field holds `org.octopusden.dmp:dmp-bundle-config:zip:config`
+- **WHEN** the `GAV` field holds `org.example.sample:sample-app-config:zip:config`
 - **THEN** the target declares a Maven artifact with classifier `config`
 
 #### Scenario: Several GAV entries
@@ -39,13 +39,13 @@ The service SHALL read declared artifacts from the registry's `GAV` and `docker`
 
 #### Scenario: Docker image without a tag
 
-- **WHEN** the `docker` field is `dmp/dmp-bundle`
-- **THEN** the target declares a docker image `dmp/dmp-bundle` with no tag
+- **WHEN** the `docker` field is `sample/sample-app`
+- **THEN** the target declares a docker image `sample/sample-app` with no tag
 
 #### Scenario: Docker image with a tag and a registry port
 
-- **WHEN** the `docker` field is `registry.example:5000/dmp/dmp-bundle:1.4`
-- **THEN** the target declares a docker image `registry.example:5000/dmp/dmp-bundle` with tag `1.4`
+- **WHEN** the `docker` field is `registry.example:5000/sample/sample-app:1.4`
+- **THEN** the target declares a docker image `registry.example:5000/sample/sample-app` with tag `1.4`
 
 #### Scenario: DEB and RPM fields are ignored
 
@@ -58,12 +58,12 @@ The service SHALL keep a `GAV` entry that is not `group:artifact:extension[:clas
 
 #### Scenario: GAV entry with two parts
 
-- **WHEN** the `GAV` field holds `org.octopusden.dmp:dmp-bundle`
+- **WHEN** the `GAV` field holds `org.example.sample:sample-app`
 - **THEN** the target declares an unsupported artifact for that entry, and the other entries are declared as usual
 
 #### Scenario: GAV entry that is a file share
 
-- **WHEN** the `GAV` field holds `file:///share/dmp/bundle.zip`
+- **WHEN** the `GAV` field holds `file:///share/sample/bundle.zip`
 - **THEN** the target declares an unsupported artifact for that entry
 
 ### Requirement: Maven artifact patterns are those whose range holds the version
@@ -111,7 +111,7 @@ The service SHALL exclude a component when any of these holds, checked in this o
 
 #### Scenario: Documentation component by name
 
-- **WHEN** the component is named `DOC-cards-manual`
+- **WHEN** the component is named `DOC-User-Guide`
 - **THEN** the component is excluded with reason `Documentation component`
 
 #### Scenario: Configured exclusion
