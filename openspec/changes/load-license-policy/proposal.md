@@ -10,7 +10,7 @@ The service resolves what a component version releases, but it cannot judge a si
 
 **Part A: the license policy, from the license registry only**
 
-- A new module, `license-policy-registry`, turns the license registry into a license policy. It talks to Bitbucket and to nothing else.
+- A new `engine/` module, `license-policy-registry` in `engine/policy-registry/`, turns the license registry into a license policy. It talks to Bitbucket and to nothing else.
 - The policy is read from the registry's files at one commit:
   - `licenses-whitelist.txt`: allowed licenses;
   - `licenses-hidden.txt`: licenses allowed but not listed as such, treated as allowed;
@@ -44,7 +44,7 @@ The service resolves what a component version releases, but it cannot judge a si
 
 ## Affected areas
 
-- New module `license-policy-registry`: the policy model, the registry file parser, the verdict rules and the Bitbucket adapter. Depends on the published Bitbucket client and `versions-api`; never on `core`, `server` or Spring.
+- New `engine/` module `license-policy-registry` (`engine/policy-registry/`): the policy model, the registry file parser, the verdict rules and the Bitbucket adapter. Depends on the published Bitbucket client and `versions-api`; never on `core`, `server` or Spring.
 - `server`:
   - holds the current policy and refreshes it on a schedule;
   - `LicenseReportService.start` answers `503` until a policy is loaded;

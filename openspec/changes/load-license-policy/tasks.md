@@ -1,8 +1,8 @@
 ## 1. The `license-policy-registry` module
 
 - [ ] 1.1 Create the module:
-  - [ ] 1.1.1 `settings.gradle.kts`: include `:license-policy-registry` with `projectDir = policy-registry`.
-  - [ ] 1.1.2 `policy-registry/build.gradle.kts`: `bitbucket-client` from `octopus-external-systems-client` and `versions-api`, versions pinned in `gradle.properties`; `feign-core` `compileOnly` at the client's version; JUnit for tests. No Spring, no `core`.
+  - [ ] 1.1.1 `settings.gradle.kts`: include `:license-policy-registry` with `projectDir = engine/policy-registry`.
+  - [ ] 1.1.2 `engine/policy-registry/build.gradle.kts`: `bitbucket-client` from `octopus-external-systems-client` and `versions-api`, versions pinned in `gradle.properties`; `feign-core` `compileOnly` at the client's version; JUnit for tests. No Spring, no `core`.
   - [ ] 1.1.3 Confirm with `:license-policy-registry:dependencies --configuration runtimeClasspath`: no Spring, no `:core`.
 - [ ] 1.2 Write failing unit tests for `LicenseRegistryParser` (pure, sample registry files as strings):
   - [ ] 1.2.1 Whitelist and hidden list: `|`-separated, trimmed, blank and `#` lines ignored.
@@ -51,14 +51,15 @@
 
 ## 3. Documentation
 
-- [ ] 3.1 `docs/architecture.md` — the module in the diagram and the table, its rule and why; the request flow checks the policy before it registers a report.
-- [ ] 3.2 `CLAUDE.md` — the module in "Shape"; the license registry under "Reads".
+- [ ] 3.1 `docs/architecture.md` — the `engine/` license registry slot becomes `engine/policy-registry` (`:license-policy-registry`): solid in the diagram, Bitbucket client and `versions-api` in its table row; the request flow checks the policy before it registers a report and records its commit.
+- [ ] 3.2 `CLAUDE.md` — `policy-registry` in the `engine/` line of "Shape"; the license registry under "Reads".
+- [ ] 3.3 `README.md` — a `license-policy-registry` row next to `license-target-registry`.
 
 ## 4. Finalization
 
 - [ ] 4.1 `./gradlew build qualityCheck` green. <Fill in: counts.>
 - [ ] 4.2 Out of scope holds: no library is judged in a report; nothing writes license files; `UNIDENTIFIED` is not produced by the module.
-- [ ] 4.3 `policy-registry/src` imports neither Spring nor `org.octopusden.octopus.license.core` (grep).
+- [ ] 4.3 `engine/policy-registry/src` imports neither Spring nor `org.octopusden.octopus.license.core` (grep).
 - [ ] 4.4 No project, repository or real component name in the repository: fixtures use sample names.
 - [ ] 4.5 The design's risks hold as written; `TD-001` stays open.
 - [ ] 4.6 Before deploying, Spring Cloud Config and Vault hold the license registry settings for QA and Prod; without them the service does not start.

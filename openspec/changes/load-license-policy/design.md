@@ -52,21 +52,27 @@ Loading also reports `MIT` as allowed with no text.
 ```mermaid
 flowchart TD
     server["license-service"] --> core
-    server --> target["license-target-registry"]
-    server --> policy["license-policy-registry (new)"]
+    server --> target
+    server --> policy
+    subgraph engine["engine/"]
+        target["license-target-registry"]
+        policy["license-policy-registry (new)"]
+    end
     policy --> bitbucket["bitbucket-client (published)"]
     policy --> versions["versions-api (published)"]
 ```
 
+It fills the `engine/` slot the architecture page reserves for the license registry.
+
 | Module | Owns | May depend on | Must never depend on |
 | --- | --- | --- | --- |
-| `license-policy-registry` | The license policy model, the registry file parser, the verdict rules, the Bitbucket adapter | Bitbucket client, `versions-api` | `core`, `server`, `license-target-registry`, Spring |
+| `engine/policy-registry` (`:license-policy-registry`) | The license policy model, the registry file parser, the verdict rules, the Bitbucket adapter | Bitbucket client, `versions-api` | `core`, `server`, `license-target-registry`, Spring |
 
 ## Decisions
 
-### 1. A module of its own, reading only the license registry
+### 1. An `engine/` module of its own, reading only the license registry
 
-- `policy-registry/` (project `:license-policy-registry`) owns turning the license registry into a policy, and judging a library with it.
+- `engine/policy-registry/` (project `:license-policy-registry`) owns turning the license registry into a policy, and judging a library with it.
 - Same shape as `license-target-registry`: a pure part the adapter pushes facts into, and one adapter that does the I/O.
 - It never imports `core`: it has its own `LicenseVerdict`, and `server` maps it to `core`'s `Verdict`. The scan, when it lands, judges through the policy without seeing the wire types.
 
