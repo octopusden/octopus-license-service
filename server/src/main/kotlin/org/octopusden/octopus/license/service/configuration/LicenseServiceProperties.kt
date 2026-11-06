@@ -1,6 +1,6 @@
 package org.octopusden.octopus.license.service.configuration
 
-import org.octopusden.octopus.license.target.ConfiguredExclusion
+import org.octopusden.octopus.license.target.model.ConfiguredExclusion
 import org.springframework.boot.context.properties.ConfigurationProperties
 import java.time.Duration
 

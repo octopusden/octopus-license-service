@@ -2,7 +2,7 @@ package org.octopusden.octopus.license.service.configuration
 
 import org.octopusden.octopus.license.service.store.LicenseReportStore
 import org.octopusden.octopus.license.target.LicenseTargetResolver
-import org.octopusden.octopus.license.target.RegistryLicenseTargetResolver
+import org.octopusden.octopus.license.target.impl.RegistryLicenseTargetResolver
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.scheduling.annotation.EnableScheduling

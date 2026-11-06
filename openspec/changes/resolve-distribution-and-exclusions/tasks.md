@@ -15,7 +15,7 @@
   - [x] 1.2.7 Maven artifact patterns: one of two ranges holds the version; none holds it (empty, still resolved); comma-separated patterns split and trimmed; two overlapping entries both kept.
   - [x] 1.2.8 Artifact versions: build version differs, kept second; equal, listed once; absent, requested version only.
 - [x] 1.3 Implement, as separate units:
-  - [x] 1.3.1 `LicenseTarget.kt` — `LicenseTarget`, `DistributionSpec`, `DeclaredArtifact`, `ArtifactPattern`, `ComponentVersion`, `TargetResolution`, `ConfiguredExclusion`.
+  - [x] 1.3.1 `model/` — `LicenseTarget`, `DistributionSpec`, `DeclaredArtifact`, `ArtifactPattern`, `ComponentVersion`, `TargetResolution`, `ConfiguredExclusion`, one per file.
   - [x] 1.3.2 `ExclusionRules` — the ordered rules and their fixed reasons; `internal`.
   - [x] 1.3.3 `DistributionParser` — `GAV` and `docker` fields to `DeclaredArtifact`s; `internal`.
   - [x] 1.3.4 `LicenseTargetDescriber` — registry facts in, `LicenseTarget` out; selects pattern entries with `VersionRangeFactory` and `NumericVersionFactory`. `RegistryComponent` and `RegistryArtifactPattern` hold the facts in the module's own terms, so the rules and the parser never see the client's DTOs.
@@ -26,6 +26,7 @@
   - [x] 1.4.4 `503` from the registry, and a closed port: `ComponentsRegistryUnavailableException`.
   - [x] 1.4.5 (added on review) The recorded `maven-artifacts` key is `(,0),[0,)`, a union of two ranges; `VersionRangeFactory` parses it and the pattern is selected. The prototype's own range matcher handled only single ranges.
 - [x] 1.5 Implement `LicenseTargetResolver`, `ComponentVersionNotFoundException`, `ComponentsRegistryUnavailableException` and `RegistryLicenseTargetResolver(registryUrl, exclusions)`. A `FeignException` with status `>= 500`, or `-1` (no answer at all), is unavailable; any other is rethrown.
+- [x] 1.5a (added on review) Packages by role, so a reader sees what each file is for: `LicenseTargetResolver` and its `exception/` at the root as the public entry; `model/` for what it answers with; `impl/RegistryLicenseTargetResolver` as the only I/O; `impl/describer/` for the pure logic the adapter pushes registry facts into (`LicenseTargetDescriber`, `ExclusionRules`, `DistributionParser`, `RegistryComponent`, `RegistryArtifactPattern`). Tests follow the same packages.
 - [x] 1.6 `:license-target-registry:test`: 43 tests, 0 failures, 0 skipped (ExclusionRules 16, DistributionParser 16, LicenseTargetDescriber 6, RegistryLicenseTargetResolver 5). No infrastructure needed.
 
 ## 2. `core` and `client`: service unavailable

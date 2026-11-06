@@ -4,7 +4,7 @@ import org.octopusden.octopus.license.core.dto.GenerationInputs
 import org.octopusden.octopus.license.core.dto.LicenseReportSummary
 import org.octopusden.octopus.license.service.service.GeneratedReport
 import org.octopusden.octopus.license.service.service.LicenseReportGenerator
-import org.octopusden.octopus.license.target.LicenseTarget
+import org.octopusden.octopus.license.target.model.LicenseTarget
 import org.springframework.boot.info.BuildProperties
 import org.springframework.stereotype.Component
 import java.io.ByteArrayOutputStream

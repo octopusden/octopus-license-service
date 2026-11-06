@@ -1,4 +1,4 @@
-package org.octopusden.octopus.license.target
+package org.octopusden.octopus.license.target.impl
 
 import feign.FeignException
 import org.octopusden.octopus.components.registry.client.ComponentsRegistryServiceClient
@@ -6,6 +6,16 @@ import org.octopusden.octopus.components.registry.client.impl.ClassicComponentsR
 import org.octopusden.octopus.components.registry.client.impl.ClassicComponentsRegistryServiceClientUrlProvider
 import org.octopusden.octopus.components.registry.core.dto.DetailedComponent
 import org.octopusden.octopus.components.registry.core.exceptions.NotFoundException
+import org.octopusden.octopus.license.target.LicenseTargetResolver
+import org.octopusden.octopus.license.target.exception.ComponentVersionNotFoundException
+import org.octopusden.octopus.license.target.exception.ComponentsRegistryUnavailableException
+import org.octopusden.octopus.license.target.impl.describer.ExclusionRules
+import org.octopusden.octopus.license.target.impl.describer.LicenseTargetDescriber
+import org.octopusden.octopus.license.target.impl.describer.RegistryArtifactPattern
+import org.octopusden.octopus.license.target.impl.describer.RegistryComponent
+import org.octopusden.octopus.license.target.model.ComponentVersion
+import org.octopusden.octopus.license.target.model.ConfiguredExclusion
+import org.octopusden.octopus.license.target.model.TargetResolution
 import org.octopusden.releng.versions.VersionNames
 
 /**

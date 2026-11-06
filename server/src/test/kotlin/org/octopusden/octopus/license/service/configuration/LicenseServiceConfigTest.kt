@@ -4,8 +4,8 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
-import org.octopusden.octopus.license.target.ConfiguredExclusion
 import org.octopusden.octopus.license.target.LicenseTargetResolver
+import org.octopusden.octopus.license.target.model.ConfiguredExclusion
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.boot.test.context.runner.ApplicationContextRunner
 

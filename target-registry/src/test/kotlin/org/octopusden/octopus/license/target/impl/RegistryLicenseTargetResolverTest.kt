@@ -1,4 +1,4 @@
-package org.octopusden.octopus.license.target
+package org.octopusden.octopus.license.target.impl
 
 import com.sun.net.httpserver.HttpServer
 import org.junit.jupiter.api.AfterEach
@@ -7,8 +7,16 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
-import org.octopusden.octopus.license.target.DeclaredArtifact.DockerImage
-import org.octopusden.octopus.license.target.DeclaredArtifact.MavenArtifact
+import org.octopusden.octopus.license.target.exception.ComponentVersionNotFoundException
+import org.octopusden.octopus.license.target.exception.ComponentsRegistryUnavailableException
+import org.octopusden.octopus.license.target.model.ArtifactPattern
+import org.octopusden.octopus.license.target.model.ComponentVersion
+import org.octopusden.octopus.license.target.model.ConfiguredExclusion
+import org.octopusden.octopus.license.target.model.DeclaredArtifact.DockerImage
+import org.octopusden.octopus.license.target.model.DeclaredArtifact.MavenArtifact
+import org.octopusden.octopus.license.target.model.DistributionSpec
+import org.octopusden.octopus.license.target.model.LicenseTarget
+import org.octopusden.octopus.license.target.model.TargetResolution
 import java.net.InetSocketAddress
 import java.net.ServerSocket
 import java.util.concurrent.CopyOnWriteArrayList

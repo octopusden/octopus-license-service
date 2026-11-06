@@ -11,11 +11,11 @@ import org.octopusden.octopus.license.service.service.LicenseReportGenerator
 import org.octopusden.octopus.license.service.service.LicenseReportService
 import org.octopusden.octopus.license.service.store.LicenseReportStore
 import org.octopusden.octopus.license.service.store.StoredReport
-import org.octopusden.octopus.license.target.ComponentVersionNotFoundException
-import org.octopusden.octopus.license.target.ComponentsRegistryUnavailableException
-import org.octopusden.octopus.license.target.LicenseTarget
 import org.octopusden.octopus.license.target.LicenseTargetResolver
-import org.octopusden.octopus.license.target.TargetResolution
+import org.octopusden.octopus.license.target.exception.ComponentVersionNotFoundException
+import org.octopusden.octopus.license.target.exception.ComponentsRegistryUnavailableException
+import org.octopusden.octopus.license.target.model.LicenseTarget
+import org.octopusden.octopus.license.target.model.TargetResolution
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.core.task.TaskExecutor

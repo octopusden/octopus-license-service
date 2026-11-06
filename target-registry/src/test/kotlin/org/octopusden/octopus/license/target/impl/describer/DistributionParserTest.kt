@@ -1,4 +1,4 @@
-package org.octopusden.octopus.license.target
+package org.octopusden.octopus.license.target.impl.describer
 
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.DisplayName
@@ -6,9 +6,10 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.NullSource
 import org.junit.jupiter.params.provider.ValueSource
-import org.octopusden.octopus.license.target.DeclaredArtifact.DockerImage
-import org.octopusden.octopus.license.target.DeclaredArtifact.MavenArtifact
-import org.octopusden.octopus.license.target.DeclaredArtifact.Unsupported
+import org.octopusden.octopus.license.target.model.DeclaredArtifact
+import org.octopusden.octopus.license.target.model.DeclaredArtifact.DockerImage
+import org.octopusden.octopus.license.target.model.DeclaredArtifact.MavenArtifact
+import org.octopusden.octopus.license.target.model.DeclaredArtifact.Unsupported
 
 class DistributionParserTest {
     @Test

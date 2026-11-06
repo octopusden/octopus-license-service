@@ -1,4 +1,6 @@
-package org.octopusden.octopus.license.target
+package org.octopusden.octopus.license.target.impl.describer
+
+import org.octopusden.octopus.license.target.model.ConfiguredExclusion
 
 /**
  * Decides whether a component is out of the service's scope, and why. Every rule reads only the

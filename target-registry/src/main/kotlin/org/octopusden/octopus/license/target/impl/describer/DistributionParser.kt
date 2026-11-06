@@ -1,8 +1,9 @@
-package org.octopusden.octopus.license.target
+package org.octopusden.octopus.license.target.impl.describer
 
-import org.octopusden.octopus.license.target.DeclaredArtifact.DockerImage
-import org.octopusden.octopus.license.target.DeclaredArtifact.MavenArtifact
-import org.octopusden.octopus.license.target.DeclaredArtifact.Unsupported
+import org.octopusden.octopus.license.target.model.DeclaredArtifact
+import org.octopusden.octopus.license.target.model.DeclaredArtifact.DockerImage
+import org.octopusden.octopus.license.target.model.DeclaredArtifact.MavenArtifact
+import org.octopusden.octopus.license.target.model.DeclaredArtifact.Unsupported
 
 /**
  * Reads the registry's `GAV` and `docker` distribution fields. Never fails: an entry it cannot

@@ -1,5 +1,9 @@
 package org.octopusden.octopus.license.target
 
+import org.octopusden.octopus.license.target.exception.ComponentVersionNotFoundException
+import org.octopusden.octopus.license.target.exception.ComponentsRegistryUnavailableException
+import org.octopusden.octopus.license.target.model.TargetResolution
+
 /** Answers what a component version releases, or why the service does not cover it. */
 interface LicenseTargetResolver {
     /**
@@ -11,14 +15,3 @@ interface LicenseTargetResolver {
         version: String,
     ): TargetResolution
 }
-
-/** No answer exists for the request, as opposed to an exclusion, which is an answer (D3). */
-class ComponentVersionNotFoundException(
-    message: String,
-    cause: Throwable,
-) : RuntimeException(message, cause)
-
-class ComponentsRegistryUnavailableException(
-    message: String,
-    cause: Throwable,
-) : RuntimeException(message, cause)

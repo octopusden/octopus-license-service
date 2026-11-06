@@ -1,4 +1,4 @@
-package org.octopusden.octopus.license.target
+package org.octopusden.octopus.license.target.impl.describer
 
 /**
  * The facts the registry's component-version call gives, in this module's own terms, so the rules
@@ -14,10 +14,4 @@ internal data class RegistryComponent(
     val gav: String?,
     val docker: String?,
     val buildVersion: String?,
-)
-
-/** One entry of the registry's `maven-artifacts` answer, as stored: comma-separated patterns. */
-internal data class RegistryArtifactPattern(
-    val groupPattern: String?,
-    val artifactPattern: String?,
 )

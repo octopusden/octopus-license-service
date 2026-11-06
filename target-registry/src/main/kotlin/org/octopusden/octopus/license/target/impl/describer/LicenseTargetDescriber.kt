@@ -1,5 +1,9 @@
-package org.octopusden.octopus.license.target
+package org.octopusden.octopus.license.target.impl.describer
 
+import org.octopusden.octopus.license.target.model.ArtifactPattern
+import org.octopusden.octopus.license.target.model.ComponentVersion
+import org.octopusden.octopus.license.target.model.DistributionSpec
+import org.octopusden.octopus.license.target.model.LicenseTarget
 import org.octopusden.releng.versions.NumericVersionFactory
 import org.octopusden.releng.versions.VersionNames
 import org.octopusden.releng.versions.VersionRangeFactory

@@ -1,10 +1,14 @@
-package org.octopusden.octopus.license.target
+package org.octopusden.octopus.license.target.impl.describer
 
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
-import org.octopusden.octopus.license.target.DeclaredArtifact.DockerImage
-import org.octopusden.octopus.license.target.DeclaredArtifact.MavenArtifact
+import org.octopusden.octopus.license.target.model.ArtifactPattern
+import org.octopusden.octopus.license.target.model.ComponentVersion
+import org.octopusden.octopus.license.target.model.DeclaredArtifact.DockerImage
+import org.octopusden.octopus.license.target.model.DeclaredArtifact.MavenArtifact
+import org.octopusden.octopus.license.target.model.DistributionSpec
+import org.octopusden.octopus.license.target.model.LicenseTarget
 import org.octopusden.releng.versions.VersionNames
 
 class LicenseTargetDescriberTest {

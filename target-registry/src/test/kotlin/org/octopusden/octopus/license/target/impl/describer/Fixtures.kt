@@ -1,4 +1,4 @@
-package org.octopusden.octopus.license.target
+package org.octopusden.octopus.license.target.impl.describer
 
 internal fun registryComponent(
     id: String = "sample-app",

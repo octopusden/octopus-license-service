@@ -1,7 +1,7 @@
 package org.octopusden.octopus.license.service.service
 
 import org.octopusden.octopus.license.core.dto.LicenseReportSummary
-import org.octopusden.octopus.license.target.LicenseTarget
+import org.octopusden.octopus.license.target.model.LicenseTarget
 
 /**
  * Generates the license report of one [LicenseTarget], synchronously; running it in the
