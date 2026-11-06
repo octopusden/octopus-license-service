@@ -117,7 +117,7 @@ data class ArtifactPattern(val groups: List<String>, val artifacts: List<String>
 - Order: archived, internal (`distribution.external == false`), build system `WHISKEY`, label `test-component`, name starts with `doc_`/`doc-` (any case), configured list.
 - All six read only the first registry call, so an excluded component costs one call; `maven-artifacts` and `version-names` are fetched only for a component that is not excluded.
 - Each rule gives one fixed reason, so the same component always reads the same way: `Archived component`, `Internal component: its distribution is not external`, `Built with WHISKEY`, `Test component (label test-component)`, `Documentation component`, or the configured entry's own reason.
-- The configured list is passed in as plain data (`List<ConfiguredExclusion(component, reason)>`); matching is exact on the component id.
+- The configured list is passed in as plain data (`List<ConfiguredExclusion(components, reason)>`): one reason covers many components, so it is written once. Matching is exact on the component id.
 
 ### 5. The published components registry client
 
@@ -149,7 +149,7 @@ data class ArtifactPattern(val groups: List<String>, val artifacts: List<String>
 ### 9. Configuration
 
 - `license-service.components-registry-url`: required; a missing value fails startup.
-- `license-service.exclusions`: a list of `{component, reason}`. It lives in Spring Cloud Config only, never in this repository: the component names are internal, and the repository is public.
+- `license-service.exclusions`: a list of `{components, reason}`, `components` a comma-separated list of component ids. It lives in Spring Cloud Config only, never in this repository: the component names are internal, and the repository is public.
 
 ## Risks / Trade-offs
 

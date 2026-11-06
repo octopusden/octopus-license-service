@@ -119,6 +119,11 @@ The service SHALL exclude a component when any of these holds, checked in this o
 - **WHEN** the configured list holds the component with reason `Applies the old license Maven plugin`
 - **THEN** the component is excluded with that reason
 
+#### Scenario: One configured reason for several components
+
+- **WHEN** one configured entry lists two components with one reason
+- **THEN** each of them is excluded with that reason
+
 #### Scenario: Several rules hold
 
 - **WHEN** the component is archived and built with `WHISKEY`

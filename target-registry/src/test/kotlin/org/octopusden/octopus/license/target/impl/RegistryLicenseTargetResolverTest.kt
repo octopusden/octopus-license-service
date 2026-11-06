@@ -50,7 +50,7 @@ class RegistryLicenseTargetResolverTest {
     fun stopRegistry() = server.stop(0)
 
     private fun resolver(url: String = "http://localhost:${server.address.port}") =
-        RegistryLicenseTargetResolver(url, listOf(ConfiguredExclusion("test_user_guides", "Documentation component")))
+        RegistryLicenseTargetResolver(url, listOf(ConfiguredExclusion(listOf("test_user_guides"), "Documentation component")))
 
     private fun answer(
         path: String,

@@ -32,16 +32,16 @@ class LicenseServiceConfigTest {
     }
 
     @Test
-    @DisplayName("configured exclusions bind as component and reason pairs")
+    @DisplayName("a configured exclusion binds a comma-separated component list and one reason")
     fun configuredExclusionsBind() {
         contextRunner
             .withPropertyValues(
                 "license-service.components-registry-url=http://localhost:1",
-                "license-service.exclusions[0].component=test_user_guides",
+                "license-service.exclusions[0].components=test_user_guides, test_admin_guides",
                 "license-service.exclusions[0].reason=Documentation component",
             ).run { context ->
                 assertEquals(
-                    listOf(ConfiguredExclusion("test_user_guides", "Documentation component")),
+                    listOf(ConfiguredExclusion(listOf("test_user_guides", "test_admin_guides"), "Documentation component")),
                     context.getBean(LicenseServiceProperties::class.java).exclusions,
                 )
             }

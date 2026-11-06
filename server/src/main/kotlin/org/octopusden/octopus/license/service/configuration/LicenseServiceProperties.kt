@@ -9,7 +9,7 @@ import java.time.Duration
  * @param generationThreads how many generations run at once; the rest queue. Bounds the load the
  * service puts on Xray and Artifactory.
  * @param componentsRegistryUrl required; nullable only so its absence is reported by name at startup.
- * @param exclusions components out of scope that no registry fact identifies, each with its reason.
+ * @param exclusions components out of scope that no registry fact identifies, grouped by reason.
  */
 @ConfigurationProperties("license-service")
 data class LicenseServiceProperties(

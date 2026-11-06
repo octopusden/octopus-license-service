@@ -7,6 +7,7 @@
   - [x] 1.1.4 (added on review) `feign-core` `12.2` is `compileOnly`, pinned as `components-registry-feign.version`: the resolver needs `FeignException` to tell an unreachable registry from other failures, and the client already brings Feign at runtime, so declaring it there would mix two Feign versions in production.
 - [x] 1.2 Write failing unit tests for `LicenseTargetDescriber` and its parts (pure, no HTTP):
   - [x] 1.2.1 Exclusion, one test per rule: archived, internal, `WHISKEY`, label `test-component`, `doc_`/`doc-` names in four casings, configured entry with its own reason, configured match is exact.
+  - [x] 1.2.1a (added on review) One configured entry lists several components under one reason, so a shared reason is written once: `ConfiguredExclusion(components, reason)`, bound from a comma-separated `components` property.
   - [x] 1.2.2 Exclusion order: archived, `WHISKEY` and a `doc_` name together give `Archived component`.
   - [x] 1.2.3 `docker-tools`, `doc`, `mydoc_x`, `documentation-service` are not excluded.
   - [x] 1.2.4 `GAV`: entry with extension; with classifier; two entries with spaces around the comma; two-part entry is `Unsupported` and keeps its neighbour; `file:`, `http:`, `https:` entries are `Unsupported`; absent, empty, blank and `" , "` fields declare nothing.
@@ -44,7 +45,7 @@
   - [x] 3.1.3 Not found: `404` envelope, and `NotFoundException` in the client.
   - [x] 3.1.4 Unavailable: `ServiceUnavailableException` in the client.
   - [x] 3.1.5 Blank component or version: the existing test still answers `400`; validation runs before the resolver.
-- [x] 3.2 `LicenseServiceConfigTest` (`ApplicationContextRunner`): without `license-service.components-registry-url` the context fails naming the property; with it the resolver is wired; configured exclusions bind as component and reason pairs.
+- [x] 3.2 `LicenseServiceConfigTest` (`ApplicationContextRunner`): without `license-service.components-registry-url` the context fails naming the property; with it the resolver is wired; a configured exclusion binds a comma-separated component list and one reason.
 - [x] 3.3 Implement:
   - [x] 3.3.1 `LicenseServiceProperties` — `componentsRegistryUrl` (nullable so its absence is reported by name), `exclusions`.
   - [x] 3.3.2 `LicenseServiceConfig` — a `LicenseTargetResolver` bean; `requireNotNull` on the URL fails startup.

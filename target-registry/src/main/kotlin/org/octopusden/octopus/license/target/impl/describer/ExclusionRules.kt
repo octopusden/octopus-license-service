@@ -9,7 +9,7 @@ import org.octopusden.octopus.license.target.model.ConfiguredExclusion
 internal class ExclusionRules(
     configured: List<ConfiguredExclusion>,
 ) {
-    private val configuredReasons = configured.associate { it.component to it.reason }
+    private val configuredReasons = configured.flatMap { exclusion -> exclusion.components.map { it to exclusion.reason } }.toMap()
 
     /** The reason of the first rule that holds, in a fixed order, or null when the component is in scope. */
     fun reasonFor(component: RegistryComponent): String? =

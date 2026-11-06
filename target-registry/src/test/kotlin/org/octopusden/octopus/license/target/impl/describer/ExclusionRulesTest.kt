@@ -9,7 +9,7 @@ import org.junit.jupiter.params.provider.ValueSource
 import org.octopusden.octopus.license.target.model.ConfiguredExclusion
 
 class ExclusionRulesTest {
-    private val rules = ExclusionRules(listOf(ConfiguredExclusion("test_user_guides", "Documentation component")))
+    private val rules = ExclusionRules(listOf(ConfiguredExclusion(listOf("test_user_guides"), "Documentation component")))
 
     @Test
     @DisplayName("an external, non-archived Gradle component with no special label is not excluded")
@@ -64,8 +64,17 @@ class ExclusionRulesTest {
     @Test
     @DisplayName("a configured component is excluded with the configured reason")
     fun configured() {
-        val rules = ExclusionRules(listOf(ConfiguredExclusion("legacy-plugin-app", "Applies the old license Gradle plugin")))
+        val rules = ExclusionRules(listOf(ConfiguredExclusion(listOf("legacy-plugin-app"), "Applies the old license Gradle plugin")))
         assertEquals("Applies the old license Gradle plugin", rules.reasonFor(registryComponent(id = "legacy-plugin-app")))
+    }
+
+    @Test
+    @DisplayName("every component of one configured entry is excluded with that entry's reason")
+    fun configuredSharedReason() {
+        val rules =
+            ExclusionRules(listOf(ConfiguredExclusion(listOf("legacy-app-a", "legacy-app-b"), "Applies the old license Gradle plugin")))
+        assertEquals("Applies the old license Gradle plugin", rules.reasonFor(registryComponent(id = "legacy-app-a")))
+        assertEquals("Applies the old license Gradle plugin", rules.reasonFor(registryComponent(id = "legacy-app-b")))
     }
 
     @Test
