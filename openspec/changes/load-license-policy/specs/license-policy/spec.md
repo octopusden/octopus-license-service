@@ -39,7 +39,7 @@ The service SHALL skip a malformed override or license text line, keep the rest 
 
 ### Requirement: An override replaces the licenses of a Maven library
 
-The service SHALL replace the licenses found for a library with those of the first override, in file order, whose group and artifact equal the library's and whose version or version range holds its version.
+The service SHALL apply overrides before anything else, reading `thirdparty-licenses.properties` as Java properties. Among the entries whose group and artifact equal the library's and whose version or version range holds its version, the one with the greatest key in sorted order SHALL replace the licenses found, as the license plugins' last match does. An entry with an empty value SHALL be ignored.
 
 #### Scenario: Version in the range
 
@@ -61,6 +61,16 @@ The service SHALL replace the licenses found for a library with those of the fir
 - **WHEN** the override's value is `MIT|Apache-2.0`
 - **THEN** the judgement uses both
 
+#### Scenario: Two entries match
+
+- **WHEN** both `org.example--sample-lib--[1.0,2.0)=MIT` and `org.example--sample-lib--[1.5,1.6)=Apache-2.0` hold `1.5`
+- **THEN** the judgement uses `Apache-2.0`, the entry with the greater key
+
+#### Scenario: Empty override value
+
+- **WHEN** the only matching override is `org.example--sample-lib--1.5=`
+- **THEN** the licenses found are kept and the line is not a problem
+
 #### Scenario: Library without Maven coordinates
 
 - **WHEN** a library is judged without coordinates
@@ -68,7 +78,7 @@ The service SHALL replace the licenses found for a library with those of the fir
 
 ### Requirement: License names are canonical and case-insensitive
 
-The service SHALL replace every license name with its canonical spelling, matching case-insensitively against the names in `merges.txt`, the whitelist and the hidden list; the first name of a `merges.txt` line is the canonical one. A name found nowhere SHALL keep its own spelling.
+The service SHALL replace every license name with its canonical spelling, matching case-insensitively against the names in `merges.txt`, the whitelist and the hidden list; the first name of a `merges.txt` line is the canonical one. A name found nowhere SHALL keep its own spelling. A name on two `merges.txt` lines SHALL keep the first line and be listed among the problems. Matching case-insensitively is a deliberate difference from the license plugins, which match exactly.
 
 #### Scenario: Synonym
 
@@ -79,6 +89,11 @@ The service SHALL replace every license name with its canonical spelling, matchi
 
 - **WHEN** a library is found with `apache 2`
 - **THEN** the judgement lists `Apache-2.0`
+
+#### Scenario: Name on two merge lines
+
+- **WHEN** `Apache 2` is on the `Apache-2.0` line and on a later line
+- **THEN** it becomes `Apache-2.0`, and the later line is a problem
 
 #### Scenario: Unknown name
 
@@ -111,12 +126,22 @@ The service SHALL judge a library `UNKNOWN` when no license is known after dropp
 
 ### Requirement: Allowed licenses without a text are known
 
-The service SHALL know, for every load, which allowed licenses have no text in the registry, and SHALL report them in its log and health details.
+The service SHALL read the text of each license from `licenses.properties` as Java properties: a `licenses/` file in the registry, or an `http`/`https` URL. It SHALL know, for every load, which whitelisted licenses have neither, and SHALL report them in its log and health details.
 
 #### Scenario: Allowed license with no text
 
 - **WHEN** `MIT` is allowed and `licenses.properties` has no entry for it
 - **THEN** the policy lists `MIT` among the licenses without text
+
+#### Scenario: Text at a URL
+
+- **WHEN** `licenses.properties` maps `H2-1.0` to an `http` URL
+- **THEN** the policy gives that URL as the text of `H2-1.0`, and `H2-1.0` is not a license without text
+
+#### Scenario: Text lookup ignores case
+
+- **WHEN** `licenses.properties` has `Apache-2.0` and the judged license is `apache-2.0`
+- **THEN** the policy gives the `Apache-2.0` text
 
 #### Scenario: Text entry pointing at a missing file
 

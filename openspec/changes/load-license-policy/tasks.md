@@ -7,18 +7,19 @@
 - [ ] 1.2 Write failing unit tests for `LicenseRegistryParser` (pure, sample registry files as strings):
   - [ ] 1.2.1 Whitelist and hidden list: `|`-separated, trimmed, blank and `#` lines ignored.
   - [ ] 1.2.2 No `licenses-whitelist.txt`, and an empty one: the load fails.
-  - [ ] 1.2.3 `merges.txt`: first name canonical; a name in two lines keeps the first line.
-  - [ ] 1.2.4 Overrides: single version; range; `|` in the value; key without three parts is a problem; range `[1.0,` is a problem; the other lines still apply.
-  - [ ] 1.2.5 Texts: `licenses.properties` entry with its file; entry without `=` is a problem; entry pointing at a missing file is a problem.
-  - [ ] 1.2.6 `licensesWithoutText`: an allowed license with no entry; with an entry whose file is missing; a hidden license with no text is not listed.
+  - [ ] 1.2.3 `merges.txt`: first name canonical; a name on two lines keeps the first line and is a problem.
+  - [ ] 1.2.4 Overrides, read as Java properties: single version; range; `|` in the value; empty value ignored and not a problem; key without three parts is a problem; range `[1.0,` is a problem; the other lines still apply; an escaped key (`\ `) reads as `Properties` reads it.
+  - [ ] 1.2.5 Texts, read as Java properties: `licenses/` entry with its file; `http`/`https` entry kept as a URL; entry pointing at a missing file is a problem; any other value is a problem.
+  - [ ] 1.2.6 `licensesWithoutText`: a whitelisted license with no entry; with an entry whose file is missing; with a URL entry is not listed; a hidden license with no text is not listed.
 - [ ] 1.3 Write failing unit tests for `LicensePolicy.judge`, one per spec scenario:
-  - [ ] 1.3.1 Override in range, outside the range, single version, several licenses, first matching entry wins, no coordinates means no override.
+  - [ ] 1.3.1 Override in range, outside the range, single version, several licenses, two matching entries give the greater key's, empty value keeps the found licenses, no coordinates means no override.
   - [ ] 1.3.2 Canonical names: synonym, different casing, whitelist name not in `merges.txt` with another casing, unknown name kept.
   - [ ] 1.3.3 Verdicts: no license, only `Unknown`/`unknown license`/blank, dual license with one allowed, hidden only, nothing allowed.
   - [ ] 1.3.4 Judgement licenses are canonical, sorted and without unknown markers.
+  - [ ] 1.3.4a `text(license)`: registry file, URL, case-insensitive lookup on the canonical name, none.
   - [ ] 1.3.5 Parity with the prototype: the five rows of the design's worked example.
 - [ ] 1.4 Implement, as separate units:
-  - [ ] 1.4.1 `model/` — `LicensePolicy`, `MavenCoordinates`, `Judgement`, `LicenseVerdict`, one per file.
+  - [ ] 1.4.1 `model/` — `LicensePolicy`, `MavenCoordinates`, `Judgement`, `LicenseVerdict`, `LicenseText`, one per file.
   - [ ] 1.4.2 `impl/parser/LicenseRegistryParser` — registry files to `LicensePolicy`; `internal`.
   - [ ] 1.4.3 `impl/parser/OverrideRule` — group, artifact, parsed range, licenses; `internal`.
 - [ ] 1.5 Write failing tests for `BitbucketLicensePolicySource` against a stub HTTP server (JDK `HttpServer`), sample project and repository names:

@@ -5,10 +5,15 @@
 - The license registry is a Git repository on Bitbucket. Its default branch is `master`. Files at its root:
   - `licenses-whitelist.txt`, `licenses-hidden.txt`: one line, names separated by `|`;
   - `merges.txt`: one line per license, `|`-separated, the first name canonical;
-  - `thirdparty-licenses.properties`: `group--artifact--version=license`, `version` a single version or a range such as `[2.3,2.6)`, `#` comments;
-  - `licenses.properties`: `NAME=licenses/FILE.txt`, blank lines and `#` comments; `licenses/` holds the texts.
-- The Maven plugin clones the repository with `git` on every build. It treats a hidden license as allowed, passes a library licensed under any allowed license, and matches override versions with `versions-api` (`VersionRangeFactory` over empty `VersionNames`, a single version wrapped as `[v]`).
-- The prototype applies the same rules, and maps synonyms case-insensitively.
+  - `thirdparty-licenses.properties`: Java properties, `group--artifact--version=license[|license…]`, `version` a single version or a range such as `[2.3,2.6)`; several entries can name one group and artifact with different ranges;
+  - `licenses.properties`: Java properties, `NAME=licenses/FILE.txt` for a text in the registry, or `NAME=http…` for a text on the web; `licenses/` holds the texts.
+- The Maven plugin clones the repository with `git` on every build, then:
+  - applies overrides first: it reads the file with `Properties`, walks the keys in sorted order, and every entry whose group, artifact and version range match replaces the licenses, so the last match wins; an empty value is skipped; versions are matched with `versions-api` (`VersionRangeFactory` over empty `VersionNames`, a single version wrapped as `[v]`);
+  - then merges synonyms into the first name of their `merges.txt` line; a name on two lines fails the build;
+  - passes a library with a hidden license, or with any whitelisted license;
+  - looks up each license's text in `licenses.properties` by its merged name, and downloads it from the registry or the URL.
+  - Every name comparison is exact.
+- The prototype applies the same rules, but compares names case-insensitively.
 
 ## Worked example
 
@@ -83,11 +88,14 @@ flowchart TD
 
 - `LicenseRegistryParser.parse(files: Map<String, String>, commit: String): LicensePolicy`.
 - Missing `licenses-whitelist.txt`, or an empty whitelist, fails the load: a policy that allows nothing would fail every library.
-- A malformed line is skipped and named in the policy's `problems`, never fatal:
+- `thirdparty-licenses.properties` and `licenses.properties` are read with `java.util.Properties`, as the plugin reads them: escapes, `:` separators and continuation lines behave the same.
+- A malformed entry is skipped and named in the policy's `problems`, never fatal:
   - an override key without three `--` parts;
   - an override range `versions-api` cannot parse;
-  - a `licenses.properties` line without `=`, or pointing at a file not in `licenses/`.
-- Blank lines and `#` comments are ignored everywhere; names are trimmed.
+  - a `licenses.properties` value that is neither a `licenses/` file present in the registry nor an `http`/`https` URL;
+  - a name on two `merges.txt` lines: the first line keeps it. The plugin fails the build here; the service must not refuse to load over one line.
+- An override with an empty value is ignored, as the plugin ignores it; it is not a problem.
+- Blank lines and `#` comments are ignored in the text files; names are trimmed.
 
 ### 5. The verdict rules, in order
 
@@ -97,7 +105,7 @@ class LicensePolicy(
     // allowed, hidden, canonical names, overrides, texts: private
 ) {
     fun judge(licenses: Set<String>, coordinates: MavenCoordinates? = null): Judgement
-    fun text(license: String): String?
+    fun text(license: String): LicenseText?
     val licensesWithoutText: List<String>
     val problems: List<String>
 }
@@ -107,15 +115,21 @@ data class MavenCoordinates(val groupId: String, val artifactId: String, val ver
 data class Judgement(val verdict: LicenseVerdict, val licenses: List<String>, val overridden: Boolean)
 
 enum class LicenseVerdict { ALLOWED, NOT_ALLOWED, UNKNOWN }
+
+sealed interface LicenseText {
+    data class InRegistry(val path: String, val content: String) : LicenseText
+    data class AtUrl(val url: String) : LicenseText
+}
 ```
 
-1. Override: the first `thirdparty-licenses.properties` entry, in file order, whose group and artifact equal the coordinates and whose version range holds the version replaces the found licenses. A value with `|` gives several licenses.
+1. Override: among the `thirdparty-licenses.properties` entries whose group and artifact equal the coordinates and whose version range holds the version, the one with the greatest key in sorted order replaces the found licenses, as the plugin's last match does. A value with `|` gives several licenses.
 2. Canonical names: each name is looked up case-insensitively among every name in `merges.txt`, the whitelist and the hidden list, and replaced by its canonical spelling; an unknown name keeps its own spelling.
 3. Unknown markers are dropped: blank, `Unknown`, `Unknown license`, any case. Nothing left: `UNKNOWN`.
 4. Any canonical name in the whitelist or the hidden list: `ALLOWED`.
 5. Otherwise `NOT_ALLOWED`.
 
-- Case-insensitive lookup is the prototype's: Xray and POMs spell the same license in several casings. The plugin compares exactly; it is stricter only where a casing differs, which the registry then has to list as a synonym.
+- **A deliberate difference from the plugin:** every name lookup is case-insensitive (synonyms, whitelist, hidden list, texts), as in the prototype. Xray and POMs spell the same license in several casings; matching exactly would turn some into false `NOT_ALLOWED` verdicts. The cost: a name differing from an allowed one only in case passes, where the plugin would reject it.
+- Texts: `text(license)` looks up the canonical name case-insensitively in `licenses.properties`. `licensesWithoutText` lists the allowed licenses, whitelist only, with no entry or with an entry skipped as a problem. A URL counts as a text; fetching it is the license files' job.
 - `licenses` in the judgement are the canonical names, sorted, so every report spells a license one way.
 
 ### 6. Version ranges with `versions-api`, as the plugin does

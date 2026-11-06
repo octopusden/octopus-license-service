@@ -16,20 +16,23 @@ The service resolves what a component version releases, but it cannot judge a si
   - `licenses-hidden.txt`: licenses allowed but not listed as such, treated as allowed;
   - `merges.txt`: synonyms, the first name of a line being the canonical one;
   - `thirdparty-licenses.properties`: overrides, the licenses of a Maven library within a version range;
-  - `licenses.properties` and `licenses/`: the text of each license.
+  - `licenses.properties` and `licenses/`: the text of each license, in the registry or at a URL.
+- Both properties files are read with `java.util.Properties`, as the license plugins read them.
 - The policy records the commit it was read at.
 
 **Part B: a verdict for one library**
 
 - The policy judges one library from the licenses it was found with, and from its Maven coordinates when it has them:
   1. an override for the coordinates replaces the licenses;
-  2. every license name becomes its canonical name, case-insensitively;
+  2. every license name becomes its canonical name;
   3. no known license left: `UNKNOWN`;
   4. any license allowed or hidden: `ALLOWED`, so a dual-licensed library passes on either license;
   5. otherwise `NOT_ALLOWED`.
 - The judgement gives the canonical license names, so the license files list one spelling per license.
 - `UNIDENTIFIED` (a file nobody could name) is not the policy's answer: a library without an identity never reaches the policy. The license scan assigns it.
-- The rules are those of the license plugins and of the prototype; the version ranges of overrides are parsed with `versions-api`, as the Maven plugin does.
+- The rules are the license plugins': overrides first, the last matching override in sorted key order wins, version ranges are parsed with `versions-api`, then synonyms, then the allowed and hidden lists.
+- One deliberate difference: license names are compared case-insensitively, as in the prototype; the plugins compare them exactly. Xray and POMs spell one license in several casings.
+- A license name on two `merges.txt` lines fails the plugins' build; the service keeps the first line and reports the other.
 
 **Part C: kept in memory, refreshed on a new commit**
 
