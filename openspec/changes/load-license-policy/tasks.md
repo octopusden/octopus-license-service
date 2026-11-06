@@ -1,34 +1,38 @@
 ## 1. The `license-policy-registry` module
 
-- [ ] 1.1 Create the module:
-  - [ ] 1.1.1 `settings.gradle.kts`: include `:license-policy-registry` with `projectDir = engine/policy-registry`.
-  - [ ] 1.1.2 `engine/policy-registry/build.gradle.kts`: `bitbucket-client` from `octopus-external-systems-client` and `versions-api`, versions pinned in `gradle.properties`; `feign-core` `compileOnly` at the client's version; JUnit for tests. No Spring, no `core`.
-  - [ ] 1.1.3 Confirm with `:license-policy-registry:dependencies --configuration runtimeClasspath`: no Spring, no `:core`.
-- [ ] 1.2 Write failing unit tests for `LicenseRegistryParser` (pure, sample registry files as strings):
-  - [ ] 1.2.1 Whitelist and hidden list: `|`-separated, trimmed, blank and `#` lines ignored.
-  - [ ] 1.2.2 No `licenses-whitelist.txt`, and an empty one: the load fails.
-  - [ ] 1.2.3 `merges.txt`: first name canonical; a name on two lines keeps the first line and is a problem.
-  - [ ] 1.2.4 Overrides, read as Java properties: single version; range; `|` in the value; empty value ignored and not a problem; key without three parts is a problem; range `[1.0,` is a problem; the other lines still apply; an escaped key (`\ `) reads as `Properties` reads it.
-  - [ ] 1.2.5 Texts, read as Java properties: `licenses/` entry with its file; `http`/`https` entry kept as a URL; entry pointing at a missing file is a problem; any other value is a problem.
-  - [ ] 1.2.6 `licensesWithoutText`: a whitelisted license with no entry; with an entry whose file is missing; with a URL entry is not listed; a hidden license with no text is not listed.
-- [ ] 1.3 Write failing unit tests for `LicensePolicy.judge`, one per spec scenario:
-  - [ ] 1.3.1 Override in range, outside the range, single version, several licenses, two matching entries give the greater key's, empty value keeps the found licenses, no coordinates means no override.
-  - [ ] 1.3.2 Canonical names: synonym, different casing, whitelist name not in `merges.txt` with another casing, unknown name kept.
-  - [ ] 1.3.3 Verdicts: no license, only `Unknown`/`unknown license`/blank, dual license with one allowed, hidden only, nothing allowed.
-  - [ ] 1.3.4 Judgement licenses are canonical, sorted and without unknown markers.
-  - [ ] 1.3.4a `text(license)`: registry file, URL, case-insensitive lookup on the canonical name, none.
-  - [ ] 1.3.5 Parity with the prototype: the five rows of the design's worked example.
-- [ ] 1.4 Implement, as separate units:
-  - [ ] 1.4.1 `model/` — `LicensePolicy`, `MavenCoordinates`, `Judgement`, `LicenseVerdict`, `LicenseText`, one per file.
-  - [ ] 1.4.2 `impl/parser/LicenseRegistryParser` — registry files to `LicensePolicy`; `internal`.
-  - [ ] 1.4.3 `impl/parser/OverrideRule` — group, artifact, parsed range, licenses; `internal`.
-- [ ] 1.5 Write failing tests for `BitbucketLicensePolicySource` against a stub HTTP server (JDK `HttpServer`), sample project and repository names:
-  - [ ] 1.5.1 Load: head commit, `licenses/` listing, every file; the policy carries the commit.
-  - [ ] 1.5.2 `headCommit()` makes one call and reads no file.
-  - [ ] 1.5.3 Head moves during a load: starts over; moves three times: fails.
-  - [ ] 1.5.4 `401`, `503` and a closed port: `LicenseRegistryUnavailableException`.
-- [ ] 1.6 Implement `LicensePolicySource` (`headCommit()`, `load()`), `LicenseRegistryUnavailableException` and `BitbucketLicensePolicySource(url, token, project, repository)`, reading the default branch.
-- [ ] 1.7 Confirm `:license-policy-registry:test`. <Fill in: counts.>
+- [x] 1.1 Create the module:
+  - [x] 1.1.1 `settings.gradle.kts`: include `:license-policy-registry` with `projectDir = engine/policy-registry`.
+  - [x] 1.1.2 `engine/policy-registry/build.gradle.kts`: `bitbucket-client` from `octopus-external-systems-client` and `versions-api`, versions pinned in `gradle.properties`; `feign-core` `compileOnly` at the client's version; JUnit for tests. No Spring, no `core`.
+  - [x] 1.1.3 Confirm with `:license-policy-registry:dependencies --configuration runtimeClasspath`: no Spring, no `:core`. Feign 12.2 and Jackson 2.14 come with the Bitbucket client `2.0.113`.
+- [x] 1.2 Write failing unit tests for `LicenseRegistryParser` (pure, sample registry files as strings):
+  - [x] 1.2.1 Whitelist and hidden list: `|`-separated, trimmed, blank and `#` lines ignored.
+  - [x] 1.2.2 No `licenses-whitelist.txt`, and an empty one: the load fails.
+  - [x] 1.2.3 `merges.txt`: first name canonical; a name on two lines keeps the first line and is a problem.
+  - [x] 1.2.4 Overrides, read as Java properties: single version; range; `|` in the value; empty value ignored and not a problem; key without three parts is a problem; range `[1.0,` is a problem; the other lines still apply; an escaped key (`\ `) reads as `Properties` reads it.
+  - [x] 1.2.5 Texts, read as Java properties: `licenses/` entry with its file; `http`/`https` entry kept as a URL; entry pointing at a missing file is a problem; any other value is a problem.
+  - [x] 1.2.6 `licensesWithoutText`: a whitelisted license with no entry; with an entry whose file is missing; with a URL entry is not listed; a hidden license with no text is not listed.
+- [x] 1.3 Write failing unit tests for `LicensePolicy.judge`, one per spec scenario:
+  - [x] 1.3.1 Override in range, outside the range, single version, several licenses, two matching entries give the greater key's, empty value keeps the found licenses, no coordinates means no override.
+  - [x] 1.3.2 Canonical names: synonym, different casing, whitelist name not in `merges.txt` with another casing, unknown name kept.
+  - [x] 1.3.3 Verdicts: no license, only `Unknown`/`unknown license`/blank, dual license with one allowed, hidden only, nothing allowed.
+  - [x] 1.3.4 Judgement licenses are canonical, sorted and without unknown markers.
+  - [x] 1.3.4a `text(license)`: registry file, URL, case-insensitive lookup on the canonical name, none.
+  - [x] 1.3.5 Parity with the prototype: the five rows of the design's worked example.
+  - [x] 1.3.5a (added on review) Writing 1.3.5 showed the prototype ignores case for `merges.txt` only: it calls `Borland` against hidden `BORLAND` not allowed. Four rows match the prototype; the fifth is the service's case-insensitive list match (D5). The design's Context and Goals now say so.
+  - [x] 1.3.6 (added on review) A library version `versions-api` cannot read is not overridden, rather than failing the judgement.
+- [x] 1.4 Implement, as separate units:
+  - [x] 1.4.1 `model/` — `LicensePolicy`, `MavenCoordinates`, `Judgement`, `LicenseVerdict`, `LicenseText`, one per file.
+  - [x] 1.4.2 `impl/parser/LicenseRegistryParser` — registry files to `LicensePolicy`. Public, not `internal`: the server's tests build policies through it from sample files, the same seam the module's tests use.
+  - [x] 1.4.3 `model/OverrideRule` — group, artifact, parsed range, licenses; `internal`. In `model/`, not `impl/parser/`: `LicensePolicy` applies it, and the model does not import from `impl`.
+  - [x] 1.4.4 (added on review) `exception/InvalidLicenseRegistryException` — a registry that cannot make a policy (no or empty whitelist), told apart from an unreachable one.
+- [x] 1.5 Write failing tests for `BitbucketLicensePolicySource` against a stub HTTP server (JDK `HttpServer`), sample project and repository names:
+  - [x] 1.5.1 Load: head commit, `licenses/` listing, every file; the policy carries the commit.
+  - [x] 1.5.2 `headCommit()` makes one call and reads no file.
+  - [x] 1.5.3 Head moves during a load: starts over; moves three times: fails.
+  - [x] 1.5.4 `401`, `503` and a closed port: `LicenseRegistryUnavailableException`. The `503` answers HTML, not Bitbucket's JSON, as a proxy in maintenance would.
+  - [x] 1.5.5 (added on review) A registry without a whitelist is `InvalidLicenseRegistryException`, not unavailable.
+- [x] 1.6 Implement `LicensePolicySource` (`headCommit()`, `load()`), `LicenseRegistryUnavailableException` and `BitbucketLicensePolicySource(url, token, project, repository)`, reading the default branch. The client's failures are `FeignException`, its own `BitbucketClientException`s, and `IllegalStateException` from its error decoder for any error it cannot name; all three are unavailable. A bearer token, as Bitbucket Server's personal access tokens use.
+- [x] 1.7 `:license-policy-registry:test`: 56 tests, 0 failures, 0 skipped (judge 16, overrides 9, texts 8, parser 10, worked example 5, Bitbucket source 8). detekt and ktlint clean. No infrastructure needed.
 
 ## 2. `server`: hold, refresh and use the policy
 

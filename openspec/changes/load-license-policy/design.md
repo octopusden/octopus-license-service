@@ -13,7 +13,7 @@
   - passes a library with a hidden license, or with any whitelisted license;
   - looks up each license's text in `licenses.properties` by its merged name, and downloads it from the registry or the URL.
   - Every name comparison is exact.
-- The prototype applies the same rules, but compares names case-insensitively.
+- The prototype applies the same rules, but looks synonyms up in `merges.txt` case-insensitively; it compares the whitelist and the hidden list exactly.
 
 ## Worked example
 
@@ -38,7 +38,7 @@ Loading also reports `MIT` as allowed with no text.
 
 **Goals:**
 - One module answers "what does the license registry allow, at which commit", reading only Bitbucket.
-- The verdict rules are pure and give the same answer as the license plugins and the prototype.
+- The verdict rules are pure and give the license plugins' answer, except where names differ only in case (Decision 5).
 - A report says which registry commit judged it.
 
 **Non-Goals:**
@@ -134,7 +134,7 @@ sealed interface LicenseText {
 4. Any canonical name in the whitelist or the hidden list: `ALLOWED`.
 5. Otherwise `NOT_ALLOWED`.
 
-- **A deliberate difference from the plugin:** every name lookup is case-insensitive (synonyms, whitelist, hidden list, texts), as in the prototype. Xray and POMs spell the same license in several casings; matching exactly would turn some into false `NOT_ALLOWED` verdicts. The cost: a name differing from an allowed one only in case passes, where the plugin would reject it.
+- **A deliberate difference from the plugin:** every name lookup is case-insensitive (synonyms, whitelist, hidden list, texts), going further than the prototype, which ignores case for `merges.txt` only. Xray and POMs spell the same license in several casings; matching exactly would turn some into false `NOT_ALLOWED` verdicts. The cost: a name differing from an allowed one only in case passes, where the plugin would reject it.
 - Texts: `text(license)` looks up the canonical name case-insensitively in `licenses.properties`. `licensesWithoutText` lists the allowed licenses, whitelist only, with no entry or with an entry skipped as a problem. A URL counts as a text; fetching it is the license files' job.
 - `licenses` in the judgement are the canonical names, sorted, so every report spells a license one way.
 
