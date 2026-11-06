@@ -11,6 +11,7 @@ Generates third-party license files for a component version from JFrog Xray and 
 | `license-service` | `server/` | Spring Boot service, docker image `ghcr.io/octopusden/license-service` |
 | `license-runner` | `runner/` | Command-line runner (`-all` jar) and its TeamCity metarunner, GitHub Packages |
 | `license-target-registry` | `engine/target-registry/` | Not published; part of the service. Resolves what a component version releases, from the components registry |
+| `license-policy-registry` | `engine/policy-registry/` | Not published; part of the service. Reads the license policy from the license registry and judges a library's licenses |
 
 Which module may depend on which, and how a request flows: [docs/architecture.md](docs/architecture.md).
 
@@ -20,7 +21,7 @@ A generation can take minutes, so the caller starts it, polls it and downloads t
 
 | Call | Answer |
 | --- | --- |
-| `POST /rest/api/1/license-reports` with `{"component", "version"}` | `202` with the report (status `RUNNING`) and its URL in `Location`; `400` for a blank component or version |
+| `POST /rest/api/1/license-reports` with `{"component", "version"}` | `202` with the report (status `RUNNING`) and its URL in `Location`; `400` for a blank component or version; `503` until the license registry has been read once after startup |
 | `GET /rest/api/1/license-reports/{id}` | the report: `RUNNING`, `DONE` (with the summary), `EXCLUDED` (with the reason) or `FAILED` (with the error); `404` for an unknown or expired id |
 | `GET /rest/api/1/license-reports/{id}/files` | the license files as one zip; `409` unless the report is `DONE` |
 

@@ -57,15 +57,16 @@
 
 ## 3. Documentation
 
-- [ ] 3.1 `docs/architecture.md` — the `engine/` license registry slot becomes `engine/policy-registry` (`:license-policy-registry`): solid in the diagram, Bitbucket client and `versions-api` in its table row; the request flow checks the policy before it registers a report and records its commit.
-- [ ] 3.2 `CLAUDE.md` — `policy-registry` in the `engine/` line of "Shape"; the license registry under "Reads".
-- [ ] 3.3 `README.md` — a `license-policy-registry` row next to `license-target-registry`.
+- [x] 3.1 `docs/architecture.md` — the `engine/` license registry slot becomes `engine/policy-registry` (`:license-policy-registry`): solid in the diagram, Bitbucket client and `versions-api` in its table row; the request flow checks the policy before it registers a report and records its commit.
+- [x] 3.2 `CLAUDE.md` — `policy-registry` in the `engine/` line of "Shape"; the license registry under "Reads".
+- [x] 3.3 `README.md` — a `license-policy-registry` row next to `license-target-registry`; the `503` of `POST` until the first load.
+- [x] 3.4 (added on review) The architecture page's "license rules" is now "license policy", the term the openspec and the code use.
 
 ## 4. Finalization
 
-- [ ] 4.1 `./gradlew build qualityCheck` green. <Fill in: counts.>
-- [ ] 4.2 Out of scope holds: no library is judged in a report; nothing writes license files; `UNIDENTIFIED` is not produced by the module.
-- [ ] 4.3 `engine/policy-registry/src` imports neither Spring nor `org.octopusden.octopus.license.core` (grep).
-- [ ] 4.4 No project, repository or real component name in the repository: fixtures use sample names.
-- [ ] 4.5 The design's risks hold as written; `TD-001` stays open.
+- [x] 4.1 `./gradlew build qualityCheck` green: 158 tests across all modules, 0 failures, 0 skipped; detekt and ktlint clean.
+- [x] 4.2 Out of scope holds: no library is judged in a report (`server` never calls `judge`); nothing writes license files; `LicenseVerdict` has no `UNIDENTIFIED`.
+- [x] 4.3 `engine/policy-registry/src` imports neither Spring nor `org.octopusden.octopus.license.core` (grep).
+- [x] 4.4 No project, repository or real component name in the repository: fixtures use `SAMPLE`, `sample-license-registry`, `org.example`; grep finds no internal host or project.
+- [x] 4.5 The design's risks hold as written; `TD-001` stays open.
 - [ ] 4.6 Before deploying, Spring Cloud Config and Vault hold the license registry settings for QA and Prod; without them the service does not start.
