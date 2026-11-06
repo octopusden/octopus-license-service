@@ -1,11 +1,13 @@
-package org.octopusden.octopus.license.service.policy
+package org.octopusden.octopus.license.service.health
 
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
-import org.octopusden.octopus.license.service.policy.LicensePolicyRefresherTest.Companion.REFRESH_INTERVAL
-import org.octopusden.octopus.license.service.policy.LicensePolicyRefresherTest.FakeLicensePolicySource
-import org.octopusden.octopus.license.service.policy.LicensePolicyRefresherTest.MutableClock
+import org.octopusden.octopus.license.service.state.policy.LicensePolicyHolder
+import org.octopusden.octopus.license.service.state.policy.LicensePolicyRefresher
+import org.octopusden.octopus.license.service.state.policy.LicensePolicyRefresherTest.Companion.REFRESH_INTERVAL
+import org.octopusden.octopus.license.service.state.policy.LicensePolicyRefresherTest.FakeLicensePolicySource
+import org.octopusden.octopus.license.service.state.policy.LicensePolicyRefresherTest.MutableClock
 import org.springframework.boot.health.contributor.Status
 
 /** Readiness follows the policy in memory, never Bitbucket itself (D7). */

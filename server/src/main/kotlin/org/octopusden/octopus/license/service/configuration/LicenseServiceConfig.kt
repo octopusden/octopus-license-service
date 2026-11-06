@@ -2,9 +2,9 @@ package org.octopusden.octopus.license.service.configuration
 
 import org.octopusden.octopus.license.policy.LicensePolicySource
 import org.octopusden.octopus.license.policy.impl.BitbucketLicensePolicySource
-import org.octopusden.octopus.license.service.policy.LicensePolicyHolder
-import org.octopusden.octopus.license.service.policy.LicensePolicyRefresher
-import org.octopusden.octopus.license.service.store.LicenseReportStore
+import org.octopusden.octopus.license.service.state.policy.LicensePolicyHolder
+import org.octopusden.octopus.license.service.state.policy.LicensePolicyRefresher
+import org.octopusden.octopus.license.service.state.report.LicenseReportStore
 import org.octopusden.octopus.license.target.LicenseTargetResolver
 import org.octopusden.octopus.license.target.impl.RegistryLicenseTargetResolver
 import org.springframework.context.annotation.Bean

@@ -1,4 +1,4 @@
-package org.octopusden.octopus.license.service.store
+package org.octopusden.octopus.license.service.state.report
 
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component

@@ -1,4 +1,4 @@
-package org.octopusden.octopus.license.service.policy
+package org.octopusden.octopus.license.service.state.policy
 
 import org.octopusden.octopus.license.policy.model.LicensePolicy
 import java.time.Instant

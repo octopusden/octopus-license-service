@@ -10,7 +10,7 @@ import org.octopusden.octopus.license.client.impl.LicenseServiceClientParameters
 import org.octopusden.octopus.license.core.dto.LicenseReportRequest
 import org.octopusden.octopus.license.core.exception.ServiceUnavailableException
 import org.octopusden.octopus.license.policy.LicensePolicySource
-import org.octopusden.octopus.license.service.policy.LicensePolicyRefresherTest.FakeLicensePolicySource
+import org.octopusden.octopus.license.service.state.policy.LicensePolicyRefresherTest.FakeLicensePolicySource
 import org.octopusden.octopus.license.target.LicenseTargetResolver
 import org.octopusden.octopus.license.target.model.ComponentVersion
 import org.octopusden.octopus.license.target.model.DistributionSpec

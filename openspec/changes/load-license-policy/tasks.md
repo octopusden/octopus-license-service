@@ -56,6 +56,13 @@
 - [x] 2.3a (added on review) `LicensePolicyHealthIndicatorTest`: readiness follows the policy in memory, never Bitbucket. Bitbucket going down after the first load leaves `licenseRegistry` UP on the loaded commit; down from the start leaves it DOWN.
 - [x] 2.4 (added on review) OKD's stand-wide `default.yml` uses `/actuator/health` as the startup probe, `/actuator/health/liveness` as liveness, and no readiness probe. Decided as components-registry-service does: probes enabled, the readiness group is `readinessState` and `licenseRegistry`, the liveness group stays `livenessState` only, so a Bitbucket outage never gets the pod restarted by liveness.
 
+## 2a. Server packages by role (added on review)
+
+- [x] 2a.1 Moves, no behaviour change: `service/` → `report/` (use case: service, generator, `impl/`); `store/` → `state/report/`; `policy/` → `state/policy/` (holder, refresher); `LicensePolicyHealthIndicator` → `health/`. `controller/` and `configuration/` stay. Tests follow the same packages.
+- [x] 2a.2 Contracts checked by import: `controller` imports only `report` and `core`; `state` never imports `report`; `health` imports only `state`; the generator imports only `core`, the policy and target models (Design 7a).
+- [x] 2a.3 (added on review) Aligning the docs showed Decision 2 claimed the adapter test covers the Bitbucket client on the server's classpath; it covers the module's (Feign 12.2, Jackson 2.14), while the server runs Feign 13.6 and Jackson 2.21. `state/policy/BitbucketOnServerClasspathTest` now loads a policy and reads an error through the client on the server's classpath.
+- [x] 2a.4 `:license-service:test`: 49 tests, 0 failures; detekt and ktlint clean.
+
 ## 3. Documentation
 
 - [x] 3.1 `docs/architecture.md` — the `engine/` license registry slot becomes `engine/policy-registry` (`:license-policy-registry`): solid in the diagram, Bitbucket client and `versions-api` in its table row; the request flow checks the policy before it registers a report and records its commit.
@@ -65,7 +72,7 @@
 
 ## 4. Finalization
 
-- [x] 4.1 `./gradlew build qualityCheck` green: 163 tests across all modules, 0 failures, 0 skipped; detekt and ktlint clean.
+- [x] 4.1 `./gradlew build qualityCheck` green: 165 tests across all modules, 0 failures, 0 skipped; detekt and ktlint clean.
 - [x] 4.2 Out of scope holds: no library is judged in a report (`server` never calls `judge`); nothing writes license files; `LicenseVerdict` has no `UNIDENTIFIED`.
 - [x] 4.3 `engine/policy-registry/src` imports neither Spring nor `org.octopusden.octopus.license.core` (grep).
 - [x] 4.4 No project, repository or real component name in the repository: fixtures use `SAMPLE`, `sample-license-registry`, `org.example`; grep finds no internal host or project.

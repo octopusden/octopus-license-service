@@ -81,7 +81,7 @@ It fills the `engine/` slot the architecture page reserves for the license regis
 - The adapter reads the files through the published `bitbucket-client` (`octopus-external-systems-client`): the default branch's head commit (`commits?limit=1`), the file list under `licenses/`, and each file's raw content.
 - The service image needs no `git` binary, no disk and no SSH key; a read-only token is enough.
 - Rejected: cloning with `git`, as the plugin does. It needs a writable disk and SSH or HTTPS Git credentials in the pod, for some 50 small files.
-- The client brings Jackson 2 and Feign 12, like the components registry client; same handling (Decision 5 of the license target change): `feign-core` is `compileOnly`, the adapter test covers the client on the server's classpath.
+- The client brings Jackson 2 and Feign 12, like the components registry client; same handling (Decision 5 of the license target change): `feign-core` is `compileOnly`. The module's adapter test runs the client on its own Feign 12 and Jackson 2.14; in the server it runs on Feign 13 and Jackson 2.21, which `BitbucketOnServerClasspathTest` covers with a load and an error.
 
 ### 3. One consistent commit per load
 
@@ -155,6 +155,14 @@ sealed interface LicenseText {
 - Probes are enabled, as in components-registry-service: the readiness group is `readinessState` and `licenseRegistry`, the liveness group `livenessState` only. A pod without a policy stays alive, answers `503` and gets no traffic; a Bitbucket outage never restarts it through liveness.
 - The stand-wide OKD startup probe reads the aggregate `/actuator/health`, which includes `licenseRegistry`. Pointing it at `/actuator/health/liveness` and adding a readiness probe belongs to the service's deployment values, later.
 
+### 7a. Where the server keeps the policy: `state/`
+
+- The holder and the refresher live in `state/policy/`, beside the report store in `state/report/`: `state/` is everything the server keeps in memory and the scheduled job that keeps it current.
+- The health indicator lives in `health/` and only reads `state/`.
+- The use case is `report/` (service and generator), the HTTP edge `controller/`. Dependencies point one way: `controller → report → state`, `health → state`; `state` never calls `report`.
+- No interface in front of the holder or the store: one implementation each, used as they are in tests.
+- The package table and its reasons are in `docs/architecture.md`, "Inside the server".
+
 ### 8. The generator receives the policy
 
 - `LicenseReportGenerator.generate(target: LicenseTarget, policy: LicensePolicy)`.
@@ -172,4 +180,4 @@ sealed interface LicenseText {
 - **Up to 15 minutes between a registry merge and the service using it.** Accepted: the commit in each summary says which policy judged it.
 - **Re-reading the head commit to get a consistent load.** A merge during a load costs a second load. Removed by `TD-001`.
 - **Case-insensitive names can allow what the plugin rejects.** Only when two spellings differ in case alone, which is the same license. Accepted.
-- **Two Feign and two Jackson versions on the server's classpath**, as with the components registry client. Accepted for the same reasons.
+- **The Bitbucket client runs on newer Feign and Jackson in the server than it is built for** (13 and 2.21 against 12 and 2.14), as the components registry client does. Accepted: a server test loads a policy through it on that classpath; a client upgrade is a version bump here.

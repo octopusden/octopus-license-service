@@ -69,15 +69,42 @@ TeamCity step (metarunner)
 
 Only `core` types cross the wire, in both directions.
 
-In the server:
+Errors become `{"error": {"code", "message"}}` in one `@RestControllerAdvice`.
+
+## Inside the server
+
+The server's packages are grouped by role, so a new piece has one obvious place:
+
+```
+org.octopusden.octopus.license.service
+├── controller/      HTTP only: LicenseReportController, advice/ExceptionInfoHandler
+├── report/          the use case: LicenseReportService, LicenseReportGenerator, and their impl/
+├── state/           what the server keeps in memory, and the jobs that keep it current
+│   ├── report/      LicenseReportStore and ExpiredReportEvictor: reports until their TTL ends
+│   └── policy/      LicensePolicyHolder and LicensePolicyRefresher: the current license policy
+├── health/          health indicators; they read state and change nothing
+└── configuration/   properties and wiring
+```
+
+| Package | May use | Never uses |
+| --- | --- | --- |
+| `controller` | `report.LicenseReportService`; only `core` types in and out | `state`, `engine/`, the generator |
+| `report`: the service | `state.report` (add, finish, find), `state.policy` (`current()`, read once per report), `engine/` `LicenseTargetResolver`, the generator | `controller`, `health` |
+| `report`: the generator | only what it is given: the license target and the policy; later the scan | `state`: a reload or an eviction never changes a running generation |
+| `state` | `engine/` models; its own `@Scheduled` job | `report`, `controller`, `health`: state never calls back into the use case |
+| `health` | `state`, read-only | anything that writes |
+| `configuration` | everything, to wire it | — |
+
+Dependencies point one way: `controller → report → state`, and `health → state`. Nothing hides `state` behind an interface: the store and the holder have one implementation each, and the tests use them as they are.
+
+What each part does on a request:
 
 - the controller only translates HTTP;
-- the service checks the request, takes the current license policy, resolves its license target, registers the report and runs the generation in the background;
-- the policy refresher loads the license policy in the background: every minute until the first load succeeds, then every 15 minutes it checks the registry's head commit and reloads only when it moved; a failed reload keeps the policy it has, and the `licenseRegistry` health shows which commit is loaded;
-- the store keeps reports in memory;
-- the generator produces the result.
-
-Errors become `{"error": {"code", "message"}}` in one `@RestControllerAdvice`.
+- the service checks the request, takes the current license policy, resolves the license target, registers the report and runs the generation in the background;
+- the generator produces the result from what it was given;
+- the report store keeps reports in memory until their TTL ends;
+- the policy refresher loads the license policy in the background: every minute until the first load succeeds, then every 15 minutes it checks the registry's head commit and reloads only when it moved; a failed reload keeps the policy it has;
+- the `licenseRegistry` health is down until a policy is loaded and up from then on, whatever Bitbucket does later. It is in the readiness group, not the liveness one: a pod without a policy stays alive, answers `503` and gets no traffic.
 
 ## Boundaries
 

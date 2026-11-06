@@ -2,7 +2,7 @@ package org.octopusden.octopus.license.service.controller
 
 import org.octopusden.octopus.license.core.dto.LicenseReport
 import org.octopusden.octopus.license.core.dto.LicenseReportRequest
-import org.octopusden.octopus.license.service.service.LicenseReportService
+import org.octopusden.octopus.license.service.report.LicenseReportService
 import org.springframework.http.ContentDisposition
 import org.springframework.http.HttpHeaders
 import org.springframework.http.ResponseEntity
