@@ -7,9 +7,18 @@ management:
     web:
       exposure:
         include: health,info,prometheus
+  endpoint:
+    health:
+      # The license registry's commit, its problems and licenses without text; nothing secret.
+      show-details: always
 
 license-service:
   report-ttl: PT1H
   generation-threads: 4
   # components-registry-url and exclusions come from Spring Cloud Config, where the component
   # names stay. Without components-registry-url the service does not start.
+  # license-registry: bitbucket-url, token, project and repository come from Spring Cloud Config
+  # and Vault; without any of them the service does not start.
+  license-registry:
+    refresh-interval: PT15M
+    retry-interval: PT1M

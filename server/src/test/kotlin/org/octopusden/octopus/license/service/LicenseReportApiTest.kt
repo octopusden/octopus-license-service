@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
@@ -20,6 +21,12 @@ import org.octopusden.octopus.license.core.exception.InvalidRequestException
 import org.octopusden.octopus.license.core.exception.LicenseFilesNotAvailableException
 import org.octopusden.octopus.license.core.exception.NotFoundException
 import org.octopusden.octopus.license.core.exception.ServiceUnavailableException
+import org.octopusden.octopus.license.policy.LicensePolicySource
+import org.octopusden.octopus.license.policy.model.LicensePolicy
+import org.octopusden.octopus.license.service.policy.LicensePolicyHolder
+import org.octopusden.octopus.license.service.policy.LicensePolicyRefresherTest.Companion.samplePolicy
+import org.octopusden.octopus.license.service.policy.LicensePolicyRefresherTest.FakeLicensePolicySource
+import org.octopusden.octopus.license.service.policy.LoadedPolicy
 import org.octopusden.octopus.license.service.service.GeneratedReport
 import org.octopusden.octopus.license.service.service.LicenseReportGenerator
 import org.octopusden.octopus.license.service.service.impl.EmptyLicenseReportGenerator
@@ -52,7 +59,13 @@ import java.util.zip.ZipInputStream
 
 @SpringBootTest(
     webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
-    properties = ["license-service.components-registry-url=http://localhost:1"],
+    properties = [
+        "license-service.components-registry-url=http://localhost:1",
+        "license-service.license-registry.bitbucket-url=http://localhost:1",
+        "license-service.license-registry.token=token",
+        "license-service.license-registry.project=SAMPLE",
+        "license-service.license-registry.repository=sample-license-registry",
+    ],
 )
 class LicenseReportApiTest {
     @LocalServerPort
@@ -64,6 +77,9 @@ class LicenseReportApiTest {
     @Autowired
     private lateinit var generator: ControllableGenerator
 
+    @Autowired
+    private lateinit var policyHolder: LicensePolicyHolder
+
     private val client: LicenseServiceClient by lazy {
         ClassicLicenseServiceClient(
             object : LicenseServiceClientParametersProvider {
@@ -72,8 +88,51 @@ class LicenseReportApiTest {
         )
     }
 
+    @BeforeEach
+    fun awaitPolicyLoaded() {
+        val deadline = Instant.now().plus(AWAIT_TIMEOUT)
+        while (policyHolder.current() == null && Instant.now().isBefore(deadline)) {
+            TimeUnit.MILLISECONDS.sleep(POLL_INTERVAL_MS)
+        }
+        requireNotNull(policyHolder.current()) { "the license policy did not load within $AWAIT_TIMEOUT" }
+    }
+
     @AfterEach
     fun releaseSlowGenerations() = generator.release()
+
+    @Test
+    @DisplayName("SYS-007: the summary records the license registry commit the report was judged with")
+    fun summaryRecordsRegistryCommit() {
+        val done = awaitFinished(client.startReport(LicenseReportRequest(COMPONENT, VERSION)).id)
+
+        assertEquals(REGISTRY_COMMIT, requireNotNull(done.summary).inputs.licenseRegistryCommit)
+    }
+
+    @Test
+    @DisplayName("D7: a reload during a generation does not change the commit that generation records")
+    fun reloadDuringGeneration() {
+        val loaded = requireNotNull(policyHolder.current())
+        val started = client.startReport(LicenseReportRequest(SLOW_COMPONENT, VERSION))
+        try {
+            policyHolder.replace(LoadedPolicy(samplePolicy("newer-commit"), Instant.now()))
+            generator.release()
+
+            assertEquals(REGISTRY_COMMIT, requireNotNull(awaitFinished(started.id).summary).inputs.licenseRegistryCommit)
+        } finally {
+            policyHolder.replace(loaded)
+        }
+    }
+
+    @Test
+    @DisplayName("D7: the health details show the loaded commit, licenses without text and problems")
+    fun healthShowsPolicy() {
+        val response = send(HttpRequest.newBuilder(URI("http://localhost:$port/actuator/health/licenseRegistry")).GET())
+
+        assertEquals(HTTP_OK, response.statusCode(), response.body())
+        assertTrue(response.body().contains(""""commit":"$REGISTRY_COMMIT""""), response.body())
+        assertTrue(response.body().contains(""""licensesWithoutText":["Apache-2.0","MIT"]"""), response.body())
+        assertTrue(response.body().contains(""""problems":[]"""), response.body())
+    }
 
     @Test
     @DisplayName("the generation receives the license target the registry resolved for the version")
@@ -310,12 +369,15 @@ class LicenseReportApiTest {
             slowGate = CountDownLatch(1)
         }
 
-        override fun generate(target: LicenseTarget): GeneratedReport {
+        override fun generate(
+            target: LicenseTarget,
+            policy: LicensePolicy,
+        ): GeneratedReport {
             targets += target
             return when (target.componentVersion.component) {
-                SLOW_COMPONENT -> slowGate.await(AWAIT_TIMEOUT.seconds, TimeUnit.SECONDS).let { delegate.generate(target) }
+                SLOW_COMPONENT -> slowGate.await(AWAIT_TIMEOUT.seconds, TimeUnit.SECONDS).let { delegate.generate(target, policy) }
                 BROKEN_COMPONENT -> error("Xray is unreachable")
-                else -> delegate.generate(target)
+                else -> delegate.generate(target, policy)
             }
         }
     }
@@ -352,6 +414,10 @@ class LicenseReportApiTest {
         @Bean
         @Primary
         fun fakeTargetResolver(): LicenseTargetResolver = FakeTargetResolver()
+
+        @Bean
+        @Primary
+        fun fakeLicensePolicySource(): LicensePolicySource = FakeLicensePolicySource(REGISTRY_COMMIT)
     }
 
     private companion object {
@@ -363,6 +429,7 @@ class LicenseReportApiTest {
         const val UNKNOWN_COMPONENT = "no-such-component"
         const val REGISTRY_DOWN_COMPONENT = "registry-down-component"
         const val VERSION = "1.2.3"
+        const val REGISTRY_COMMIT = "a1b2c3d"
         const val UNKNOWN_ID = "00000000-0000-0000-0000-000000000000"
         const val HTTP_OK = 200
         const val HTTP_ACCEPTED = 202
