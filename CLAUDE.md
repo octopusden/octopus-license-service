@@ -4,12 +4,12 @@ Generates the third-party license files of a component version: the libraries in
 
 ## Role in the ecosystem
 - Called by: TeamCity build, RC and RELEASE templates through the `license-runner` metarunner; later the components management portal through `client`
-- Reads (as later features land): components registry, JFrog Xray, Artifactory build-info, the license registry
+- Reads: the components registry; as later features land, JFrog Xray, Artifactory build-info, the license registry
 - Config: Spring Cloud Config with Vault; deployed to OKD QA and Prod from TeamCity
 
 ## Shape
 - Kotlin, Gradle, JDK 25, Spring Boot 4
-- `core` (DTOs, no dependencies), `client` (Feign), `server` (`:license-service`), `runner` (`:license-runner`, Clikt)
+- `core` (DTOs, no dependencies), `client` (Feign), `server` (`:license-service`), `runner` (`:license-runner`, Clikt), `target-registry` (`:license-target-registry`, components registry only)
 
 ## Working here
 - Module rules and request flow: [docs/architecture.md](docs/architecture.md)

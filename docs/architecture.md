@@ -10,6 +10,8 @@ flowchart TD
     portal["portal (another repository, later)"] -.-> client
     client --> core
     server --> core
+    server --> target["license-target-registry"]
+    target --> crs["components registry client (published)"]
     server -.-> scan["scan (later)"]
     server -.-> ext["external system clients (later)"]
 ```
@@ -21,7 +23,8 @@ An arrow means "depends on". Dashed parts do not exist yet.
 | `core` | The wire contract: request, report, summary, error envelope, exceptions | nothing | anything |
 | `client` | The Feign client for the API | `core` | `server` |
 | `runner` | The command line that starts a report, waits for it and writes the files | `client` | `server` |
-| `server` | The Spring Boot service | `core`, later `scan` and the external system clients | `client`, `runner` |
+| `server` | The Spring Boot service | `core`, `license-target-registry`, later `scan` and the external system clients | `client`, `runner` |
+| `license-target-registry` | What a component version releases, or why it is excluded, from the components registry | the components registry client, `versions-api` | `core`, `server`, Spring, any other system |
 | `scan` (later) | The license scan algorithm | nothing | Spring, HTTP clients, `core` |
 
 Why each rule:
@@ -29,6 +32,7 @@ Why each rule:
 - **`core` depends on nothing**, because every caller imports it: whatever it depends on, every caller pulls in.
 - **`client` and `runner` never see `server`.** A caller needs the HTTP contract, not Spring Boot and Tomcat. The runner talks to the service over HTTP like any other caller.
 - **`server` never sees `client` or `runner`.** The service does not call itself and knows nothing about who calls it.
+- **`license-target-registry` reads the components registry and nothing else.** Its answer is "what the registry declares", so it never needs Artifactory or Xray, and the scan builds on it instead of asking the registry again. It never imports `core` or Spring, for the same reasons as `scan`.
 - **`scan` stays pure.** Data goes in and a result comes out. That keeps it testable without mocks, the way `component-validation` is in octopus-components-registry-service.
 
 Gradle enforces the dependency rules: a module cannot import what its build file does not declare. This page holds the reasons.
@@ -38,10 +42,12 @@ Gradle enforces the dependency rules: a module cannot import what its build file
 ```
 TeamCity step (metarunner)
   runner ──client── POST /rest/api/1/license-reports ──► controller → service
+                                                           ├─ license target, from the components registry
+                                                           │    unknown → 404, unreachable → 503, nothing stored
+                                                           │    excluded → store: report EXCLUDED, done
                                                            ├─ store: report RUNNING
-                                                           └─ generator, on a background thread
-                                                                └─ later: components registry, Xray,
-                                                                   Artifactory, license registry
+                                                           └─ generator, on a background thread, with the target
+                                                                └─ later: Xray, Artifactory, license registry
   runner ──client── GET …/{id} until DONE, EXCLUDED or FAILED
   runner ──client── GET …/{id}/files ──► zip
   runner writes license-report.json and the zip to --output-dir
@@ -52,7 +58,7 @@ Only `core` types cross the wire, in both directions.
 In the server:
 
 - the controller only translates HTTP;
-- the service checks the request, registers the report and runs the generation in the background;
+- the service checks the request, resolves its license target, registers the report and runs the generation in the background;
 - the store keeps reports in memory;
 - the generator produces the result.
 

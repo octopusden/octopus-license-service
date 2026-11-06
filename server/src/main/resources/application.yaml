@@ -11,3 +11,17 @@ management:
 license-service:
   report-ttl: PT1H
   generation-threads: 4
+  # components-registry-url comes from Spring Cloud Config; without it the service does not start.
+  # Documentation components whose names do not start with doc_ or doc-, which are excluded by rule.
+  exclusions:
+    - { component: OpenwayProprietaryBusinessSpecificDataFormat, reason: Documentation component }
+    - { component: DeviceHost2Host, reason: Documentation component }
+    - { component: UFX_Host_to_Host_Interchange, reason: Documentation component }
+    - { component: UFX_Host_to_Host_Interchange_Fleet_Data, reason: Documentation component }
+    - { component: AffiliatedFormat, reason: Documentation component }
+    - { component: Fleet_ACQ_Data_Exchange, reason: Documentation component }
+    - { component: Stoplists_Exchange_File_Format, reason: Documentation component }
+    - { component: Industry_Specific_Addenda_Format, reason: Documentation component }
+    - { component: OpenWay_POS_ISO_Protocol, reason: Documentation component }
+    - { component: H2H_ISO_Protocol, reason: Documentation component }
+    - { component: cards_manuals, reason: Documentation component }

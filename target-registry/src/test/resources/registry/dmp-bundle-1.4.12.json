@@ -1,0 +1,120 @@
+{
+  "id": "dmp-bundle",
+  "name": "DMP Bundle",
+  "componentOwner": "owner",
+  "buildSystem": "GRADLE",
+  "vcsSettings": {
+    "versionControlSystemRoots": [
+      {
+        "name": "main",
+        "vcsPath": "ssh://git@vcs.example/dmp/dmp-bundle.git",
+        "type": "GIT",
+        "tag": "dmp-bundle-1.4.12",
+        "branch": "master"
+      }
+    ],
+    "externalRegistry": null
+  },
+  "jiraComponentVersion": {
+    "name": "dmp-bundle",
+    "version": "1.4.12",
+    "component": {
+      "projectKey": "DMP",
+      "displayName": "DMP Bundle",
+      "componentVersionFormat": {
+        "majorVersionFormat": "$major.$minor",
+        "releaseVersionFormat": "$major.$minor.$service",
+        "buildVersionFormat": "$major.$minor.$service",
+        "lineVersionFormat": "$major.$minor",
+        "hotfixVersionFormat": "$major.$minor.$service-$fix"
+      },
+      "componentInfo": {
+        "versionPrefix": "dmp-bundle",
+        "versionFormat": "$versionPrefix-$baseVersionFormat"
+      },
+      "technical": false
+    }
+  },
+  "detailedComponentVersion": {
+    "component": "DMP Bundle",
+    "minorVersion": {
+      "type": "MINOR",
+      "version": "1.4",
+      "jiraVersion": "dmp-bundle-1.4"
+    },
+    "lineVersion": {
+      "type": "LINE",
+      "version": "1.4",
+      "jiraVersion": "dmp-bundle-1.4"
+    },
+    "buildVersion": {
+      "type": "BUILD",
+      "version": "1.4.12-0034",
+      "jiraVersion": "dmp-bundle-1.4.12"
+    },
+    "rcVersion": {
+      "type": "RC",
+      "version": "1.4.12_RC",
+      "jiraVersion": "dmp-bundle-1.4.12_RC"
+    },
+    "releaseVersion": {
+      "type": "RELEASE",
+      "version": "1.4.12",
+      "jiraVersion": "dmp-bundle-1.4.12"
+    }
+  },
+  "deprecated": false,
+  "buildFilePath": null,
+  "system": [
+    "CLASSIC"
+  ],
+  "clientCode": "",
+  "releasesInDefaultBranch": true,
+  "solution": true,
+  "parentComponent": null,
+  "securityChampion": "owner",
+  "releaseManager": "owner",
+  "distribution": {
+    "explicit": true,
+    "external": true,
+    "GAV": "org.example.dmp:dmp-bundle:zip,org.example.dmp:dmp-bundle-config:yaml",
+    "securityGroups": {
+      "read": [
+        "Example Group"
+      ]
+    },
+    "docker": "dmp/dmp-bundle"
+  },
+  "archived": false,
+  "testComponent": false,
+  "doc": null,
+  "escrow": {
+    "buildTask": null,
+    "providedDependencies": [],
+    "diskSpaceRequirement": null,
+    "additionalSources": [],
+    "isReusable": true,
+    "generation": "UNSUPPORTED"
+  },
+  "copyright": null,
+  "labels": [],
+  "buildParameters": {
+    "javaVersion": "17",
+    "mavenVersion": "3.6.3",
+    "gradleVersion": "LATEST",
+    "requiredProject": false,
+    "projectVersion": null,
+    "systemProperties": null,
+    "buildTasks": null,
+    "tools": [
+      {
+        "name": "BuildEnv",
+        "escrowEnvironmentVariable": "BUILD_ENV",
+        "sourceLocation": "$env.BUILD_ENV",
+        "targetLocation": "tools/BUILD_ENV",
+        "installScript": null
+      }
+    ],
+    "buildTools": []
+  }
+}
