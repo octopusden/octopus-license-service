@@ -52,7 +52,8 @@
   - [x] 2.2.6 `LicenseReportGenerator.generate(target, policy)`; `EmptyLicenseReportGenerator` records `policy.commit`.
   - [x] 2.2.7 `application.yaml` — interval defaults only; `bootstrap-dev.yml` — the registry settings from `BITBUCKET_URL`, `BITBUCKET_TOKEN`, `LICENSE_REGISTRY_PROJECT`, `LICENSE_REGISTRY_REPOSITORY`.
   - [x] 2.2.8 (added on review) The refresher ticks every retry interval and skips a tick until the refresh interval has passed since its last check, so one `@Scheduled` method serves both intervals; tested with a hand-moved `Clock`.
-- [x] 2.3 `:license-service:test`: 45 tests, 0 failures, 0 skipped (API 23, not loaded 3, config 8, refresher 6, store 5).
+- [x] 2.3 `:license-service:test`: 47 tests, 0 failures, 0 skipped (API 23, not loaded 3, config 8, refresher 6, health 2, store 5).
+- [x] 2.3a (added on review) `LicensePolicyHealthIndicatorTest`: readiness follows the policy in memory, never Bitbucket. Bitbucket going down after the first load leaves `licenseRegistry` UP on the loaded commit; down from the start leaves it DOWN.
 - [x] 2.4 (added on review) OKD's stand-wide `default.yml` uses `/actuator/health` as the startup probe, `/actuator/health/liveness` as liveness, and no readiness probe. Decided as components-registry-service does: probes enabled, the readiness group is `readinessState` and `licenseRegistry`, the liveness group stays `livenessState` only, so a Bitbucket outage never gets the pod restarted by liveness.
 
 ## 3. Documentation
@@ -64,7 +65,7 @@
 
 ## 4. Finalization
 
-- [x] 4.1 `./gradlew build qualityCheck` green: 161 tests across all modules, 0 failures, 0 skipped; detekt and ktlint clean.
+- [x] 4.1 `./gradlew build qualityCheck` green: 163 tests across all modules, 0 failures, 0 skipped; detekt and ktlint clean.
 - [x] 4.2 Out of scope holds: no library is judged in a report (`server` never calls `judge`); nothing writes license files; `LicenseVerdict` has no `UNIDENTIFIED`.
 - [x] 4.3 `engine/policy-registry/src` imports neither Spring nor `org.octopusden.octopus.license.core` (grep).
 - [x] 4.4 No project, repository or real component name in the repository: fixtures use `SAMPLE`, `sample-license-registry`, `org.example`; grep finds no internal host or project.
