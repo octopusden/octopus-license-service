@@ -49,23 +49,27 @@ flowchart TD
     runner["license-runner"] --> client
     client --> core
     server["license-service"] --> core
-    server --> target["license-target-registry (new)"]
+    subgraph engine["engine/"]
+        target["license-target-registry (new)"]
+    end
+    server --> target
     target --> crs["components-registry-service-client (published)"]
     target --> versions["versions-api (published)"]
 ```
 
 | Module | Owns | May depend on | Must never depend on |
 | --- | --- | --- | --- |
-| `license-target-registry` | The license target model, the exclusion rules, the components registry adapter | components registry client, `versions-api` | `core`, `server`, Spring |
+| `engine/target-registry` (`:license-target-registry`) | The license target model, the exclusion rules, the components registry adapter | components registry client, `versions-api` | `core`, `server`, Spring |
 
 ## Decisions
 
 ### 1. A module of its own, reading only the components registry
 
-- `target-registry/` (project `:license-target-registry`) owns resolving a component version into a license target or an exclusion.
+- `engine/target-registry/` (project `:license-target-registry`) owns resolving a component version into a license target or an exclusion.
 - It never imports `core`: the target is richer than anything on the wire, and a wire change must not ripple into it.
 - It never imports Spring: `server` builds it from configuration, the way it builds the store.
 - Its only I/O is the components registry. Release management, Artifactory and Xray stay out, so the module stays small and its contract stays "what the registry declares".
+- It sits under `engine/`, the folder for the modules that produce a report. The license registry and the Xray/Artifactory scan join it later, each its own Gradle project reading only its own systems.
 
 ### 2. Pure description, thin adapter
 

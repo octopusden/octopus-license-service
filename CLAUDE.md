@@ -9,7 +9,8 @@ Generates the third-party license files of a component version: the libraries in
 
 ## Shape
 - Kotlin, Gradle, JDK 25, Spring Boot 4
-- `core` (DTOs, no dependencies), `client` (Feign), `server` (`:license-service`), `runner` (`:license-runner`, Clikt), `target-registry` (`:license-target-registry`, components registry only)
+- `core` (DTOs, no dependencies), `client` (Feign), `server` (`:license-service`), `runner` (`:license-runner`, Clikt)
+- `engine/`: the modules that produce a report, one per system read — `target-registry` (`:license-target-registry`, components registry only); later the license registry and the Xray/Artifactory scan
 
 ## Working here
 - Module rules and request flow: [docs/architecture.md](docs/architecture.md)

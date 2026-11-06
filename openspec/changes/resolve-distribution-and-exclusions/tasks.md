@@ -1,8 +1,8 @@
 ## 1. The `license-target-registry` module
 
 - [x] 1.1 Create the module:
-  - [x] 1.1.1 `settings.gradle.kts`: include `:license-target-registry` with `projectDir = target-registry`.
-  - [x] 1.1.2 `target-registry/build.gradle.kts`: `components-registry-service-client` `3.2.0` and `versions-api` `2.0.14`, versions pinned in `gradle.properties`; JUnit for tests. No Spring, no `core`.
+  - [x] 1.1.1 `settings.gradle.kts`: include `:license-target-registry` with `projectDir = engine/target-registry`.
+  - [x] 1.1.2 `engine/target-registry/build.gradle.kts`: `components-registry-service-client` `3.2.0` and `versions-api` `2.0.14`, versions pinned in `gradle.properties`; JUnit for tests. No Spring, no `core`.
   - [x] 1.1.3 Confirmed with `:license-target-registry:dependencies --configuration runtimeClasspath`: no Spring, no `:core`; Jackson 2.16 and Feign 12.2 come with the registry client.
   - [x] 1.1.4 (added on review) `feign-core` `12.2` is `compileOnly`, pinned as `components-registry-feign.version`: the resolver needs `FeignException` to tell an unreachable registry from other failures, and the client already brings Feign at runtime, so declaring it there would mix two Feign versions in production.
 - [x] 1.2 Write failing unit tests for `LicenseTargetDescriber` and its parts (pure, no HTTP):
@@ -29,6 +29,7 @@
 - [x] 1.5 Implement `LicenseTargetResolver`, `ComponentVersionNotFoundException`, `ComponentsRegistryUnavailableException` and `RegistryLicenseTargetResolver(registryUrl, exclusions)`. A `FeignException` with status `>= 500`, or `-1` (no answer at all), is unavailable; any other is rethrown.
 - [x] 1.5a (added on review) Packages by role, so a reader sees what each file is for: `LicenseTargetResolver` and its `exception/` at the root as the public entry; `model/` for what it answers with; `impl/RegistryLicenseTargetResolver` as the only I/O; `impl/describer/` for the pure logic the adapter pushes registry facts into (`LicenseTargetDescriber`, `ExclusionRules`, `DistributionParser`, `RegistryComponent`, `RegistryArtifactPattern`). Tests follow the same packages.
 - [x] 1.6 `:license-target-registry:test`: 43 tests, 0 failures, 0 skipped (ExclusionRules 16, DistributionParser 16, LicenseTargetDescriber 6, RegistryLicenseTargetResolver 5). No infrastructure needed.
+- [x] 1.7 (added on review) The module moved to `engine/target-registry`: `engine/` groups the modules that produce a report, with the license registry and the Xray/Artifactory scan to follow. A folder, not one module, so each part keeps its own build file and reaches only its own systems. Project name `:license-target-registry` unchanged.
 
 ## 2. `core` and `client`: service unavailable
 
@@ -60,12 +61,13 @@
 
 - [x] 4.1 `docs/architecture.md` — the module in the diagram and the table, its rule and why; the request flow resolves the target before the background step.
 - [x] 4.2 `CLAUDE.md` — the module in "Shape"; the components registry under "Reads".
+- [x] 4.3 (added on review) `docs/architecture.md` and `CLAUDE.md` describe `engine/`: what it holds now and later, and why each part is its own module.
 
 ## 5. Finalization
 
 - [x] 5.1 `./gradlew build qualityCheck` green: 85 tests across all modules, 0 failures, 0 skipped; detekt and ktlint clean.
 - [x] 5.2 Out of scope holds: no Artifactory, Xray or release management call (grep finds only two KDoc mentions); `DEB`/`RPM` have no field to be read through; nothing is cached.
-- [x] 5.3 `target-registry/src` imports neither Spring nor `org.octopusden.octopus.license.core` (grep: none).
+- [x] 5.3 `engine/target-registry/src` imports neither Spring nor `org.octopusden.octopus.license.core` (grep: none).
 - [x] 5.4 The design's risks hold as written.
 - [x] 5.5 The runner needs no change: a start failure becomes `RunOutcome.Unavailable` with the server's message, and an `EXCLUDED` report goes through the existing "finished without download" path, both already tested.
 - [ ] 5.6 (added on review) Before deploying, Spring Cloud Config must hold `license-service.components-registry-url` for QA and Prod; without it the service does not start (Decision 9).
