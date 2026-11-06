@@ -80,6 +80,21 @@ class LicensePolicyNotLoadedApiTest {
         assertTrue(response.body().contains(""""status":"DOWN""""), response.body())
     }
 
+    @Test
+    @DisplayName("D7: before the first load the pod is alive but not ready, so OKD keeps it and sends it no traffic")
+    fun aliveButNotReadyBeforeFirstLoad() {
+        assertEquals(HTTP_SERVICE_UNAVAILABLE, status("/actuator/health/readiness"))
+        assertEquals(HTTP_OK, status("/actuator/health/liveness"))
+    }
+
+    private fun status(path: String) =
+        HttpClient
+            .newHttpClient()
+            .send(
+                HttpRequest.newBuilder(URI("http://localhost:$port$path")).GET().build(),
+                HttpResponse.BodyHandlers.ofString(),
+            ).statusCode()
+
     @TestConfiguration
     class RegistryDownConfig {
         @Bean
@@ -106,6 +121,7 @@ class LicensePolicyNotLoadedApiTest {
     }
 
     private companion object {
+        const val HTTP_OK = 200
         const val HTTP_SERVICE_UNAVAILABLE = 503
     }
 }

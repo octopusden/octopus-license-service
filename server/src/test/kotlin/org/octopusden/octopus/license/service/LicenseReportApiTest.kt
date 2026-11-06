@@ -296,7 +296,7 @@ class LicenseReportApiTest {
     }
 
     @ParameterizedTest(name = "{0}")
-    @ValueSource(strings = ["/actuator/health", "/actuator/prometheus"])
+    @ValueSource(strings = ["/actuator/health", "/actuator/health/liveness", "/actuator/health/readiness", "/actuator/prometheus"])
     @DisplayName("the OKD probes and the metrics scrape answer 200 without credentials")
     fun operationalEndpointsAreOpen(path: String) {
         val response = send(HttpRequest.newBuilder(URI("http://localhost:$port$path")).GET())

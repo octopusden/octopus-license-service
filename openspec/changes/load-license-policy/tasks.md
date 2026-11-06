@@ -41,7 +41,7 @@
   - [x] 2.1.2 API: before the first load, `POST` answers `503` and the client raises `ServiceUnavailableException`; no report is stored.
   - [x] 2.1.3 API: after a load at `a1b2c3d`, a finished report's `licenseRegistryCommit` is `a1b2c3d`.
   - [x] 2.1.4 A reload between start and generation does not change the commit the generation records.
-  - [ ] 2.1.5 Readiness: down while the holder is empty, up after; details show commit, load time, licenses without text and problems. The `licenseRegistry` health indicator is down before the first load and shows the details after it (tested); it is not yet in a readiness group, see 2.4.
+  - [x] 2.1.5 Readiness: down while the holder is empty, up after; details show commit, load time, licenses without text and problems. Before the first load `/actuator/health/readiness` answers `503` and `/actuator/health/liveness` `200`; after it both answer `200`.
   - [x] 2.1.6 `LicenseServiceConfigTest`: each missing registry setting fails the context, naming the property; defaults for the intervals.
 - [x] 2.2 Implement:
   - [x] 2.2.1 `LicenseServiceProperties.licenseRegistry` — URL, token, project, repository (nullable so their absence is named), refresh and retry intervals.
@@ -52,8 +52,8 @@
   - [x] 2.2.6 `LicenseReportGenerator.generate(target, policy)`; `EmptyLicenseReportGenerator` records `policy.commit`.
   - [x] 2.2.7 `application.yaml` — interval defaults only; `bootstrap-dev.yml` — the registry settings from `BITBUCKET_URL`, `BITBUCKET_TOKEN`, `LICENSE_REGISTRY_PROJECT`, `LICENSE_REGISTRY_REPOSITORY`.
   - [x] 2.2.8 (added on review) The refresher ticks every retry interval and skips a tick until the refresh interval has passed since its last check, so one `@Scheduled` method serves both intervals; tested with a hand-moved `Clock`.
-- [x] 2.3 `:license-service:test`: 42 tests, 0 failures, 0 skipped (API 21, not loaded 2, config 8, refresher 6, store 5).
-- [ ] 2.4 (added on review) OKD's stand-wide `default.yml` uses `/actuator/health` as the startup probe, `/actuator/health/liveness` as liveness, and no readiness probe. The indicator is part of the aggregate `/actuator/health`, so until the first load the startup probe fails, which restarts the pod instead of keeping it unready. Decide: keep it there, or move it into a readiness group with a readiness probe in the service's deployment values.
+- [x] 2.3 `:license-service:test`: 45 tests, 0 failures, 0 skipped (API 23, not loaded 3, config 8, refresher 6, store 5).
+- [x] 2.4 (added on review) OKD's stand-wide `default.yml` uses `/actuator/health` as the startup probe, `/actuator/health/liveness` as liveness, and no readiness probe. Decided as components-registry-service does: probes enabled, the readiness group is `readinessState` and `licenseRegistry`, the liveness group stays `livenessState` only, so a Bitbucket outage never gets the pod restarted by liveness.
 
 ## 3. Documentation
 
@@ -64,9 +64,10 @@
 
 ## 4. Finalization
 
-- [x] 4.1 `./gradlew build qualityCheck` green: 158 tests across all modules, 0 failures, 0 skipped; detekt and ktlint clean.
+- [x] 4.1 `./gradlew build qualityCheck` green: 161 tests across all modules, 0 failures, 0 skipped; detekt and ktlint clean.
 - [x] 4.2 Out of scope holds: no library is judged in a report (`server` never calls `judge`); nothing writes license files; `LicenseVerdict` has no `UNIDENTIFIED`.
 - [x] 4.3 `engine/policy-registry/src` imports neither Spring nor `org.octopusden.octopus.license.core` (grep).
 - [x] 4.4 No project, repository or real component name in the repository: fixtures use `SAMPLE`, `sample-license-registry`, `org.example`; grep finds no internal host or project.
 - [x] 4.5 The design's risks hold as written; `TD-001` stays open.
+- [ ] 4.7 (added on review) Later, in the service's deployment values: startup probe on `/actuator/health/liveness` and a readiness probe on `/actuator/health/readiness`, as components-registry-service has. Until then the stand-wide startup probe reads the aggregate `/actuator/health`, which includes `licenseRegistry`, so a Bitbucket outage at deploy keeps a new pod from starting. Not part of this change.
 - [ ] 4.6 Before deploying, Spring Cloud Config and Vault hold the license registry settings for QA and Prod; without them the service does not start.

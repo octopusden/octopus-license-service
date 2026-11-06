@@ -11,6 +11,13 @@ management:
     health:
       # The license registry's commit, its problems and licenses without text; nothing secret.
       show-details: always
+      probes:
+        enabled: true
+      # Not ready until the license policy is loaded; liveness stays livenessState only, so a
+      # Bitbucket outage never gets the pod restarted.
+      group:
+        readiness:
+          include: readinessState,licenseRegistry
 
 license-service:
   report-ttl: PT1H
