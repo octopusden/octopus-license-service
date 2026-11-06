@@ -4,6 +4,7 @@ import org.octopusden.octopus.license.core.dto.GenerationInputs
 import org.octopusden.octopus.license.core.dto.LicenseReportSummary
 import org.octopusden.octopus.license.service.service.GeneratedReport
 import org.octopusden.octopus.license.service.service.LicenseReportGenerator
+import org.octopusden.octopus.license.target.model.LicenseTarget
 import org.springframework.boot.info.BuildProperties
 import org.springframework.stereotype.Component
 import java.io.ByteArrayOutputStream
@@ -16,22 +17,20 @@ class EmptyLicenseReportGenerator(
     private val clock: Clock,
     private val buildProperties: BuildProperties,
 ) : LicenseReportGenerator {
-    override fun generate(
-        component: String,
-        version: String,
-    ) = GeneratedReport(
-        LicenseReportSummary(
-            inputs = GenerationInputs(
-                licenseRegistryCommit = null,
-                generatedAt = clock.instant(),
-                serviceVersion = requireNotNull(buildProperties.version) { "build-info carries no version" },
+    override fun generate(target: LicenseTarget) =
+        GeneratedReport(
+            LicenseReportSummary(
+                inputs = GenerationInputs(
+                    licenseRegistryCommit = null,
+                    generatedAt = clock.instant(),
+                    serviceVersion = requireNotNull(buildProperties.version) { "build-info carries no version" },
+                ),
+                trust = null,
+                libraryCounts = emptyMap(),
+                violations = emptyList(),
             ),
-            trust = null,
-            libraryCounts = emptyMap(),
-            violations = emptyList(),
-        ),
-        emptyZip(),
-    )
+            emptyZip(),
+        )
 
     private fun emptyZip() = ByteArrayOutputStream().also { ZipOutputStream(it).close() }.toByteArray()
 }

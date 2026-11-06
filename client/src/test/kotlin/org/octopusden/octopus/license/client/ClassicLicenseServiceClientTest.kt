@@ -15,6 +15,7 @@ import org.octopusden.octopus.license.core.dto.Verdict
 import org.octopusden.octopus.license.core.exception.InvalidRequestException
 import org.octopusden.octopus.license.core.exception.LicenseFilesNotAvailableException
 import org.octopusden.octopus.license.core.exception.NotFoundException
+import org.octopusden.octopus.license.core.exception.ServiceUnavailableException
 import java.net.InetSocketAddress
 import java.time.Instant
 
@@ -80,6 +81,14 @@ class ClassicLicenseServiceClientTest {
     }
 
     @Test
+    @DisplayName("a 503 with the error envelope means a system the service depends on is unavailable")
+    fun mapsServiceUnavailable() {
+        answerError("/rest/api/1/license-reports", HTTP_SERVICE_UNAVAILABLE)
+
+        assertThrows<ServiceUnavailableException> { client.startReport(LicenseReportRequest("c", "1")) }
+    }
+
+    @Test
     @DisplayName("an answer without the error envelope stays a plain Feign error")
     fun nonEnvelopeErrorStaysFeignError() {
         answer("/rest/api/1/license-reports/$REPORT_ID", HTTP_BAD_GATEWAY, "<html>Bad Gateway</html>")
@@ -112,5 +121,6 @@ class ClassicLicenseServiceClientTest {
         const val HTTP_NOT_FOUND = 404
         const val HTTP_CONFLICT = 409
         const val HTTP_BAD_GATEWAY = 502
+        const val HTTP_SERVICE_UNAVAILABLE = 503
     }
 }

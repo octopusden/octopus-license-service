@@ -4,6 +4,7 @@ import org.octopusden.octopus.license.core.dto.ApiError
 import org.octopusden.octopus.license.core.dto.ApiErrorResponse
 import org.octopusden.octopus.license.core.exception.LicenseFilesNotAvailableException
 import org.octopusden.octopus.license.core.exception.NotFoundException
+import org.octopusden.octopus.license.core.exception.ServiceUnavailableException
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
@@ -20,6 +21,9 @@ class ExceptionInfoHandler {
 
     @ExceptionHandler(LicenseFilesNotAvailableException::class)
     fun handleFilesNotAvailable(e: LicenseFilesNotAvailableException) = errorResponse(HttpStatus.CONFLICT, e)
+
+    @ExceptionHandler(ServiceUnavailableException::class)
+    fun handleServiceUnavailable(e: ServiceUnavailableException) = errorResponse(HttpStatus.SERVICE_UNAVAILABLE, e)
 
     @ExceptionHandler(IllegalArgumentException::class, HttpMessageNotReadableException::class)
     fun handleBadRequest(e: Exception) = errorResponse(HttpStatus.BAD_REQUEST, e)

@@ -5,11 +5,17 @@ import org.octopusden.octopus.license.core.dto.LicenseReportRequest
 import org.octopusden.octopus.license.core.dto.LicenseReportStatus
 import org.octopusden.octopus.license.core.exception.LicenseFilesNotAvailableException
 import org.octopusden.octopus.license.core.exception.NotFoundException
+import org.octopusden.octopus.license.core.exception.ServiceUnavailableException
 import org.octopusden.octopus.license.service.service.LicenseFiles
 import org.octopusden.octopus.license.service.service.LicenseReportGenerator
 import org.octopusden.octopus.license.service.service.LicenseReportService
 import org.octopusden.octopus.license.service.store.LicenseReportStore
 import org.octopusden.octopus.license.service.store.StoredReport
+import org.octopusden.octopus.license.target.LicenseTargetResolver
+import org.octopusden.octopus.license.target.exception.ComponentVersionNotFoundException
+import org.octopusden.octopus.license.target.exception.ComponentsRegistryUnavailableException
+import org.octopusden.octopus.license.target.model.LicenseTarget
+import org.octopusden.octopus.license.target.model.TargetResolution
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.core.task.TaskExecutor
@@ -22,6 +28,7 @@ import java.util.UUID
 class LicenseReportServiceImpl(
     private val licenseReportStore: LicenseReportStore,
     private val licenseReportGenerator: LicenseReportGenerator,
+    private val licenseTargetResolver: LicenseTargetResolver,
     @Qualifier("licenseReportExecutor") private val licenseReportExecutor: TaskExecutor,
     private val clock: Clock,
 ) : LicenseReportService {
@@ -34,9 +41,18 @@ class LicenseReportServiceImpl(
             version = request.version,
             status = LicenseReportStatus.RUNNING,
         )
-        licenseReportStore.add(report)
-        licenseReportExecutor.execute { generate(report) }
-        return report
+        return when (val resolution = resolve(request)) {
+            is TargetResolution.Excluded ->
+                report.copy(status = LicenseReportStatus.EXCLUDED, exclusionReason = resolution.reason).also {
+                    licenseReportStore.finish(it, null)
+                    log.info("License report {} for {}:{} excluded: {}", it.id, it.component, it.version, resolution.reason)
+                }
+            is TargetResolution.Resolved -> {
+                licenseReportStore.add(report)
+                licenseReportExecutor.execute { generate(report, resolution.target) }
+                report
+            }
+        }
     }
 
     override fun get(id: String) = find(id).report
@@ -53,9 +69,22 @@ class LicenseReportServiceImpl(
     private fun find(id: String): StoredReport =
         licenseReportStore.find(id) ?: throw NotFoundException("License report '$id' is not found or has expired")
 
-    private fun generate(report: LicenseReport) {
+    private fun resolve(request: LicenseReportRequest): TargetResolution =
+        try {
+            licenseTargetResolver.resolve(request.component, request.version)
+        } catch (e: ComponentVersionNotFoundException) {
+            throw NotFoundException(e.message ?: "Component version ${request.component}:${request.version} is not found", e)
+        } catch (e: ComponentsRegistryUnavailableException) {
+            log.warn("Cannot start a license report for {}:{}", request.component, request.version, e)
+            throw ServiceUnavailableException(e.message ?: "Components registry is unavailable", e)
+        }
+
+    private fun generate(
+        report: LicenseReport,
+        target: LicenseTarget,
+    ) {
         val startedAt = clock.instant()
-        val finished = runCatching { licenseReportGenerator.generate(report.component, report.version) }.fold(
+        val finished = runCatching { licenseReportGenerator.generate(target) }.fold(
             onSuccess = { generated ->
                 report.copy(status = LicenseReportStatus.DONE, summary = generated.summary).also {
                     licenseReportStore.finish(it, generated.files)

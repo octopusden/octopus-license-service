@@ -11,3 +11,5 @@ management:
 license-service:
   report-ttl: PT1H
   generation-threads: 4
+  # components-registry-url and exclusions come from Spring Cloud Config, where the component
+  # names stay. Without components-registry-url the service does not start.

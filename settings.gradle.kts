@@ -34,3 +34,6 @@ project(":license-service").projectDir = file("server")
 
 include(":license-runner")
 project(":license-runner").projectDir = file("runner")
+
+include(":license-target-registry")
+project(":license-target-registry").projectDir = file("engine/target-registry")

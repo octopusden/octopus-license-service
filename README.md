@@ -10,6 +10,7 @@ Generates third-party license files for a component version from JFrog Xray and 
 | `client` | `client/` | Feign client, Maven Central `org.octopusden.octopus.license:client` |
 | `license-service` | `server/` | Spring Boot service, docker image `ghcr.io/octopusden/license-service` |
 | `license-runner` | `runner/` | Command-line runner (`-all` jar) and its TeamCity metarunner, GitHub Packages |
+| `license-target-registry` | `engine/target-registry/` | Not published; part of the service. Resolves what a component version releases, from the components registry |
 
 Which module may depend on which, and how a request flows: [docs/architecture.md](docs/architecture.md).
 

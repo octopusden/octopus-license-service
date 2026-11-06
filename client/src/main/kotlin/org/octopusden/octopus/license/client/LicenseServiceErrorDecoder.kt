@@ -6,6 +6,7 @@ import org.octopusden.octopus.license.core.dto.ApiErrorResponse
 import org.octopusden.octopus.license.core.exception.InvalidRequestException
 import org.octopusden.octopus.license.core.exception.LicenseFilesNotAvailableException
 import org.octopusden.octopus.license.core.exception.NotFoundException
+import org.octopusden.octopus.license.core.exception.ServiceUnavailableException
 import tools.jackson.core.JacksonException
 import tools.jackson.databind.json.JsonMapper
 
@@ -29,6 +30,7 @@ internal class LicenseServiceErrorDecoder(
             HTTP_BAD_REQUEST -> InvalidRequestException(message)
             HTTP_NOT_FOUND -> NotFoundException(message)
             HTTP_CONFLICT -> LicenseFilesNotAvailableException(message)
+            HTTP_SERVICE_UNAVAILABLE -> ServiceUnavailableException(message)
             else -> default.decode(methodKey, response)
         }
     }
@@ -37,5 +39,6 @@ internal class LicenseServiceErrorDecoder(
         const val HTTP_BAD_REQUEST = 400
         const val HTTP_NOT_FOUND = 404
         const val HTTP_CONFLICT = 409
+        const val HTTP_SERVICE_UNAVAILABLE = 503
     }
 }
