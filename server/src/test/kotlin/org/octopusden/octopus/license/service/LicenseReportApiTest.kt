@@ -23,9 +23,9 @@ import org.octopusden.octopus.license.core.exception.NotFoundException
 import org.octopusden.octopus.license.core.exception.ServiceUnavailableException
 import org.octopusden.octopus.license.policy.LicensePolicySource
 import org.octopusden.octopus.license.policy.model.LicensePolicy
-import org.octopusden.octopus.license.service.report.GeneratedReport
-import org.octopusden.octopus.license.service.report.LicenseReportGenerator
-import org.octopusden.octopus.license.service.report.impl.EmptyLicenseReportGenerator
+import org.octopusden.octopus.license.service.service.GeneratedReport
+import org.octopusden.octopus.license.service.service.LicenseReportGenerator
+import org.octopusden.octopus.license.service.service.impl.EmptyLicenseReportGenerator
 import org.octopusden.octopus.license.service.state.policy.LicensePolicyHolder
 import org.octopusden.octopus.license.service.state.policy.LicensePolicyRefresherTest.Companion.samplePolicy
 import org.octopusden.octopus.license.service.state.policy.LicensePolicyRefresherTest.FakeLicensePolicySource

@@ -1,4 +1,4 @@
-package org.octopusden.octopus.license.service.report
+package org.octopusden.octopus.license.service.service
 
 import org.octopusden.octopus.license.core.dto.LicenseReportSummary
 import org.octopusden.octopus.license.policy.model.LicensePolicy

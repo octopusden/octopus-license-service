@@ -78,7 +78,7 @@ The server's packages are grouped by role, so a new piece has one obvious place:
 ```
 org.octopusden.octopus.license.service
 ├── controller/      HTTP only: LicenseReportController, advice/ExceptionInfoHandler
-├── report/          the use case: LicenseReportService, LicenseReportGenerator, and their impl/
+├── service/         the use case: LicenseReportService, LicenseReportGenerator, and their impl/
 ├── state/           what the server keeps in memory, and the jobs that keep it current
 │   ├── report/      LicenseReportStore and ExpiredReportEvictor: reports until their TTL ends
 │   └── policy/      LicensePolicyHolder and LicensePolicyRefresher: the current license policy
@@ -88,14 +88,14 @@ org.octopusden.octopus.license.service
 
 | Package | May use | Never uses |
 | --- | --- | --- |
-| `controller` | `report.LicenseReportService`; only `core` types in and out | `state`, `engine/`, the generator |
-| `report`: the service | `state.report` (add, finish, find), `state.policy` (`current()`, read once per report), `engine/` `LicenseTargetResolver`, the generator | `controller`, `health` |
-| `report`: the generator | only what it is given: the license target and the policy; later the scan | `state`: a reload or an eviction never changes a running generation |
-| `state` | `engine/` models; its own `@Scheduled` job | `report`, `controller`, `health`: state never calls back into the use case |
+| `controller` | `service.LicenseReportService`; only `core` types in and out | `state`, `engine/`, the generator |
+| `service`: the report service | `state.report` (add, finish, find), `state.policy` (`current()`, read once per report), `engine/` `LicenseTargetResolver`, the generator | `controller`, `health` |
+| `service`: the generator | only what it is given: the license target and the policy; later the scan | `state`: a reload or an eviction never changes a running generation |
+| `state` | `engine/` models; its own `@Scheduled` job | `service`, `controller`, `health`: state never calls back into the use case |
 | `health` | `state`, read-only | anything that writes |
 | `configuration` | everything, to wire it | — |
 
-Dependencies point one way: `controller → report → state`, and `health → state`. Nothing hides `state` behind an interface: the store and the holder have one implementation each, and the tests use them as they are.
+Dependencies point one way: `controller → service → state`, and `health → state`. Nothing hides `state` behind an interface: the store and the holder have one implementation each, and the tests use them as they are.
 
 What each part does on a request:
 

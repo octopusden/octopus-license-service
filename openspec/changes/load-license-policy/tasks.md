@@ -58,8 +58,8 @@
 
 ## 2a. Server packages by role (added on review)
 
-- [x] 2a.1 Moves, no behaviour change: `service/` → `report/` (use case: service, generator, `impl/`); `store/` → `state/report/`; `policy/` → `state/policy/` (holder, refresher); `LicensePolicyHealthIndicator` → `health/`. `controller/` and `configuration/` stay. Tests follow the same packages.
-- [x] 2a.2 Contracts checked by import: `controller` imports only `report` and `core`; `state` never imports `report`; `health` imports only `state`; the generator imports only `core`, the policy and target models (Design 7a).
+- [x] 2a.1 Moves, no behaviour change: `store/` → `state/report/`; `policy/` → `state/policy/` (holder, refresher); `LicensePolicyHealthIndicator` → `health/`. `controller/`, `service/` (the use case: report service, generator, `impl/`) and `configuration/` stay. Tests follow the same packages.
+- [x] 2a.2 Contracts checked by import: `controller` imports only `service` and `core`; `state` never imports `service`; `health` imports only `state`; the generator imports only `core`, the policy and target models (Design 7a).
 - [x] 2a.3 (added on review) Aligning the docs showed Decision 2 claimed the adapter test covers the Bitbucket client on the server's classpath; it covers the module's (Feign 12.2, Jackson 2.14), while the server runs Feign 13.6 and Jackson 2.21. `state/policy/BitbucketOnServerClasspathTest` now loads a policy and reads an error through the client on the server's classpath.
 - [x] 2a.4 `:license-service:test`: 49 tests, 0 failures; detekt and ktlint clean.
 

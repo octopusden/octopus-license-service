@@ -1,4 +1,4 @@
-package org.octopusden.octopus.license.service.report.impl
+package org.octopusden.octopus.license.service.service.impl
 
 import org.octopusden.octopus.license.core.dto.LicenseReport
 import org.octopusden.octopus.license.core.dto.LicenseReportRequest
@@ -7,9 +7,9 @@ import org.octopusden.octopus.license.core.exception.LicenseFilesNotAvailableExc
 import org.octopusden.octopus.license.core.exception.NotFoundException
 import org.octopusden.octopus.license.core.exception.ServiceUnavailableException
 import org.octopusden.octopus.license.policy.model.LicensePolicy
-import org.octopusden.octopus.license.service.report.LicenseFiles
-import org.octopusden.octopus.license.service.report.LicenseReportGenerator
-import org.octopusden.octopus.license.service.report.LicenseReportService
+import org.octopusden.octopus.license.service.service.LicenseFiles
+import org.octopusden.octopus.license.service.service.LicenseReportGenerator
+import org.octopusden.octopus.license.service.service.LicenseReportService
 import org.octopusden.octopus.license.service.state.policy.LicensePolicyHolder
 import org.octopusden.octopus.license.service.state.report.LicenseReportStore
 import org.octopusden.octopus.license.service.state.report.StoredReport

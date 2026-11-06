@@ -1,10 +1,10 @@
-package org.octopusden.octopus.license.service.report.impl
+package org.octopusden.octopus.license.service.service.impl
 
 import org.octopusden.octopus.license.core.dto.GenerationInputs
 import org.octopusden.octopus.license.core.dto.LicenseReportSummary
 import org.octopusden.octopus.license.policy.model.LicensePolicy
-import org.octopusden.octopus.license.service.report.GeneratedReport
-import org.octopusden.octopus.license.service.report.LicenseReportGenerator
+import org.octopusden.octopus.license.service.service.GeneratedReport
+import org.octopusden.octopus.license.service.service.LicenseReportGenerator
 import org.octopusden.octopus.license.target.model.LicenseTarget
 import org.springframework.boot.info.BuildProperties
 import org.springframework.stereotype.Component

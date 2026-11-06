@@ -159,7 +159,7 @@ sealed interface LicenseText {
 
 - The holder and the refresher live in `state/policy/`, beside the report store in `state/report/`: `state/` is everything the server keeps in memory and the scheduled job that keeps it current.
 - The health indicator lives in `health/` and only reads `state/`.
-- The use case is `report/` (service and generator), the HTTP edge `controller/`. Dependencies point one way: `controller → report → state`, `health → state`; `state` never calls `report`.
+- The use case is `service/` (the report service and the generator), the HTTP edge `controller/`. Dependencies point one way: `controller → service → state`, `health → state`; `state` never calls `service`.
 - No interface in front of the holder or the store: one implementation each, used as they are in tests.
 - The package table and its reasons are in `docs/architecture.md`, "Inside the server".
 
