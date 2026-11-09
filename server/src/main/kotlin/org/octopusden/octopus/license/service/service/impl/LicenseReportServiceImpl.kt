@@ -6,6 +6,7 @@ import org.octopusden.octopus.license.core.dto.LicenseReportStatus
 import org.octopusden.octopus.license.core.exception.InvalidRequestException
 import org.octopusden.octopus.license.core.exception.LicenseFilesNotAvailableException
 import org.octopusden.octopus.license.core.exception.NotFoundException
+import org.octopusden.octopus.license.core.exception.ServiceBusyException
 import org.octopusden.octopus.license.service.service.LicenseFiles
 import org.octopusden.octopus.license.service.service.LicenseReportGenerator
 import org.octopusden.octopus.license.service.service.LicenseReportService
@@ -14,6 +15,7 @@ import org.octopusden.octopus.license.service.state.report.StoredReport
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.core.task.TaskExecutor
+import org.springframework.core.task.TaskRejectedException
 import org.springframework.stereotype.Service
 import java.time.Clock
 import java.time.Duration
@@ -27,8 +29,7 @@ class LicenseReportServiceImpl(
     private val clock: Clock,
 ) : LicenseReportService {
     override fun start(request: LicenseReportRequest): LicenseReport {
-        if (request.component.isBlank()) throw InvalidRequestException("Component must not be blank")
-        if (request.version.isBlank()) throw InvalidRequestException("Version must not be blank")
+        validate(request)
         val report = LicenseReport(
             id = UUID.randomUUID().toString(),
             component = request.component,
@@ -36,7 +37,12 @@ class LicenseReportServiceImpl(
             status = LicenseReportStatus.RUNNING,
         )
         licenseReportStore.add(report)
-        licenseReportExecutor.execute { generate(report) }
+        try {
+            licenseReportExecutor.execute { generate(report) }
+        } catch (_: TaskRejectedException) {
+            licenseReportStore.remove(report.id)
+            throw ServiceBusyException("Every license report generation is busy; start the report again later")
+        }
         return report
     }
 
@@ -49,6 +55,11 @@ class LicenseReportServiceImpl(
                 "License report '$id' is ${stored.report.status}, it has no license files",
             )
         return LicenseFiles(stored.report, files)
+    }
+
+    private fun validate(request: LicenseReportRequest) {
+        if (request.component.isBlank()) throw InvalidRequestException("Component must not be blank")
+        if (request.version.isBlank()) throw InvalidRequestException("Version must not be blank")
     }
 
     private fun find(id: String): StoredReport =

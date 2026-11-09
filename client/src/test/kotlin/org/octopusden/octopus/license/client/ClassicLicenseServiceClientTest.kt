@@ -16,6 +16,7 @@ import org.octopusden.octopus.license.core.dto.Verdict
 import org.octopusden.octopus.license.core.exception.InvalidRequestException
 import org.octopusden.octopus.license.core.exception.LicenseFilesNotAvailableException
 import org.octopusden.octopus.license.core.exception.NotFoundException
+import org.octopusden.octopus.license.core.exception.ServiceBusyException
 import java.net.InetSocketAddress
 import java.time.Instant
 
@@ -69,15 +70,17 @@ class ClassicLicenseServiceClientTest {
     }
 
     @Test
-    @DisplayName("the error envelope maps 400, 404 and 409 to the shared exception types")
+    @DisplayName("the error envelope maps 400, 404, 409 and 503 to the shared exception types")
     fun mapsErrorEnvelope() {
         answerError("/rest/api/1/license-reports", HTTP_BAD_REQUEST)
         answerError("/rest/api/1/license-reports/missing", HTTP_NOT_FOUND)
         answerError("/rest/api/1/license-reports/running/files", HTTP_CONFLICT)
+        answerError("/rest/api/1/license-reports/busy", HTTP_SERVICE_UNAVAILABLE)
 
         assertThrows<InvalidRequestException> { client.startReport(LicenseReportRequest("c", "1")) }
         assertThrows<NotFoundException> { client.getReport("missing") }
         assertThrows<LicenseFilesNotAvailableException> { client.downloadFiles("running") }
+        assertThrows<ServiceBusyException> { client.getReport("busy") }
     }
 
     @Test
@@ -126,5 +129,6 @@ class ClassicLicenseServiceClientTest {
         const val HTTP_CONFLICT = 409
         const val HTTP_INTERNAL_SERVER_ERROR = 500
         const val HTTP_BAD_GATEWAY = 502
+        const val HTTP_SERVICE_UNAVAILABLE = 503
     }
 }

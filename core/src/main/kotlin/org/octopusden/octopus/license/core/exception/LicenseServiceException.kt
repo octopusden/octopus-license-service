@@ -20,3 +20,8 @@ class LicenseFilesNotAvailableException(
 class InvalidRequestException(
     message: String,
 ) : LicenseServiceException(message)
+
+/** Every generation thread is busy and the queue is full; start the report again later. */
+class ServiceBusyException(
+    message: String,
+) : LicenseServiceException(message)
