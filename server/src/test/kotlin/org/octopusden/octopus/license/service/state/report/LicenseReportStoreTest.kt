@@ -14,7 +14,7 @@ import java.time.ZoneOffset
 
 class LicenseReportStoreTest {
     private val clock = MutableClock(Instant.parse("2026-11-04T10:00:00Z"))
-    private val store = LicenseReportStore(clock, TTL)
+    private val store = LicenseReportStore(clock, TTL, MAX_STORED_BYTES)
 
     @Test
     @DisplayName("a finished report is kept until the TTL has passed since it finished")
@@ -72,6 +72,53 @@ class LicenseReportStoreTest {
         assertEquals(FILES.toList(), store.find(REPORT_ID)?.files?.toList())
     }
 
+    @Test
+    @DisplayName("over the byte limit, the oldest finished reports go first and running ones stay")
+    fun byteLimitDropsOldestFinishedFirst() {
+        store.add(report(LicenseReportStatus.RUNNING, id = "running"))
+        finish("oldest", ByteArray(4))
+        clock.advance(Duration.ofMinutes(1))
+        finish("older", ByteArray(4))
+        clock.advance(Duration.ofMinutes(1))
+
+        finish("newest", ByteArray(4))
+
+        assertEquals(listOf("newest", "older", "running"), store.ids())
+        assertEquals(8, store.storedBytes())
+    }
+
+    @Test
+    @DisplayName("a report larger than the byte limit on its own is still kept: it is the one just asked for")
+    fun oversizedReportIsKept() {
+        finish("small", ByteArray(2))
+
+        finish("huge", ByteArray(MAX_STORED_BYTES.toInt() * 2))
+
+        assertEquals(listOf("huge"), store.ids())
+    }
+
+    @Test
+    @DisplayName("expired and removed reports give their bytes back")
+    fun evictionReleasesBytes() {
+        finish("expiring", ByteArray(4))
+        clock.advance(TTL)
+        store.evictExpired()
+        finish("removed", ByteArray(4))
+
+        store.remove("removed")
+
+        assertEquals(0, store.storedBytes())
+        assertEquals(emptyList<String>(), store.ids())
+    }
+
+    private fun finish(
+        id: String,
+        files: ByteArray,
+    ) {
+        store.add(report(LicenseReportStatus.RUNNING, id = id))
+        store.finish(report(LicenseReportStatus.DONE, id = id), files)
+    }
+
     private class MutableClock(
         private var now: Instant,
     ) : Clock() {
@@ -90,6 +137,7 @@ class LicenseReportStoreTest {
         const val REPORT_ID = "report-1"
         val TTL: Duration = Duration.ofHours(1)
         val FILES = byteArrayOf(1, 2, 3)
+        const val MAX_STORED_BYTES = 10L
 
         fun report(
             status: LicenseReportStatus,

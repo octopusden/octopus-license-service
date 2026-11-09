@@ -18,7 +18,7 @@ class LicenseServiceConfig(
     fun clock(): Clock = Clock.systemUTC()
 
     @Bean
-    fun licenseReportStore(clock: Clock) = LicenseReportStore(clock, properties.reportTtl)
+    fun licenseReportStore(clock: Clock) = LicenseReportStore(clock, properties.reportTtl, properties.maxStoredBytes.toBytes())
 
     @Bean
     fun licenseTargetResolver(): LicenseTargetResolver =
@@ -34,6 +34,7 @@ class LicenseServiceConfig(
         ThreadPoolTaskExecutor().apply {
             corePoolSize = properties.generationThreads
             maxPoolSize = properties.generationThreads
+            queueCapacity = properties.maxQueuedReports
             setThreadNamePrefix("license-report-")
         }
 }

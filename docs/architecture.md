@@ -54,7 +54,7 @@ Gradle enforces the dependency rules: a module cannot import what its build file
 TeamCity step (metarunner)
   runner ──client── POST /rest/api/1/license-reports ──► controller → service
                                                            ├─ license target, from the components registry
-                                                           │    unknown → 404, unreachable → 503, nothing stored
+                                                           │    unknown → 404, unreachable → 503 without Retry-After, nothing stored
                                                            │    excluded → store: report EXCLUDED, done
                                                            ├─ store: report RUNNING
                                                            └─ generator, on a background thread, with the target

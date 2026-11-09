@@ -16,11 +16,11 @@ Which module may depend on which, and how a request flows: [docs/architecture.md
 
 ## API
 
-A generation can take minutes, so the caller starts it, polls it and downloads the result. A finished report is kept in memory for `license-service.report-ttl` (one hour by default), then dropped. The API needs no authorization.
+A generation can take minutes, so the caller starts it, polls it and downloads the result. A finished report is kept in memory for `license-service.report-ttl` (one hour by default), then dropped; once the kept license files pass `license-service.max-stored-bytes` (512 MB), the oldest finished reports go early. At most `license-service.generation-threads` (4) generations run and `license-service.max-queued-reports` (50) wait; past that, a new report is refused. The API needs no authorization.
 
 | Call | Answer |
 | --- | --- |
-| `POST /rest/api/1/license-reports` with `{"component", "version"}` | `202` with the report (status `RUNNING`) and its URL in `Location`; `400` for a blank component or version |
+| `POST /rest/api/1/license-reports` with `{"component", "version"}` | `202` with the report (status `RUNNING`) and its URL in `Location`; `400` for a blank component or version; `404` for a component version the components registry does not know; `503` with `Retry-After` when the queue is full, `503` without it when the components registry is unreachable |
 | `GET /rest/api/1/license-reports/{id}` | the report: `RUNNING`, `DONE` (with the summary), `EXCLUDED` (with the reason) or `FAILED` (with the error); `404` for an unknown or expired id |
 | `GET /rest/api/1/license-reports/{id}/files` | the license files as one zip; `409` unless the report is `DONE` |
 

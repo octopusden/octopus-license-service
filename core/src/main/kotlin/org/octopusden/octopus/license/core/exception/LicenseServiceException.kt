@@ -25,7 +25,12 @@ class InvalidRequestException(
 ) : LicenseServiceException(message)
 
 /** A system the service reads, such as the components registry, could not be asked; retrying later may work. */
-class ServiceUnavailableException(
+open class ServiceUnavailableException(
     message: String,
     cause: Throwable? = null,
 ) : LicenseServiceException(message, cause)
+
+/** Every generation thread is busy and the queue is full; start the report again later. */
+class ServiceBusyException(
+    message: String,
+) : ServiceUnavailableException(message)

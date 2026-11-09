@@ -183,7 +183,7 @@ object DeployToOkdProd : BuildType({
                 "TEAMCITY_METARUNNERS_ZIP_URL",
                 "file://%teamcity.build.checkoutDir%/license-runner-%BUILD_NUMBER%-metarunners.zip",
             )
-            param("TEAMCITY_PROJECT_ID", "RDDepartment")
+            param("TEAMCITY_PROJECT_ID", "%RELEASE_MANAGEMENT_ROOT_PROJECT_ID%")
         }
     }
 
