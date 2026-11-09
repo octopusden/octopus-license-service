@@ -20,6 +20,7 @@
   - [x] 1.3.5 Parity with the prototype: the five rows of the design's worked example.
   - [x] 1.3.5a (added on review) Writing 1.3.5 showed the prototype ignores case for `merges.txt` only: it calls `Borland` against hidden `BORLAND` not allowed. Four rows match the prototype; the fifth is the service's case-insensitive list match (D5). The design's Context and Goals now say so.
   - [x] 1.3.6 (added on review) A library version `versions-api` cannot read is not overridden, rather than failing the judgement.
+  - [x] 1.3.7 (added on review) Names become canonical before unknown markers are dropped (D5 order): the registry's `merges.txt` has `Unknown license|none|UNKNOWN`, so `none` is `UNKNOWN`, not `NOT_ALLOWED`.
 - [x] 1.4 Implement, as separate units:
   - [x] 1.4.1 `model/` — `LicensePolicy`, `MavenCoordinates`, `Judgement`, `LicenseVerdict`, `LicenseText`, one per file.
   - [x] 1.4.2 `impl/parser/LicenseRegistryParser` — registry files to `LicensePolicy`. Public, not `internal`: the server's tests build policies through it from sample files, the same seam the module's tests use.
@@ -33,7 +34,7 @@
   - [x] 1.5.5 (added on review) A registry without a whitelist is `InvalidLicenseRegistryException`, not unavailable.
   - [x] 1.5.6 (added on review) A default branch with no commit is `LicenseRegistryUnavailableException`, not an uncaught `NoSuchElementException`.
 - [x] 1.6 Implement `LicensePolicySource` (`headCommit()`, `load()`), `LicenseRegistryUnavailableException` and `BitbucketLicensePolicySource(url, token, project, repository)`, reading the default branch. The client's failures are `FeignException`, its own `BitbucketClientException`s, and `IllegalStateException` from its error decoder for any error it cannot name; all three are unavailable. A bearer token, as Bitbucket Server's personal access tokens use.
-- [x] 1.7 `:license-policy-registry:test`: 57 tests, 0 failures, 0 skipped (judge 16, overrides 9, texts 8, parser 10, worked example 5, Bitbucket source 9). detekt and ktlint clean. No infrastructure needed.
+- [x] 1.7 `:license-policy-registry:test`: 58 tests, 0 failures, 0 skipped (judge 17, overrides 9, texts 8, parser 10, worked example 5, Bitbucket source 9). detekt and ktlint clean. No infrastructure needed.
 
 ## 2. `server`: hold, refresh and use the policy
 
@@ -80,7 +81,7 @@
 
 ## 4. Finalization
 
-- [x] 4.1 `./gradlew build qualityCheck` green: 178 tests across all modules, 0 failures, 0 skipped; detekt and ktlint clean.
+- [x] 4.1 `./gradlew build qualityCheck` green: 179 tests across all modules, 0 failures, 0 skipped; detekt and ktlint clean.
 - [x] 4.2 Out of scope holds: no library is judged in a report (`server` never calls `judge`); nothing writes license files; `LicenseVerdict` has no `UNIDENTIFIED`.
 - [x] 4.3 `engine/policy-registry/src` imports neither Spring nor `org.octopusden.octopus.license.core` (grep).
 - [x] 4.4 No project, repository or real component name in the repository: fixtures use `SAMPLE`, `sample-license-registry`, `org.example`; grep finds no internal host or project.

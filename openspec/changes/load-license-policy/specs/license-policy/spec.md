@@ -109,6 +109,11 @@ The service SHALL judge a library `UNKNOWN` when no license is known after dropp
 - **WHEN** a library is found with no license, or only `Unknown`
 - **THEN** the verdict is `UNKNOWN`
 
+#### Scenario: Synonym of an unknown marker
+
+- **WHEN** `merges.txt` has `Unknown license|none` and a library is found with `none`
+- **THEN** the verdict is `UNKNOWN`
+
 #### Scenario: Dual license, one allowed
 
 - **WHEN** a library is found with `GPL-2.0` and `MIT`

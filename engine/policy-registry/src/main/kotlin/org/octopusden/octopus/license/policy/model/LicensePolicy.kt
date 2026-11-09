@@ -42,9 +42,8 @@ class LicensePolicy internal constructor(
         val override = coordinates?.let { overrideFor(it) }
         val names =
             (override?.licenses ?: licenses)
-                .map { it.trim() }
+                .map { canonical(it.trim()) }
                 .filterNot { it.lowercase() in UNKNOWN_MARKERS }
-                .map { canonical(it) }
                 .distinct()
                 .sorted()
         val verdict =

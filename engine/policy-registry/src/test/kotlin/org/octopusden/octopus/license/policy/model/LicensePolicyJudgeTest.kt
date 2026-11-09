@@ -47,6 +47,14 @@ class LicensePolicyJudgeTest {
     }
 
     @Test
+    @DisplayName("a synonym of an unknown marker in merges.txt is no license")
+    fun unknownMarkerSynonym() {
+        val policy = policy(registryFiles(merges = "Unknown license|none"))
+
+        assertEquals(Judgement(LicenseVerdict.UNKNOWN, emptyList(), overridden = false), policy.judge(setOf("none")))
+    }
+
+    @Test
     @DisplayName("unknown markers are dropped from the licenses a known license is judged on")
     fun unknownMarkerBesideALicense() {
         assertEquals(
