@@ -170,6 +170,15 @@ class LicensePolicyRefresherTest {
         val REFRESH_INTERVAL: Duration = Duration.ofMinutes(15)
 
         fun samplePolicy(commit: String): LicensePolicy =
-            LicenseRegistryParser.parse(mapOf("licenses-whitelist.txt" to "Apache-2.0|MIT"), commit)
+            LicenseRegistryParser.parse(
+                mapOf(
+                    "licenses-whitelist.txt" to "Apache-2.0|MIT",
+                    "licenses-hidden.txt" to "",
+                    "merges.txt" to "",
+                    "thirdparty-licenses.properties" to "",
+                    "licenses.properties" to "",
+                ),
+                commit,
+            )
     }
 }

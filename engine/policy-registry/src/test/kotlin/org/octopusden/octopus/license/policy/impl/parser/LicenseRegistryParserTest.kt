@@ -5,6 +5,8 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 import org.octopusden.octopus.license.policy.exception.InvalidLicenseRegistryException
 import org.octopusden.octopus.license.policy.model.LicenseVerdict
 import org.octopusden.octopus.license.policy.model.MavenCoordinates
@@ -42,6 +44,14 @@ class LicenseRegistryParserTest {
     @DisplayName("a registry without licenses-hidden.txt allows the whitelist only")
     fun noHiddenList() {
         assertEquals(LicenseVerdict.NOT_ALLOWED, policy(registryFiles(hidden = null)).judge(setOf("BORLAND")).verdict)
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = ["licenses-hidden.txt", "merges.txt", "thirdparty-licenses.properties", "licenses.properties"])
+    @DisplayName("a missing registry file other than the whitelist is read as empty, and is a problem (D4)")
+    fun missingFile(file: String) {
+        val policy = policy(registryFiles() - file)
+        assertEquals(listOf("$file is missing at $COMMIT; read as empty"), policy.problems)
     }
 
     @Test

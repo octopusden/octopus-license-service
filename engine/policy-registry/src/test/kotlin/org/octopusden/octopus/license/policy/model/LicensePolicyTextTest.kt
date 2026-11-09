@@ -5,6 +5,8 @@ import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 import org.octopusden.octopus.license.policy.impl.parser.policy
 import org.octopusden.octopus.license.policy.impl.parser.registryFiles
 
@@ -66,4 +68,34 @@ class LicensePolicyTextTest {
         val policy = policy(registryFiles(whitelist = "Apache-2.0|Apache 2|MIT", texts = "Apache-2.0=licenses/APACHE-2.0.txt"))
         assertEquals(listOf("MIT"), policy.licensesWithoutText)
     }
+
+    @ParameterizedTest
+    @ValueSource(
+        strings = [
+            "CDDL-1.1=licenses/CDDL-1.1.txt\nCDDL-1.1-GPL-2.0-CPE=licenses/CDDL-GPL-1.1.txt",
+            "CDDL-1.1-GPL-2.0-CPE=licenses/CDDL-GPL-1.1.txt\nCDDL-1.1=licenses/CDDL-1.1.txt",
+        ],
+    )
+    @DisplayName("the entry under the license's own name wins over a synonym's, which is a problem")
+    fun ownEntryWinsOverSynonym(texts: String) {
+        val policy = policy(cddlRegistry(texts))
+        assertEquals(LicenseText.InRegistry("licenses/CDDL-1.1.txt", "CDDL"), policy.text("CDDL-1.1"))
+        assertEquals(1, policy.problems.size)
+    }
+
+    @Test
+    @DisplayName("of two synonyms' entries, the one with the smaller key wins, and the other is a problem")
+    fun twoSynonymEntries() {
+        val policy = policy(cddlRegistry("CDDL/GPLv2+CE=licenses/CDDL-1.1.txt\nCDDL-1.1-GPL-2.0-CPE=licenses/CDDL-GPL-1.1.txt"))
+        assertEquals(LicenseText.InRegistry("licenses/CDDL-GPL-1.1.txt", "CDDL with GPL"), policy.text("CDDL-1.1"))
+        assertEquals(1, policy.problems.size)
+    }
+
+    private fun cddlRegistry(texts: String) =
+        registryFiles(
+            whitelist = "CDDL-1.1",
+            merges = "CDDL-1.1|CDDL/GPLv2+CE|CDDL-1.1-GPL-2.0-CPE",
+            texts = texts,
+            textFiles = mapOf("licenses/CDDL-1.1.txt" to "CDDL", "licenses/CDDL-GPL-1.1.txt" to "CDDL with GPL"),
+        )
 }

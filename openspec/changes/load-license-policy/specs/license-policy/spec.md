@@ -37,6 +37,11 @@ The service SHALL skip a malformed override or license text line, keep the rest 
 - **WHEN** an override's version is `[1.0,`
 - **THEN** that line is a problem and the load succeeds
 
+#### Scenario: Missing file other than the whitelist
+
+- **WHEN** the registry has no `merges.txt`
+- **THEN** it is read as empty, it is a problem, and the load succeeds
+
 ### Requirement: An override replaces the licenses of a Maven library
 
 The service SHALL apply overrides before anything else, reading `thirdparty-licenses.properties` as Java properties. Among the entries whose group and artifact equal the library's and whose version or version range holds its version, the one with the greatest key in sorted order SHALL replace the licenses found, as the license plugins' last match does. An entry with an empty value SHALL be ignored.
@@ -119,6 +124,11 @@ The service SHALL judge a library `UNKNOWN` when no license is known after dropp
 - **WHEN** a library is found with `GPL-2.0` and `MIT`
 - **THEN** the verdict is `ALLOWED`
 
+#### Scenario: Synonym on the whitelist
+
+- **WHEN** the whitelist names `The MIT License`, `merges.txt` has `MIT|The MIT License`, and a library is found with `MIT`
+- **THEN** the verdict is `ALLOWED`, a deliberate difference from the license plugins
+
 #### Scenario: Hidden license
 
 - **WHEN** a library is found with a license on the hidden list only
@@ -152,3 +162,8 @@ The service SHALL read the text of each license from `licenses.properties` as Ja
 
 - **WHEN** `licenses.properties` maps `MIT` to `licenses/MIT.txt` and `licenses/` has no such file
 - **THEN** the line is a problem and `MIT` is a license without text
+
+#### Scenario: Entries for two synonyms of one license
+
+- **WHEN** `merges.txt` has `CDDL-1.1|CDDL-1.1-GPL-2.0-CPE`, and `licenses.properties` maps both names to different files
+- **THEN** the policy gives the `CDDL-1.1` entry's text, and the other entry is a problem

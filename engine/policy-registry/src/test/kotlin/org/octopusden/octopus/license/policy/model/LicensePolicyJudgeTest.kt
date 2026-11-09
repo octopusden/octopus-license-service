@@ -111,4 +111,14 @@ class LicensePolicyJudgeTest {
     fun twoSynonymsOfOneLicense() {
         assertEquals(listOf("MIT"), policy().judge(setOf("The MIT License", "mit")).licenses)
     }
+
+    @Test
+    @DisplayName("a synonym on the whitelist allows its canonical license, which the plugins would not (D5)")
+    fun whitelistedSynonymAllowsItsCanonicalLicense() {
+        val policy = policy(registryFiles(whitelist = "The MIT License", merges = "MIT|The MIT License"))
+        assertEquals(
+            Judgement(LicenseVerdict.ALLOWED, listOf("MIT"), overridden = false),
+            policy.judge(setOf("MIT")),
+        )
+    }
 }

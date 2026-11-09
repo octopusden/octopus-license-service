@@ -95,12 +95,14 @@ It fills the `engine/` slot the architecture page reserves for the license regis
 
 - `LicenseRegistryParser.parse(files: Map<String, String>, commit: String): LicensePolicy`.
 - Missing `licenses-whitelist.txt`, or an empty whitelist, fails the load: a policy that allows nothing would fail every library.
+- Any other file missing is read as empty and named in `problems`; the plugin fails the build instead. Without `merges.txt`, every synonym would quietly become `NOT_ALLOWED`.
 - `thirdparty-licenses.properties` and `licenses.properties` are read with `java.util.Properties`, as the plugin reads them: escapes, `:` separators and continuation lines behave the same.
 - A malformed entry is skipped and named in the policy's `problems`, never fatal:
   - an override key without three `--` parts;
   - an override range `versions-api` cannot parse;
   - a `licenses.properties` value that is neither a `licenses/` file present in the registry nor an `http`/`https` URL;
   - a name on two `merges.txt` lines: the first line keeps it. The plugin fails the build here; the service must not refuse to load over one line.
+  - two `licenses.properties` entries for synonyms of one license: the entry under the license's own name wins, else the smallest key; the others are problems. The plugin looks texts up by merged name only, so it never reads them either.
 - An override with an empty value is ignored, as the plugin ignores it; it is not a problem.
 - Blank lines and `#` comments are ignored in the text files; names are trimmed.
 
@@ -131,11 +133,12 @@ sealed interface LicenseText {
 
 1. Override: among the `thirdparty-licenses.properties` entries whose group and artifact equal the coordinates and whose version range holds the version, the one with the greatest key in sorted order replaces the found licenses, as the plugin's last match does. A value with `|` gives several licenses.
 2. Canonical names: each name is looked up case-insensitively among every name in `merges.txt`, the whitelist and the hidden list, and replaced by its canonical spelling; an unknown name keeps its own spelling.
-3. Unknown markers are dropped: blank, `Unknown`, `Unknown license`, any case. Nothing left: `UNKNOWN`.
+3. Unknown markers are dropped after step 2: blank, `Unknown`, `Unknown license`, any case. The registry merges `none` into `Unknown license`, so it is dropped too. Nothing left: `UNKNOWN`.
 4. Any canonical name in the whitelist or the hidden list: `ALLOWED`.
 5. Otherwise `NOT_ALLOWED`.
 
 - **A deliberate difference from the plugin:** every name lookup is case-insensitive (synonyms, whitelist, hidden list, texts), going further than the prototype, which ignores case for `merges.txt` only. Xray and POMs spell the same license in several casings; matching exactly would turn some into false `NOT_ALLOWED` verdicts. The cost: a name differing from an allowed one only in case passes, where the plugin would reject it.
+- **Another deliberate difference:** a synonym on the whitelist or the hidden list allows its canonical license. With whitelist `The MIT License` and `MIT|The MIT License` in `merges.txt`, `MIT` is allowed; the plugin merges found names to `MIT` and finds no `MIT` on the whitelist. The registry lists such synonyms (`CDDL-1.0-GPL-2.0` and others) beside their canonical names, so no verdict differs today.
 - Texts: `text(license)` looks up the canonical name case-insensitively in `licenses.properties`. `licensesWithoutText` lists the allowed licenses, whitelist only, with no entry or with an entry skipped as a problem. A URL counts as a text; fetching it is the license files' job.
 - `licenses` in the judgement are the canonical names, sorted, so every report spells a license one way.
 
@@ -181,5 +184,5 @@ sealed interface LicenseText {
 - **The service is not ready right after a deploy until Bitbucket answers.** Accepted: a report judged without a policy would be wrong; `503` and a down readiness probe say so plainly.
 - **Up to 15 minutes between a registry merge and the service using it.** Accepted: the commit in each summary says which policy judged it.
 - **Re-reading the head commit to get a consistent load.** A merge during a load costs a second load. Removed by `TD-001`, reading through octopus-vcs-facade.
-- **Case-insensitive names can allow what the plugin rejects.** Only when two spellings differ in case alone, which is the same license. Accepted.
+- **Case-insensitive names can allow what the plugin rejects, or name another license.** Usually two spellings differing in case alone are one license. Not always: the registry's `merges.txt` has `GNU Lesser General Public License` under `LGPL-2.1` and `GNU LESSER GENERAL PUBLIC LICENSE` under `LGPL-3.0`; the service keeps the first, so the second is reported as `LGPL-2.1`, and every load lists it as a problem. Both are allowed, so no verdict changes. Accepted; the registry line is the fix.
 - **The Bitbucket client runs on newer Feign and Jackson in the server than it is built for** (13 and 2.21 against 12 and 2.14), as the components registry client does. Accepted: a server test loads a policy through it on that classpath; a client upgrade is a version bump here.

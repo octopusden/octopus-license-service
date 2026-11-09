@@ -25,6 +25,7 @@ object LicenseRegistryParser {
     private const val OVERRIDES = "thirdparty-licenses.properties"
     private const val TEXTS = "licenses.properties"
     private const val TEXTS_DIRECTORY = "licenses/"
+    private val OPTIONAL_FILES = listOf(HIDDEN, MERGES, OVERRIDES, TEXTS)
 
     // The names the Maven plugin parses override versions with: none, so only plain numbers count (D6).
     private val versionNames = VersionNames("", "", "")
@@ -43,8 +44,8 @@ object LicenseRegistryParser {
         if (whitelist.isEmpty()) {
             throw InvalidLicenseRegistryException("$WHITELIST is missing or names no license at $commit")
         }
+        val problems = OPTIONAL_FILES.filterNot { it in files }.mapTo(mutableListOf()) { "$it is missing at $commit; read as empty" }
         val hidden = listedNames(files[HIDDEN].orEmpty())
-        val problems = mutableListOf<String>()
         val canonicalNames = canonicalNames(files[MERGES].orEmpty(), whitelist + hidden, problems)
         return LicensePolicy(
             commit = commit,
@@ -99,27 +100,50 @@ object LicenseRegistryParser {
             }
         }
 
-    /** Lower-cased canonical name to its text. The plugin looks texts up by merged name; so does the policy. */
+    /**
+     * Lower-cased canonical name to its text. The plugin looks texts up by merged name; so does the
+     * policy. When synonyms of one license have entries, the license's own entry wins, else the
+     * smallest key, and the others are problems: the plugin would never read them.
+     */
     private fun texts(
         files: Map<String, String>,
         canonicalNames: Map<String, String>,
         problems: MutableList<String>,
     ): Map<String, LicenseText> =
         properties(files[TEXTS].orEmpty())
-            .mapNotNull { (name, value) ->
+            .mapNotNull { (key, value) ->
+                val name = key.trim()
                 val location = value.trim()
-                val text =
-                    when {
-                        location.startsWith("http://") || location.startsWith("https://") -> LicenseText.AtUrl(location)
-                        location.startsWith(TEXTS_DIRECTORY) && location in files ->
-                            LicenseText.InRegistry(location, files.getValue(location))
-                        else -> null
-                    }
+                val text = textAt(location, files)
                 if (text == null) {
                     problems += "$TEXTS: the text of '$name' is neither a $TEXTS_DIRECTORY file in the registry nor a URL: '$location'"
                 }
-                text?.let { (canonicalNames[name.trim().lowercase()] ?: name.trim()).lowercase() to it }
-            }.toMap()
+                text?.let { TextEntry(name, canonicalNames[name.lowercase()] ?: name, it) }
+            }.sortedWith(compareBy({ !it.name.equals(it.canonical, ignoreCase = true) }, { it.name }))
+            .groupBy { it.canonical.lowercase() }
+            .mapValues { (_, entries) ->
+                val used = entries.first()
+                entries.drop(1).forEach {
+                    problems += "$TEXTS: '${it.name}' and '${used.name}' both give the text of '${it.canonical}'; '${it.name}' is ignored"
+                }
+                used.text
+            }
+
+    private fun textAt(
+        location: String,
+        files: Map<String, String>,
+    ): LicenseText? =
+        when {
+            location.startsWith("http://") || location.startsWith("https://") -> LicenseText.AtUrl(location)
+            location.startsWith(TEXTS_DIRECTORY) && location in files -> LicenseText.InRegistry(location, files.getValue(location))
+            else -> null
+        }
+
+    private class TextEntry(
+        val name: String,
+        val canonical: String,
+        val text: LicenseText,
+    )
 
     // The plugin's rule: a version that is not already a range means exactly that version.
     private fun asRange(version: String) = if (range.matches(version)) version else "[$version]"
