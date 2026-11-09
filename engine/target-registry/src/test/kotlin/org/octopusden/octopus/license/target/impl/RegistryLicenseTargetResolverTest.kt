@@ -123,10 +123,11 @@ class RegistryLicenseTargetResolverTest {
     }
 
     @Test
-    @DisplayName("a 503 from the registry is an unavailable error")
+    @DisplayName("a 503 from the registry is retried once, then an unavailable error")
     fun serviceUnavailable() {
         answers["$API/components/sample-app/versions/1.4.12"] = SERVICE_UNAVAILABLE to """{"errorMessage":"down"}"""
         assertThrows<ComponentsRegistryUnavailableException> { resolver().resolve("sample-app", "1.4.12") }
+        assertEquals(2, requests.size)
     }
 
     @Test

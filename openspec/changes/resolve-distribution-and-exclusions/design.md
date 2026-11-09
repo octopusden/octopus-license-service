@@ -129,6 +129,7 @@ data class ArtifactPattern(val groups: List<String>, val artifacts: List<String>
 - Uses `org.octopusden.octopus.infrastructure:components-registry-service-client` `3.2.0`, as `octopus-dms-service` and `octopus-teamcity-automation` do. Its DTOs follow the registry's wire format without us keeping a copy.
 - It brings Jackson 2 and Feign 12, beside the service's Jackson 3 and Feign 13. Jackson 2 and 3 live in different packages; Feign resolves to 13 where both meet (the server's test classpath). The adapter test covers the client on that classpath.
 - The module compiles against `feign-core` `12.2` only (`compileOnly`), to tell an unreachable registry from other failures; at runtime Feign comes with the client, so production carries one Feign version.
+- The client is built with a retryer of 2 attempts (one retry, 100–500 ms backoff) instead of its default 5: a caller waits on every call.
 - Rejected: a hand-rolled Feign interface for the three endpoints. It would keep one stack, but duplicate the registry's DTOs, which would then drift silently.
 
 ### 6. Range selection with `versions-api`, patterns kept as strings
@@ -167,5 +168,6 @@ data class ArtifactPattern(val groups: List<String>, val artifacts: List<String>
 
 - **Two Feign versions meet in the server's test classpath.** The client is built for Feign 12 and runs on 13 there. Accepted: the adapter test exercises it end to end; the published client upgrading its Feign is a version bump here.
 - **The start request waits on the registry.** Up to three calls, normally a few hundred milliseconds. Accepted for a clear `404`; caching can come with the portal.
+- **A hanging registry still holds a start for minutes.** The published client reads with Feign's default 60 s timeout and does not let a caller change it; with 2 attempts per call and up to three calls, the worst case is about 6 minutes on a request thread. Fixing it needs the client to accept request options, a change in components-registry.
 - **Exclusion by name prefix.** A component named `doc-…` that is not documentation would be excluded. Accepted: it is the prototype's rule; a false match is fixed by renaming or by a configured override later.
 - **The configured list is the only way to exclude a component that still applies the old plugins.** Forgetting to add one gives that component a second, competing set of license files. Accepted for now; the rollout issue lists those components.

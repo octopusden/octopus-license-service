@@ -1,6 +1,8 @@
 package org.octopusden.octopus.license.target.impl
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import feign.FeignException
+import feign.Retryer
 import org.octopusden.octopus.components.registry.client.ComponentsRegistryServiceClient
 import org.octopusden.octopus.components.registry.client.impl.ClassicComponentsRegistryServiceClient
 import org.octopusden.octopus.components.registry.client.impl.ClassicComponentsRegistryServiceClientUrlProvider
@@ -27,11 +29,15 @@ class RegistryLicenseTargetResolver(
     registryUrl: String,
     exclusions: List<ConfiguredExclusion>,
 ) : LicenseTargetResolver {
+    // A caller waits on this per request; the client's default of 5 attempts can hold it for minutes
+    // when the registry hangs, and its read timeout cannot be set from here.
     private val client: ComponentsRegistryServiceClient =
         ClassicComponentsRegistryServiceClient(
             object : ClassicComponentsRegistryServiceClientUrlProvider {
                 override fun getApiUrl() = registryUrl
             },
+            ClassicComponentsRegistryServiceClient.configureObjectMapper(ObjectMapper()),
+            Retryer.Default(RETRY_PERIOD_MS, RETRY_MAX_PERIOD_MS, MAX_ATTEMPTS),
         )
 
     private val exclusionRules = ExclusionRules(exclusions)
@@ -89,5 +95,8 @@ class RegistryLicenseTargetResolver(
 
     private companion object {
         const val SERVER_ERROR = 500
+        const val RETRY_PERIOD_MS = 100L
+        const val RETRY_MAX_PERIOD_MS = 500L
+        const val MAX_ATTEMPTS = 2
     }
 }
