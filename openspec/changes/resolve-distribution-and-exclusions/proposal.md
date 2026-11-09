@@ -31,7 +31,7 @@ The service answers every component version with an empty report, whatever the c
   - it is archived;
   - it is internal: its distribution is not `external`;
   - its build system is `WHISKEY`;
-  - it has the registry label `test-component`;
+  - the registry flags it as a test component (`testComponent`);
   - it is a documentation component: its name starts with `doc_` or `doc-` (any case);
   - it is on the exclusion list in configuration, each entry with its own reason.
 - The exclusion list lives in Spring Cloud Config, not in the repository: component names are internal. It holds the documentation components whose names do not follow the `doc_`/`doc-` rule, and the components that still apply the old license plugins; nothing detects them.

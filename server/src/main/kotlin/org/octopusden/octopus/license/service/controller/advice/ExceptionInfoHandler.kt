@@ -2,10 +2,13 @@ package org.octopusden.octopus.license.service.controller.advice
 
 import org.octopusden.octopus.license.core.dto.ApiError
 import org.octopusden.octopus.license.core.dto.ApiErrorResponse
+import org.octopusden.octopus.license.core.exception.InvalidRequestException
 import org.octopusden.octopus.license.core.exception.LicenseFilesNotAvailableException
 import org.octopusden.octopus.license.core.exception.NotFoundException
+import org.octopusden.octopus.license.core.exception.ServiceBusyException
 import org.octopusden.octopus.license.core.exception.ServiceUnavailableException
 import org.slf4j.LoggerFactory
+import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
@@ -22,10 +25,14 @@ class ExceptionInfoHandler {
     @ExceptionHandler(LicenseFilesNotAvailableException::class)
     fun handleFilesNotAvailable(e: LicenseFilesNotAvailableException) = errorResponse(HttpStatus.CONFLICT, e)
 
+    @ExceptionHandler(ServiceBusyException::class)
+    fun handleBusy(e: ServiceBusyException) =
+        errorResponse(HttpStatus.SERVICE_UNAVAILABLE, e) { header(HttpHeaders.RETRY_AFTER, RETRY_AFTER_SECONDS.toString()) }
+
     @ExceptionHandler(ServiceUnavailableException::class)
     fun handleServiceUnavailable(e: ServiceUnavailableException) = errorResponse(HttpStatus.SERVICE_UNAVAILABLE, e)
 
-    @ExceptionHandler(IllegalArgumentException::class, HttpMessageNotReadableException::class)
+    @ExceptionHandler(InvalidRequestException::class, HttpMessageNotReadableException::class)
     fun handleBadRequest(e: Exception) = errorResponse(HttpStatus.BAD_REQUEST, e)
 
     /**
@@ -44,13 +51,16 @@ class ExceptionInfoHandler {
     private fun errorResponse(
         status: HttpStatus,
         e: Exception,
+        headers: ResponseEntity.BodyBuilder.() -> Unit = {},
     ): ResponseEntity<ApiErrorResponse> =
         ResponseEntity
             .status(status)
+            .apply(headers)
             .contentType(MediaType.APPLICATION_JSON)
             .body(ApiErrorResponse(ApiError(status.value(), e.message ?: status.reasonPhrase)))
 
     private companion object {
+        const val RETRY_AFTER_SECONDS = 60
         val log = LoggerFactory.getLogger(ExceptionInfoHandler::class.java)
     }
 }

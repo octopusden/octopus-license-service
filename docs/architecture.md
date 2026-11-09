@@ -57,7 +57,7 @@ TeamCity step (metarunner)
                                                            ├─ license policy, as loaded in the background
                                                            │    none loaded yet → 503, nothing stored
                                                            ├─ license target, from the components registry
-                                                           │    unknown → 404, unreachable → 503, nothing stored
+                                                           │    unknown → 404, unreachable → 503 without Retry-After, nothing stored
                                                            │    excluded → store: report EXCLUDED, done
                                                            ├─ store: report RUNNING
                                                            └─ generator, on a background thread, with the target and that policy

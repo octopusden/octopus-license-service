@@ -39,12 +39,15 @@ class ExclusionRulesTest {
     }
 
     @Test
-    @DisplayName("a component labelled test-component is excluded")
+    @DisplayName("a component the registry flags as a test component is excluded")
     fun testComponent() {
-        assertEquals(
-            "Test component (label test-component)",
-            rules.reasonFor(registryComponent(labels = setOf("java", "test-component"))),
-        )
+        assertEquals("Test component", rules.reasonFor(registryComponent(testComponent = true)))
+    }
+
+    @Test
+    @DisplayName("the label test-component alone does not exclude: the registry's flag decides")
+    fun testComponentLabelIgnored() {
+        assertNull(rules.reasonFor(registryComponent(labels = setOf("test-component"))))
     }
 
     @ParameterizedTest
@@ -84,7 +87,7 @@ class ExclusionRulesTest {
     }
 
     @Test
-    @DisplayName("D4: when several rules hold, the first in order gives the reason")
+    @DisplayName("when several rules hold, the first in order gives the reason")
     fun firstRuleWins() {
         assertEquals(
             "Archived component",

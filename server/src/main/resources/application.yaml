@@ -22,6 +22,8 @@ management:
 license-service:
   report-ttl: PT1H
   generation-threads: 4
+  max-queued-reports: 50
+  max-stored-bytes: 512MB
   # components-registry-url and exclusions come from Spring Cloud Config, where the component
   # names stay. Without components-registry-url the service does not start.
   # license-registry: bitbucket-url, token, project and repository come from Spring Cloud Config

@@ -13,7 +13,7 @@ sealed interface DeclaredArtifact {
         val tag: String? = null,
     ) : DeclaredArtifact
 
-    /** A registry entry that names no Maven artifact or docker image; kept so the scan can report it (D7). */
+    /** A registry entry that names no Maven artifact or docker image; kept so the scan can report it. */
     data class Unsupported(
         val entry: String,
         val reason: String,

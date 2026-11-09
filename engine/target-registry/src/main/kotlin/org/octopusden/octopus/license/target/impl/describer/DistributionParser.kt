@@ -7,7 +7,7 @@ import org.octopusden.octopus.license.target.model.DeclaredArtifact.Unsupported
 
 /**
  * Reads the registry's `GAV` and `docker` distribution fields. Never fails: an entry it cannot
- * read becomes [Unsupported], so one bad entry does not cost the whole version its target (D7).
+ * read becomes [Unsupported], so one bad entry does not cost the whole version its target.
  */
 internal object DistributionParser {
     private val URI_PREFIXES = listOf("file:", "http:", "https:")

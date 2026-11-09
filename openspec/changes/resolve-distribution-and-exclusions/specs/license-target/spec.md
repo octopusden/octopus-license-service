@@ -87,7 +87,7 @@ The service SHALL keep every Maven artifact pattern entry whose version range, p
 
 ### Requirement: Excluded components are told why
 
-The service SHALL exclude a component when any of these holds, checked in this order, and SHALL give the reason of the first that holds: archived (`Archived component`); internal, its distribution not external (`Internal component: its distribution is not external`); build system `WHISKEY` (`Built with WHISKEY`); label `test-component` (`Test component (label test-component)`); name starting with `doc_` or `doc-` in any case (`Documentation component`); on the configured exclusion list (that entry's reason).
+The service SHALL exclude a component when any of these holds, checked in this order, and SHALL give the reason of the first that holds: archived (`Archived component`); internal, its distribution not external (`Internal component: its distribution is not external`); build system `WHISKEY` (`Built with WHISKEY`); flagged by the registry as a test component (`Test component`); name starting with `doc_` or `doc-` in any case (`Documentation component`); on the configured exclusion list (that entry's reason).
 
 #### Scenario: Archived component
 
@@ -106,8 +106,13 @@ The service SHALL exclude a component when any of these holds, checked in this o
 
 #### Scenario: Test component
 
-- **WHEN** the component has the label `test-component`
-- **THEN** the component is excluded with reason `Test component (label test-component)`
+- **WHEN** the registry flags the component as a test component (`testComponent`)
+- **THEN** the component is excluded with reason `Test component`
+
+#### Scenario: The test-component label alone
+
+- **WHEN** the component has the label `test-component` but the registry does not flag it as a test component, and no other rule holds
+- **THEN** the component is not excluded
 
 #### Scenario: Documentation component by name
 
@@ -145,7 +150,7 @@ The service SHALL decide exclusion from the component-version call alone, and SH
 
 ### Requirement: Unknown and unreachable are errors, not results
 
-The service SHALL report an unknown component, or a version the registry does not know, as not found, and a registry that cannot be reached or answers with a server error as unavailable; neither SHALL produce a license target or an exclusion.
+The service SHALL report an unknown component, or a version the registry does not know, as not found, and a registry that cannot be reached, answers with a server error, or is still loading its repository as unavailable; neither SHALL produce a license target or an exclusion.
 
 #### Scenario: Unknown component version
 
@@ -160,4 +165,9 @@ The service SHALL report an unknown component, or a version the registry does no
 #### Scenario: Registry answers 503
 
 - **WHEN** the registry answers `503`
+- **THEN** the resolution fails as unavailable
+
+#### Scenario: Registry still loading its repository
+
+- **WHEN** the registry answers `425`
 - **THEN** the resolution fails as unavailable

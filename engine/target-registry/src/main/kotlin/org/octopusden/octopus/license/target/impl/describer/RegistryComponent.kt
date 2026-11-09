@@ -10,6 +10,7 @@ internal data class RegistryComponent(
     val archived: Boolean,
     val external: Boolean,
     val buildSystem: String,
+    val testComponent: Boolean,
     val labels: Set<String>,
     val gav: String?,
     val docker: String?,
