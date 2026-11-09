@@ -6,6 +6,7 @@ import org.octopusden.octopus.components.registry.client.impl.ClassicComponentsR
 import org.octopusden.octopus.components.registry.client.impl.ClassicComponentsRegistryServiceClientUrlProvider
 import org.octopusden.octopus.components.registry.core.dto.DetailedComponent
 import org.octopusden.octopus.components.registry.core.exceptions.NotFoundException
+import org.octopusden.octopus.components.registry.core.exceptions.RepositoryNotPreparedException
 import org.octopusden.octopus.license.target.LicenseTargetResolver
 import org.octopusden.octopus.license.target.exception.ComponentVersionNotFoundException
 import org.octopusden.octopus.license.target.exception.ComponentsRegistryUnavailableException
@@ -19,8 +20,8 @@ import org.octopusden.octopus.license.target.model.TargetResolution
 import org.octopusden.releng.versions.VersionNames
 
 /**
- * Reads the components registry and nothing else (D1): the component version first, and the Maven
- * artifact patterns and version names only for a component the [ExclusionRules] keep (D4).
+ * Reads the components registry and nothing else: the component version first, and the Maven
+ * artifact patterns and version names only for a component the [ExclusionRules] keep.
  */
 class RegistryLicenseTargetResolver(
     registryUrl: String,
@@ -62,6 +63,8 @@ class RegistryLicenseTargetResolver(
             call()
         } catch (e: NotFoundException) {
             throw ComponentVersionNotFoundException("Component version $component:$version is not found", e)
+        } catch (e: RepositoryNotPreparedException) {
+            throw ComponentsRegistryUnavailableException("Components registry is still loading its repository: ${e.message}", e)
         } catch (e: FeignException) {
             // status() is -1 when no answer came back at all: refused, reset or timed out.
             if (e.status() >= SERVER_ERROR || e.status() < 0) {

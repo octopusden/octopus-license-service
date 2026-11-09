@@ -145,7 +145,7 @@ The service SHALL decide exclusion from the component-version call alone, and SH
 
 ### Requirement: Unknown and unreachable are errors, not results
 
-The service SHALL report an unknown component, or a version the registry does not know, as not found, and a registry that cannot be reached or answers with a server error as unavailable; neither SHALL produce a license target or an exclusion.
+The service SHALL report an unknown component, or a version the registry does not know, as not found, and a registry that cannot be reached, answers with a server error, or is still loading its repository as unavailable; neither SHALL produce a license target or an exclusion.
 
 #### Scenario: Unknown component version
 
@@ -160,4 +160,9 @@ The service SHALL report an unknown component, or a version the registry does no
 #### Scenario: Registry answers 503
 
 - **WHEN** the registry answers `503`
+- **THEN** the resolution fails as unavailable
+
+#### Scenario: Registry still loading its repository
+
+- **WHEN** the registry answers `425`
 - **THEN** the resolution fails as unavailable

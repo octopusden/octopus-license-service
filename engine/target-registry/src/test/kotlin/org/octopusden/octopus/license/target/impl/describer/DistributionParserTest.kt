@@ -40,7 +40,7 @@ class DistributionParserTest {
     }
 
     @Test
-    @DisplayName("D7: a GAV entry without an extension is unsupported and does not drop its neighbours")
+    @DisplayName("a GAV entry without an extension is unsupported and does not drop its neighbours")
     fun twoPartGav() {
         val declared = DistributionParser.parse(gav = "org.a:x,org.b:y:jar", docker = null)
         assertEquals(MavenArtifact("org.b", "y", "jar"), declared[1])
@@ -51,7 +51,7 @@ class DistributionParserTest {
 
     @ParameterizedTest
     @ValueSource(strings = ["file:///share/sample/bundle.zip", "http://host/bundle.zip", "https://host/a:b:c"])
-    @DisplayName("D7: a GAV entry that is a file share or URL is unsupported")
+    @DisplayName("a GAV entry that is a file share or URL is unsupported")
     fun uriGav(entry: String) {
         val declared = DistributionParser.parse(gav = entry, docker = null).single()
         assertEquals(entry, (declared as Unsupported).entry)
@@ -81,7 +81,7 @@ class DistributionParserTest {
     }
 
     @Test
-    @DisplayName("D7: a registry port stays part of the image, with a tag")
+    @DisplayName("a registry port stays part of the image, with a tag")
     fun dockerRegistryPortWithTag() {
         assertEquals(
             listOf(DockerImage("registry.example:5000/sample/sample-app", "1.4")),
@@ -90,7 +90,7 @@ class DistributionParserTest {
     }
 
     @Test
-    @DisplayName("D7: a registry port stays part of the image, without a tag")
+    @DisplayName("a registry port stays part of the image, without a tag")
     fun dockerRegistryPortWithoutTag() {
         assertEquals(
             listOf(DockerImage("registry.example:5000/sample/sample-app")),

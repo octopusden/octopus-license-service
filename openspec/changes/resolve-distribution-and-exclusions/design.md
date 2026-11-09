@@ -113,7 +113,7 @@ data class ArtifactPattern(val groups: List<String>, val artifacts: List<String>
 ### 3. Exclusion is a result, not-found and unreachable are exceptions
 
 - `Excluded` is a normal answer the caller acts on, so it is a `TargetResolution` case.
-- An unknown component version and an unreachable registry mean no answer exists, so they are the module's own exceptions: `ComponentVersionNotFoundException`, `ComponentsRegistryUnavailableException`.
+- An unknown component version and an unreachable registry (no answer, a `5xx`, or a `425` while it loads its repository) mean no answer exists, so they are the module's own exceptions: `ComponentVersionNotFoundException`, `ComponentsRegistryUnavailableException`.
 - `server` maps them to `core`'s `NotFoundException` (`404`) and a new `ServiceUnavailableException` (`503`).
 
 ### 4. Exclusion rules: fixed order, first match wins, cheapest call first

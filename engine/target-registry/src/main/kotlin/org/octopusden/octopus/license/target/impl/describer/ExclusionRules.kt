@@ -4,7 +4,7 @@ import org.octopusden.octopus.license.target.model.ConfiguredExclusion
 
 /**
  * Decides whether a component is out of the service's scope, and why. Every rule reads only the
- * component-version call, so an excluded component never costs a second registry call (D4).
+ * component-version call, so an excluded component never costs a second registry call.
  */
 internal class ExclusionRules(
     configured: List<ConfiguredExclusion>,

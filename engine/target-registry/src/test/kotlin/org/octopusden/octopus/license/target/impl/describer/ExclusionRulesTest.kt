@@ -84,7 +84,7 @@ class ExclusionRulesTest {
     }
 
     @Test
-    @DisplayName("D4: when several rules hold, the first in order gives the reason")
+    @DisplayName("when several rules hold, the first in order gives the reason")
     fun firstRuleWins() {
         assertEquals(
             "Archived component",

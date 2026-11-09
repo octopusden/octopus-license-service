@@ -26,9 +26,10 @@
   - [x] 1.4.3 `404` from the registry: `ComponentVersionNotFoundException`.
   - [x] 1.4.4 `503` from the registry, and a closed port: `ComponentsRegistryUnavailableException`.
   - [x] 1.4.5 (added on review) The recorded `maven-artifacts` key is `(,0),[0,)`, a union of two ranges; `VersionRangeFactory` parses it and the pattern is selected. The prototype's own range matcher handled only single ranges.
-- [x] 1.5 Implement `LicenseTargetResolver`, `ComponentVersionNotFoundException`, `ComponentsRegistryUnavailableException` and `RegistryLicenseTargetResolver(registryUrl, exclusions)`. A `FeignException` with status `>= 500`, or `-1` (no answer at all), is unavailable; any other is rethrown.
+  - [x] 1.4.6 (added on review) `425` from the registry, still loading its repository (`RepositoryNotPreparedException`): `ComponentsRegistryUnavailableException`, not a `500`.
+- [x] 1.5 Implement `LicenseTargetResolver`, `ComponentVersionNotFoundException`, `ComponentsRegistryUnavailableException` and `RegistryLicenseTargetResolver(registryUrl, exclusions)`. A `FeignException` with status `>= 500`, or `-1` (no answer at all), and a `RepositoryNotPreparedException` (`425`) are unavailable; any other is rethrown.
 - [x] 1.5a (added on review) Packages by role, so a reader sees what each file is for: `LicenseTargetResolver` and its `exception/` at the root as the public entry; `model/` for what it answers with; `impl/RegistryLicenseTargetResolver` as the only I/O; `impl/describer/` for the pure logic the adapter pushes registry facts into (`LicenseTargetDescriber`, `ExclusionRules`, `DistributionParser`, `RegistryComponent`, `RegistryArtifactPattern`). Tests follow the same packages.
-- [x] 1.6 `:license-target-registry:test`: 43 tests, 0 failures, 0 skipped (ExclusionRules 16, DistributionParser 16, LicenseTargetDescriber 6, RegistryLicenseTargetResolver 5). No infrastructure needed.
+- [x] 1.6 `:license-target-registry:test`: 44 tests, 0 failures, 0 skipped (ExclusionRules 16, DistributionParser 16, LicenseTargetDescriber 6, RegistryLicenseTargetResolver 6). No infrastructure needed.
 - [x] 1.7 (added on review) The module moved to `engine/target-registry`: `engine/` groups the modules that produce a report, with the license registry and the Xray/Artifactory scan to follow. A folder, not one module, so each part keeps its own build file and reaches only its own systems. Project name `:license-target-registry` unchanged.
 
 ## 2. `core` and `client`: service unavailable
@@ -70,7 +71,7 @@
 
 ## 5. Finalization
 
-- [x] 5.1 `./gradlew build qualityCheck` green: 85 tests across all modules, 0 failures, 0 skipped; detekt and ktlint clean.
+- [x] 5.1 `./gradlew build qualityCheck` green: 94 tests across all modules, 0 failures, 0 skipped; detekt and ktlint clean.
 - [x] 5.2 Out of scope holds: no Artifactory, Xray or release management call (grep finds only two KDoc mentions); `DEB`/`RPM` have no field to be read through; nothing is cached.
 - [x] 5.3 `engine/target-registry/src` imports neither Spring nor `org.octopusden.octopus.license.core` (grep: none).
 - [x] 5.4 The design's risks hold as written.

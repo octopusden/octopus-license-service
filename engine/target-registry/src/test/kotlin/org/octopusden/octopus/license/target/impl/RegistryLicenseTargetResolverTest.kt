@@ -23,7 +23,7 @@ import java.util.concurrent.CopyOnWriteArrayList
 
 /**
  * Drives the published registry client over HTTP against answers recorded from the components
- * registry (identifying values replaced), so the client is proven on this classpath (D5).
+ * registry (identifying values replaced), so the client is proven on this classpath.
  */
 class RegistryLicenseTargetResolverTest {
     private val requests = CopyOnWriteArrayList<String>()
@@ -91,7 +91,7 @@ class RegistryLicenseTargetResolverTest {
     }
 
     @Test
-    @DisplayName("D4: an excluded component costs exactly one registry call")
+    @DisplayName("an excluded component costs exactly one registry call")
     fun excluded() {
         answer("/components/whiskey-component/versions/1.0", "whiskey-component-1.0.json")
 
@@ -105,20 +105,27 @@ class RegistryLicenseTargetResolverTest {
     }
 
     @Test
-    @DisplayName("D3: a 404 from the registry is a not-found error")
+    @DisplayName("a 404 from the registry is a not-found error")
     fun notFound() {
         assertThrows<ComponentVersionNotFoundException> { resolver().resolve("no-such-component", "1.0") }
     }
 
     @Test
-    @DisplayName("D3: a 503 from the registry is an unavailable error")
+    @DisplayName("a 503 from the registry is an unavailable error")
     fun serviceUnavailable() {
         answers["$API/components/sample-app/versions/1.4.12"] = SERVICE_UNAVAILABLE to """{"errorMessage":"down"}"""
         assertThrows<ComponentsRegistryUnavailableException> { resolver().resolve("sample-app", "1.4.12") }
     }
 
     @Test
-    @DisplayName("D3: a registry nobody listens on is an unavailable error")
+    @DisplayName("a registry still loading its repository (425) is an unavailable error")
+    fun repositoryNotPrepared() {
+        answers["$API/components/sample-app/versions/1.4.12"] = TOO_EARLY to """{"errorMessage":"repository is not prepared"}"""
+        assertThrows<ComponentsRegistryUnavailableException> { resolver().resolve("sample-app", "1.4.12") }
+    }
+
+    @Test
+    @DisplayName("a registry nobody listens on is an unavailable error")
     fun unreachable() {
         val closedPort = ServerSocket(0).use { it.localPort }
         assertThrows<ComponentsRegistryUnavailableException> {
@@ -130,6 +137,7 @@ class RegistryLicenseTargetResolverTest {
         const val API = "/rest/api/2"
         const val OK = 200
         const val NOT_FOUND = 404
+        const val TOO_EARLY = 425
         const val SERVICE_UNAVAILABLE = 503
     }
 }

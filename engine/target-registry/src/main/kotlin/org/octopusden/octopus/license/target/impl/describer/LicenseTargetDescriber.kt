@@ -10,13 +10,13 @@ import org.octopusden.releng.versions.VersionRangeFactory
 
 /**
  * Turns what the registry said about a component version into its [LicenseTarget]. Pure: the
- * caller fetches, this only reads (D2). Exclusion is decided before, by [ExclusionRules], so an
+ * caller fetches, this only reads. Exclusion is decided before, by [ExclusionRules], so an
  * excluded component never needs the patterns or version names this takes.
  */
 internal object LicenseTargetDescriber {
     /**
      * @param artifactPatterns the registry's `maven-artifacts` answer: version range to patterns.
-     * @param versionNames the registry's version names, so ranges parse exactly as the registry parses them (D6).
+     * @param versionNames the registry's version names, so ranges parse exactly as the registry parses them.
      */
     fun describe(
         component: RegistryComponent,
