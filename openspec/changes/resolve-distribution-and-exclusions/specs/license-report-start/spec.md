@@ -44,3 +44,17 @@ The service SHALL fail to start when the components registry URL is not configur
 
 - **WHEN** the service starts without `license-service.components-registry-url`
 - **THEN** startup fails, naming the missing property
+
+### Requirement: Every resolution is counted by its outcome
+
+The service SHALL count each license target resolution in the metric `license.target.resolutions`, tagged `outcome` with `resolved`, `excluded`, `not_found` or `unavailable`. The registry's reachability SHALL NOT be a health indicator.
+
+#### Scenario: Registry down
+
+- **WHEN** a start fails because the registry is unreachable
+- **THEN** the `unavailable` count grows by one, and readiness is unchanged
+
+#### Scenario: Each outcome
+
+- **WHEN** one start resolves, one is excluded, one names an unknown version and one meets a registry outage
+- **THEN** each of the four outcomes grows by one

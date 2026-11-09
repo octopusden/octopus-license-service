@@ -56,12 +56,16 @@
   - [x] 3.3.6 `LicenseReportStore` unchanged: `finish` alone stores a report that never ran, already finished.
   - [x] 3.3.7 `application.yaml` — no component names; `exclusions` come from Spring Cloud Config; `bootstrap-dev.yml` — the URL from `COMPONENTS_REGISTRY_URL`; tests set the URL as a property.
 - [x] 3.4 `:license-service:test`: 26 tests, 0 failures (API 18, config 3, store 5).
+- [x] 3.5 (added on review) Registry outages are a Prometheus metric, not a health indicator (Decision 10):
+  - [x] 3.5.1 API test: one start per outcome raises each `license.target.resolutions{outcome}` by one.
+  - [x] 3.5.2 `LicenseReportServiceImpl` counts each resolution through the `MeterRegistry`.
 
 ## 4. Documentation
 
 - [x] 4.1 `docs/architecture.md` — the module in the diagram and the table, its rule and why; the request flow resolves the target before the background step.
 - [x] 4.2 `CLAUDE.md` — the module in "Shape"; the components registry under "Reads".
 - [x] 4.3 (added on review) `docs/architecture.md` and `CLAUDE.md` describe `engine/`: what it holds now and later, and why each part is its own module.
+- [x] 4.4 (added on review) `docs/architecture.md` states the rule: readiness covers what a pod holds; a per-request dependency answers `503` and is watched by a metric.
 
 ## 5. Finalization
 

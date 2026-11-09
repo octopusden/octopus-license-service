@@ -1,5 +1,6 @@
 package org.octopusden.octopus.license.service
 
+import io.micrometer.core.instrument.MeterRegistry
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
@@ -79,6 +80,9 @@ class LicenseReportApiTest {
 
     @Autowired
     private lateinit var policyHolder: LicensePolicyHolder
+
+    @Autowired
+    private lateinit var meterRegistry: MeterRegistry
 
     private val client: LicenseServiceClient by lazy {
         ClassicLicenseServiceClient(
@@ -176,6 +180,26 @@ class LicenseReportApiTest {
             client.startReport(LicenseReportRequest(REGISTRY_DOWN_COMPONENT, VERSION))
         }
     }
+
+    @Test
+    @DisplayName("every license target resolution is counted by its outcome, so a registry outage shows as a metric")
+    fun resolutionsCountedByOutcome() {
+        val before = OUTCOMES.associateWith { resolutions(it) }
+
+        client.startReport(LicenseReportRequest(COMPONENT, VERSION))
+        client.startReport(LicenseReportRequest(EXCLUDED_COMPONENT, VERSION))
+        assertThrows<NotFoundException> { client.startReport(LicenseReportRequest(UNKNOWN_COMPONENT, VERSION)) }
+        assertThrows<ServiceUnavailableException> { client.startReport(LicenseReportRequest(REGISTRY_DOWN_COMPONENT, VERSION)) }
+
+        assertEquals(OUTCOMES.associateWith { before.getValue(it) + 1 }, OUTCOMES.associateWith { resolutions(it) })
+    }
+
+    private fun resolutions(outcome: String): Double =
+        meterRegistry
+            .find("license.target.resolutions")
+            .tag("outcome", outcome)
+            .counter()
+            ?.count() ?: 0.0
 
     @Test
     @DisplayName("a started report finishes DONE with an empty summary and an empty zip")
@@ -430,6 +454,7 @@ class LicenseReportApiTest {
         const val REGISTRY_DOWN_COMPONENT = "registry-down-component"
         const val VERSION = "1.2.3"
         const val REGISTRY_COMMIT = "a1b2c3d"
+        val OUTCOMES = listOf("resolved", "excluded", "not_found", "unavailable")
         const val UNKNOWN_ID = "00000000-0000-0000-0000-000000000000"
         const val HTTP_OK = 200
         const val HTTP_ACCEPTED = 202

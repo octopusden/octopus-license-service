@@ -1,5 +1,6 @@
 package org.octopusden.octopus.license.service.service.impl
 
+import io.micrometer.core.instrument.MeterRegistry
 import org.octopusden.octopus.license.core.dto.LicenseReport
 import org.octopusden.octopus.license.core.dto.LicenseReportRequest
 import org.octopusden.octopus.license.core.dto.LicenseReportStatus
@@ -34,6 +35,7 @@ class LicenseReportServiceImpl(
     private val licensePolicyHolder: LicensePolicyHolder,
     @Qualifier("licenseReportExecutor") private val licenseReportExecutor: TaskExecutor,
     private val clock: Clock,
+    private val meterRegistry: MeterRegistry,
 ) : LicenseReportService {
     override fun start(request: LicenseReportRequest): LicenseReport {
         require(request.component.isNotBlank()) { "Component must not be blank" }
@@ -78,13 +80,21 @@ class LicenseReportServiceImpl(
 
     private fun resolve(request: LicenseReportRequest): TargetResolution =
         try {
-            licenseTargetResolver.resolve(request.component, request.version)
+            licenseTargetResolver.resolve(request.component, request.version).also {
+                countResolution(if (it is TargetResolution.Excluded) "excluded" else "resolved")
+            }
         } catch (e: ComponentVersionNotFoundException) {
+            countResolution("not_found")
             throw NotFoundException(e.message ?: "Component version ${request.component}:${request.version} is not found", e)
         } catch (e: ComponentsRegistryUnavailableException) {
+            countResolution("unavailable")
             log.warn("Cannot start a license report for {}:{}", request.component, request.version, e)
             throw ServiceUnavailableException(e.message ?: "Components registry is unavailable", e)
         }
+
+    // A registry outage is a metric, not a health indicator: the registry is called per request
+    // and shared by every pod, so turning pods unready would only take the whole service down.
+    private fun countResolution(outcome: String) = meterRegistry.counter(RESOLUTIONS_METRIC, "outcome", outcome).increment()
 
     private fun generate(
         report: LicenseReport,
@@ -117,5 +127,6 @@ class LicenseReportServiceImpl(
 
     private companion object {
         val log = LoggerFactory.getLogger(LicenseReportServiceImpl::class.java)
+        const val RESOLUTIONS_METRIC = "license.target.resolutions"
     }
 }

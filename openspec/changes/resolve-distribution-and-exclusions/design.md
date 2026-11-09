@@ -155,6 +155,13 @@ data class ArtifactPattern(val groups: List<String>, val artifacts: List<String>
 - `license-service.components-registry-url`: required; a missing value fails startup.
 - `license-service.exclusions`: a list of `{components, reason}`, `components` a comma-separated list of component ids. It lives in Spring Cloud Config only, never in this repository: the component names are internal, and the repository is public.
 
+### 10. A registry outage is a metric, not a health indicator
+
+- Every resolution is counted as `license.target.resolutions` with tag `outcome`: `resolved`, `excluded`, `not_found` or `unavailable`. Prometheus scrapes it as `license_target_resolutions_total`.
+- No health indicator for the registry. It is called per request and shared by every pod: in readiness it would turn every pod unready at once, blocking even `GET` of running reports; in liveness it would restart pods that cannot fix it.
+- An outage already answers `503` per request; the `unavailable` count is what an alert watches.
+- The counter lives in `server`, not in `license-target-registry`: the module reads one system and knows nothing of Micrometer.
+
 ## Risks / Trade-offs
 
 - **Two Feign versions meet in the server's test classpath.** The client is built for Feign 12 and runs on 13 there. Accepted: the adapter test exercises it end to end; the published client upgrading its Feign is a version bump here.

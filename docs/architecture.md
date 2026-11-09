@@ -104,7 +104,14 @@ What each part does on a request:
 - the generator produces the result from what it was given;
 - the report store keeps reports in memory until their TTL ends;
 - the policy refresher loads the license policy in the background: every minute until the first load succeeds, then every 15 minutes it checks the registry's head commit and reloads only when it moved; a failed reload keeps the policy it has;
-- the `licenseRegistry` health is down until a policy is loaded and up from then on, whatever Bitbucket does later. It is in the readiness group, not the liveness one: a pod without a policy stays alive, answers `503` and gets no traffic.
+- a pod without a policy stays alive, answers `503` and gets no traffic (see Health and metrics).
+
+## Health and metrics
+
+- **Readiness covers only what this pod holds.** A pod that cannot serve until it has loaded something is unready until it has it: the `licenseRegistry` indicator is down until the license policy is in memory, and up from then on, whatever Bitbucket does later. Liveness stays `livenessState` only: a restart fixes nothing outside the pod.
+- **A per-request dependency is never a health indicator.** The components registry, and later Xray and Artifactory, are called per request and shared by every pod. In readiness, an outage would turn every pod unready at once, and block even `GET` of reports already running.
+- **Instead, an outage answers `503` with a message, and is counted.** `license.target.resolutions{outcome}` (`license_target_resolutions_total` in Prometheus) counts each resolution as `resolved`, `excluded`, `not_found` or `unavailable`; an alert watches `unavailable`. A later dependency gets its own counter the same way.
+- **Metrics live in `server`.** `engine/` modules know nothing of Micrometer; the server counts what they answer or throw.
 
 ## Boundaries
 
