@@ -1,5 +1,10 @@
 package org.octopusden.octopus.license.service.configuration
 
+import io.micrometer.core.instrument.MeterRegistry
+import org.octopusden.octopus.license.policy.LicensePolicySource
+import org.octopusden.octopus.license.policy.impl.BitbucketLicensePolicySource
+import org.octopusden.octopus.license.service.state.policy.LicensePolicyHolder
+import org.octopusden.octopus.license.service.state.policy.LicensePolicyRefresher
 import org.octopusden.octopus.license.service.state.report.LicenseReportStore
 import org.octopusden.octopus.license.target.LicenseTargetResolver
 import org.octopusden.octopus.license.target.impl.RegistryLicenseTargetResolver
@@ -30,6 +35,28 @@ class LicenseServiceConfig(
         )
 
     @Bean
+    fun licensePolicySource(): LicensePolicySource =
+        with(properties.licenseRegistry) {
+            BitbucketLicensePolicySource(
+                required(bitbucketUrl, "bitbucket-url"),
+                required(token, "token"),
+                required(project, "project"),
+                required(repository, "repository"),
+            )
+        }
+
+    @Bean
+    fun licensePolicyHolder() = LicensePolicyHolder()
+
+    @Bean
+    fun licensePolicyRefresher(
+        source: LicensePolicySource,
+        holder: LicensePolicyHolder,
+        clock: Clock,
+        meterRegistry: MeterRegistry,
+    ) = LicensePolicyRefresher(source, holder, properties.licenseRegistry.refreshInterval, clock, meterRegistry)
+
+    @Bean
     fun licenseReportExecutor() =
         ThreadPoolTaskExecutor().apply {
             corePoolSize = properties.generationThreads
@@ -37,4 +64,9 @@ class LicenseServiceConfig(
             queueCapacity = properties.maxQueuedReports
             setThreadNamePrefix("license-report-")
         }
+
+    private fun required(
+        value: String?,
+        setting: String,
+    ) = requireNotNull(value?.takeIf { it.isNotBlank() }) { "license-service.license-registry.$setting is not set" }
 }

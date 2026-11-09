@@ -1,0 +1,174 @@
+## Purpose
+
+How the service reads the license policy from the license registry, and how the policy judges one library. It governs the verdict of a library that has a name; finding libraries, and naming files nobody could identify, are outside it.
+
+## ADDED Requirements
+
+### Requirement: The policy is read from the license registry at one commit
+
+The service SHALL read the license policy from the default branch of the license registry only, and SHALL record the commit it read every file at.
+
+#### Scenario: Files read at the head commit
+
+- **WHEN** the branch head is `a1b2c3d` during the whole load
+- **THEN** the policy's commit is `a1b2c3d`
+
+#### Scenario: The branch moves during a load
+
+- **WHEN** the branch head changes between the start and the end of a load
+- **THEN** the load starts over, and the policy holds the files of a single commit
+
+#### Scenario: No whitelist
+
+- **WHEN** the registry has no `licenses-whitelist.txt`, or it names no license
+- **THEN** the load fails and no policy is produced
+
+### Requirement: Malformed registry lines are skipped and reported
+
+The service SHALL skip a malformed override or license text line, keep the rest of the policy, and list each skipped line among the policy's problems.
+
+#### Scenario: Override key without a version
+
+- **WHEN** `thirdparty-licenses.properties` holds `org.example--sample-lib=MIT`
+- **THEN** that line is a problem and every other override applies
+
+#### Scenario: Unparseable version range
+
+- **WHEN** an override's version is `[1.0,`
+- **THEN** that line is a problem and the load succeeds
+
+#### Scenario: Missing file other than the whitelist
+
+- **WHEN** the registry has no `merges.txt`
+- **THEN** it is read as empty, it is a problem, and the load succeeds
+
+### Requirement: An override replaces the licenses of a Maven library
+
+The service SHALL apply overrides before anything else, reading `thirdparty-licenses.properties` as Java properties. Among the entries whose group and artifact equal the library's and whose version or version range holds its version, the one with the greatest key in sorted order SHALL replace the licenses found, as the license plugins' last match does. An entry with an empty value SHALL be ignored.
+
+#### Scenario: Version in the range
+
+- **WHEN** the override is `org.example--sample-lib--[1.0,2.0)=MIT` and the library is `org.example:sample-lib:1.5` found with `GPL-3.0`
+- **THEN** the judgement uses `MIT`, says the licenses were overridden, and is `ALLOWED`
+
+#### Scenario: Version outside the range
+
+- **WHEN** the same override and the library is `org.example:sample-lib:2.1` found with `GPL-3.0`
+- **THEN** the judgement uses `GPL-3.0` and is `NOT_ALLOWED`
+
+#### Scenario: Single version
+
+- **WHEN** the override is `org.example--sample-lib--1.5=MIT`
+- **THEN** it applies to `1.5` only
+
+#### Scenario: Several licenses in one override
+
+- **WHEN** the override's value is `MIT|Apache-2.0`
+- **THEN** the judgement uses both
+
+#### Scenario: Two entries match
+
+- **WHEN** both `org.example--sample-lib--[1.0,2.0)=MIT` and `org.example--sample-lib--[1.5,1.6)=Apache-2.0` hold `1.5`
+- **THEN** the judgement uses `Apache-2.0`, the entry with the greater key
+
+#### Scenario: Empty override value
+
+- **WHEN** the only matching override is `org.example--sample-lib--1.5=`
+- **THEN** the licenses found are kept and the line is not a problem
+
+#### Scenario: Library without Maven coordinates
+
+- **WHEN** a library is judged without coordinates
+- **THEN** no override applies
+
+### Requirement: License names are canonical, exact first, then ignoring case
+
+The service SHALL replace every license name with its canonical spelling, matching it against the names in `merges.txt`, the whitelist and the hidden list as written, and ignoring case only when the name is found nowhere as written; the first name of a `merges.txt` line is the canonical one. Ignoring case, the first match in registry order SHALL win. A name found nowhere SHALL keep its own spelling. A name written the same way on two `merges.txt` lines SHALL keep the first line and be listed among the problems; names differing only in case are not a problem. Ignoring case when the exact name is unknown is a deliberate difference from the license plugins, which match exactly.
+
+#### Scenario: Synonym
+
+- **WHEN** a library is found with `The Apache Software License, Version 2.0`
+- **THEN** the judgement lists `Apache-2.0`
+
+#### Scenario: Different casing
+
+- **WHEN** a library is found with `apache 2`
+- **THEN** the judgement lists `Apache-2.0`
+
+#### Scenario: Names on two lines differing only in case
+
+- **WHEN** `merges.txt` has `GNU Lesser General Public License` on the `LGPL-2.1` line and `GNU LESSER GENERAL PUBLIC LICENSE` on the `LGPL-3.0` line
+- **THEN** `GNU LESSER GENERAL PUBLIC LICENSE` becomes `LGPL-3.0`, `GNU Lesser General Public License` and `gnu lesser general public license` become `LGPL-2.1`, and neither line is a problem
+
+#### Scenario: Name on two merge lines
+
+- **WHEN** `Apache 2` is on the `Apache-2.0` line and on a later line
+- **THEN** it becomes `Apache-2.0`, and the later line is a problem
+
+#### Scenario: Unknown name
+
+- **WHEN** a library is found with `Some Custom License`
+- **THEN** the judgement lists `Some Custom License` and is `NOT_ALLOWED`
+
+### Requirement: The verdict follows the allowed and hidden lists
+
+The service SHALL judge a library `UNKNOWN` when no license is known after dropping blank, `Unknown` and `Unknown license` in any case; `ALLOWED` when any canonical license is in the whitelist or the hidden list; and `NOT_ALLOWED` otherwise.
+
+#### Scenario: No license
+
+- **WHEN** a library is found with no license, or only `Unknown`
+- **THEN** the verdict is `UNKNOWN`
+
+#### Scenario: Synonym of an unknown marker
+
+- **WHEN** `merges.txt` has `Unknown license|none` and a library is found with `none`
+- **THEN** the verdict is `UNKNOWN`
+
+#### Scenario: Dual license, one allowed
+
+- **WHEN** a library is found with `GPL-2.0` and `MIT`
+- **THEN** the verdict is `ALLOWED`
+
+#### Scenario: Synonym on the whitelist
+
+- **WHEN** the whitelist names `The MIT License`, `merges.txt` has `MIT|The MIT License`, and a library is found with `MIT`
+- **THEN** the verdict is `ALLOWED`, a deliberate difference from the license plugins
+
+#### Scenario: Hidden license
+
+- **WHEN** a library is found with a license on the hidden list only
+- **THEN** the verdict is `ALLOWED`
+
+#### Scenario: Nothing allowed
+
+- **WHEN** a library is found with `GPL-3.0` only
+- **THEN** the verdict is `NOT_ALLOWED`
+
+### Requirement: Allowed licenses without a text are known
+
+The service SHALL read the text of each license from `licenses.properties` as Java properties: a `licenses/` file in the registry, or an `http`/`https` URL. It SHALL know, for every load, which whitelisted licenses have neither, and SHALL report them in its log and health details.
+
+#### Scenario: Allowed license with no text
+
+- **WHEN** `MIT` is allowed and `licenses.properties` has no entry for it
+- **THEN** the policy lists `MIT` among the licenses without text
+
+#### Scenario: Text at a URL
+
+- **WHEN** `licenses.properties` maps `H2-1.0` to an `http` URL
+- **THEN** the policy gives that URL as the text of `H2-1.0`, and `H2-1.0` is not a license without text
+
+#### Scenario: Text lookup ignores case when the exact name is unknown
+
+- **WHEN** `licenses.properties` has `Apache-2.0` and the judged license is `apache-2.0`
+- **THEN** the policy gives the `Apache-2.0` text
+
+#### Scenario: Text entry pointing at a missing file
+
+- **WHEN** `licenses.properties` maps `MIT` to `licenses/MIT.txt` and `licenses/` has no such file
+- **THEN** the line is a problem and `MIT` is a license without text
+
+#### Scenario: Entries for two synonyms of one license
+
+- **WHEN** `merges.txt` has `CDDL-1.1|CDDL-1.1-GPL-2.0-CPE`, and `licenses.properties` maps both names to different files
+- **THEN** the policy gives the `CDDL-1.1` entry's text, and the other entry is a problem

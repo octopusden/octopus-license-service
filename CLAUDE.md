@@ -4,15 +4,16 @@ Generates the third-party license files of a component version: the libraries in
 
 ## Role in the ecosystem
 - Called by: TeamCity build, RC and RELEASE templates through the `license-runner` metarunner; later the components management portal through `client`
-- Reads: the components registry; as later features land, JFrog Xray, Artifactory build-info, the license registry
+- Reads: the components registry, the license registry (through Bitbucket); as later features land, JFrog Xray and Artifactory build-info
 - Config: Spring Cloud Config with Vault; deployed to OKD QA and Prod from TeamCity
 
 ## Shape
 - Kotlin, Gradle, JDK 25, Spring Boot 4
 - `core` (DTOs, no dependencies), `client` (Feign), `server` (`:license-service`), `runner` (`:license-runner`, Clikt)
-- `engine/`: the modules that produce a report, one per system read — `target-registry` (`:license-target-registry`, components registry only); later the license registry and the Xray/Artifactory scan
+- `engine/`: the modules that produce a report, one per system read — `target-registry` (`:license-target-registry`, components registry only), `policy-registry` (`:license-policy-registry`, license registry only); later the Xray/Artifactory scan
 
 ## Working here
 - Module rules and request flow: [docs/architecture.md](docs/architecture.md)
+- Deferred work: [docs/tech-debt/](docs/tech-debt/README.md), `TD-NNN`, cited from code instead of `TODO`
 - Build: `./gradlew build` · Quality gate: `./gradlew qualityCheck` · Run: `./gradlew :license-service:bootRun`
 - detekt is 2.x and configured in the root build, not by octopus-quality: 1.x cannot run on JDK 25

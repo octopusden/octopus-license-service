@@ -3,6 +3,7 @@ package org.octopusden.octopus.license.service
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
@@ -11,9 +12,13 @@ import org.octopusden.octopus.license.client.impl.ClassicLicenseServiceClient
 import org.octopusden.octopus.license.client.impl.LicenseServiceClientParametersProvider
 import org.octopusden.octopus.license.core.dto.LicenseReportRequest
 import org.octopusden.octopus.license.core.exception.ServiceBusyException
+import org.octopusden.octopus.license.policy.LicensePolicySource
+import org.octopusden.octopus.license.policy.model.LicensePolicy
 import org.octopusden.octopus.license.service.service.GeneratedReport
 import org.octopusden.octopus.license.service.service.LicenseReportGenerator
 import org.octopusden.octopus.license.service.service.impl.EmptyLicenseReportGenerator
+import org.octopusden.octopus.license.service.state.policy.LicensePolicyHolder
+import org.octopusden.octopus.license.service.state.policy.LicensePolicyRefresherTest.FakeLicensePolicySource
 import org.octopusden.octopus.license.service.state.report.LicenseReportStore
 import org.octopusden.octopus.license.target.LicenseTargetResolver
 import org.octopusden.octopus.license.target.model.ComponentVersion
@@ -43,6 +48,10 @@ import java.util.concurrent.TimeUnit
         "license-service.generation-threads=1",
         "license-service.max-queued-reports=0",
         "license-service.components-registry-url=http://localhost:1",
+        "license-service.license-registry.bitbucket-url=http://localhost:1",
+        "license-service.license-registry.token=token",
+        "license-service.license-registry.project=SAMPLE",
+        "license-service.license-registry.repository=sample-license-registry",
     ],
 )
 class BusyServiceApiTest {
@@ -65,6 +74,18 @@ class BusyServiceApiTest {
 
     @Autowired
     private lateinit var licenseReportExecutor: ThreadPoolTaskExecutor
+
+    @Autowired
+    private lateinit var policyHolder: LicensePolicyHolder
+
+    @BeforeEach
+    fun awaitPolicyLoaded() {
+        val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(GATE_TIMEOUT_SECONDS)
+        while (policyHolder.current() == null && System.nanoTime() < deadline) {
+            TimeUnit.MILLISECONDS.sleep(POLL_INTERVAL_MS)
+        }
+        requireNotNull(policyHolder.current()) { "the license policy did not load within $GATE_TIMEOUT_SECONDS s" }
+    }
 
     @AfterEach
     fun releaseGeneration() {
@@ -110,15 +131,22 @@ class BusyServiceApiTest {
         @Volatile
         var gate = CountDownLatch(1)
 
-        override fun generate(target: LicenseTarget): GeneratedReport {
+        override fun generate(
+            target: LicenseTarget,
+            policy: LicensePolicy,
+        ): GeneratedReport {
             gate.await(GATE_TIMEOUT_SECONDS, TimeUnit.SECONDS)
             gate = CountDownLatch(1)
-            return delegate.generate(target)
+            return delegate.generate(target, policy)
         }
     }
 
     @TestConfiguration
     class BlockingGeneratorConfig {
+        @Bean
+        @Primary
+        fun loadedLicensePolicySource(): LicensePolicySource = FakeLicensePolicySource()
+
         @Bean
         @Primary
         fun blockingGenerator(

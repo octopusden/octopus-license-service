@@ -39,6 +39,7 @@ tasks.named<org.springframework.boot.gradle.tasks.run.BootRun>("bootRun") {
 dependencies {
     implementation(project(":core"))
     implementation(project(":license-target-registry"))
+    implementation(project(":license-policy-registry"))
 
     implementation(platform("org.springframework.boot:spring-boot-dependencies:${project.property("spring-boot.version")}"))
     implementation(platform("org.springframework.cloud:spring-cloud-dependencies:${project.property("spring-cloud.version")}"))

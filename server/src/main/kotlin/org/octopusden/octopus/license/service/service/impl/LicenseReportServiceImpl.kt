@@ -9,9 +9,11 @@ import org.octopusden.octopus.license.core.exception.LicenseFilesNotAvailableExc
 import org.octopusden.octopus.license.core.exception.NotFoundException
 import org.octopusden.octopus.license.core.exception.ServiceBusyException
 import org.octopusden.octopus.license.core.exception.ServiceUnavailableException
+import org.octopusden.octopus.license.policy.model.LicensePolicy
 import org.octopusden.octopus.license.service.service.LicenseFiles
 import org.octopusden.octopus.license.service.service.LicenseReportGenerator
 import org.octopusden.octopus.license.service.service.LicenseReportService
+import org.octopusden.octopus.license.service.state.policy.LicensePolicyHolder
 import org.octopusden.octopus.license.service.state.report.LicenseReportStore
 import org.octopusden.octopus.license.service.state.report.StoredReport
 import org.octopusden.octopus.license.target.LicenseTargetResolver
@@ -33,12 +35,17 @@ class LicenseReportServiceImpl(
     private val licenseReportStore: LicenseReportStore,
     private val licenseReportGenerator: LicenseReportGenerator,
     private val licenseTargetResolver: LicenseTargetResolver,
+    private val licensePolicyHolder: LicensePolicyHolder,
     @Qualifier("licenseReportExecutor") private val licenseReportExecutor: TaskExecutor,
     private val clock: Clock,
     private val meterRegistry: MeterRegistry,
 ) : LicenseReportService {
     override fun start(request: LicenseReportRequest): LicenseReport {
         validate(request)
+        // Read once: the generation keeps this policy even if a newer one is loaded meanwhile (D7).
+        val policy =
+            licensePolicyHolder.current()?.policy
+                ?: throw ServiceUnavailableException("The license registry has not been loaded yet")
         val report = LicenseReport(
             id = UUID.randomUUID().toString(),
             component = request.component,
@@ -54,7 +61,7 @@ class LicenseReportServiceImpl(
             is TargetResolution.Resolved -> {
                 licenseReportStore.add(report)
                 try {
-                    licenseReportExecutor.execute { generate(report, resolution.target) }
+                    licenseReportExecutor.execute { generate(report, resolution.target, policy) }
                 } catch (_: TaskRejectedException) {
                     licenseReportStore.remove(report.id)
                     throw ServiceBusyException("Every license report generation is busy; start the report again later")
@@ -104,9 +111,10 @@ class LicenseReportServiceImpl(
     private fun generate(
         report: LicenseReport,
         target: LicenseTarget,
+        policy: LicensePolicy,
     ) {
         val startedAt = clock.instant()
-        val finished = runCatching { licenseReportGenerator.generate(target) }.fold(
+        val finished = runCatching { licenseReportGenerator.generate(target, policy) }.fold(
             onSuccess = { generated ->
                 report.copy(status = LicenseReportStatus.DONE, summary = generated.summary).also {
                     licenseReportStore.finish(it, generated.files)
