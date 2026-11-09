@@ -1,6 +1,8 @@
 package org.octopusden.octopus.license.service.configuration
 
 import org.octopusden.octopus.license.service.state.report.LicenseReportStore
+import org.octopusden.octopus.license.target.LicenseTargetResolver
+import org.octopusden.octopus.license.target.impl.RegistryLicenseTargetResolver
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.scheduling.annotation.EnableScheduling
@@ -17,6 +19,15 @@ class LicenseServiceConfig(
 
     @Bean
     fun licenseReportStore(clock: Clock) = LicenseReportStore(clock, properties.reportTtl, properties.maxStoredBytes.toBytes())
+
+    @Bean
+    fun licenseTargetResolver(): LicenseTargetResolver =
+        RegistryLicenseTargetResolver(
+            requireNotNull(properties.componentsRegistryUrl?.takeIf { it.isNotBlank() }) {
+                "license-service.components-registry-url is not set"
+            },
+            properties.exclusions,
+        )
 
     @Bean
     fun licenseReportExecutor() =

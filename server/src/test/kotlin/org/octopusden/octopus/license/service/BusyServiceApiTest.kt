@@ -15,6 +15,11 @@ import org.octopusden.octopus.license.service.service.GeneratedReport
 import org.octopusden.octopus.license.service.service.LicenseReportGenerator
 import org.octopusden.octopus.license.service.service.impl.EmptyLicenseReportGenerator
 import org.octopusden.octopus.license.service.state.report.LicenseReportStore
+import org.octopusden.octopus.license.target.LicenseTargetResolver
+import org.octopusden.octopus.license.target.model.ComponentVersion
+import org.octopusden.octopus.license.target.model.DistributionSpec
+import org.octopusden.octopus.license.target.model.LicenseTarget
+import org.octopusden.octopus.license.target.model.TargetResolution
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.info.BuildProperties
 import org.springframework.boot.test.context.SpringBootTest
@@ -34,7 +39,11 @@ import java.util.concurrent.TimeUnit
 /** One generation thread and no queue: a second report while the first runs finds the service busy. */
 @SpringBootTest(
     webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
-    properties = ["license-service.generation-threads=1", "license-service.max-queued-reports=0"],
+    properties = [
+        "license-service.generation-threads=1",
+        "license-service.max-queued-reports=0",
+        "license-service.components-registry-url=http://localhost:1",
+    ],
 )
 class BusyServiceApiTest {
     @LocalServerPort
@@ -101,13 +110,10 @@ class BusyServiceApiTest {
         @Volatile
         var gate = CountDownLatch(1)
 
-        override fun generate(
-            component: String,
-            version: String,
-        ): GeneratedReport {
+        override fun generate(target: LicenseTarget): GeneratedReport {
             gate.await(GATE_TIMEOUT_SECONDS, TimeUnit.SECONDS)
             gate = CountDownLatch(1)
-            return delegate.generate(component, version)
+            return delegate.generate(target)
         }
     }
 
@@ -119,6 +125,24 @@ class BusyServiceApiTest {
             clock: Clock,
             buildProperties: BuildProperties,
         ) = BlockingGenerator(EmptyLicenseReportGenerator(clock, buildProperties))
+
+        @Bean
+        @Primary
+        fun resolvingTargetResolver() =
+            object : LicenseTargetResolver {
+                override fun resolve(
+                    component: String,
+                    version: String,
+                ) = TargetResolution.Resolved(
+                    LicenseTarget(
+                        ComponentVersion(component, version),
+                        listOf(version),
+                        "GRADLE",
+                        emptySet(),
+                        DistributionSpec(emptyList(), emptyList()),
+                    ),
+                )
+            }
     }
 
     private companion object {

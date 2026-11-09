@@ -1,16 +1,14 @@
 package org.octopusden.octopus.license.service.service
 
 import org.octopusden.octopus.license.core.dto.LicenseReportSummary
+import org.octopusden.octopus.license.target.model.LicenseTarget
 
 /**
- * Generates the license report of one component version, synchronously; running it in the
- * background and keeping the result is the caller's job.
+ * Generates the license report of one [LicenseTarget], synchronously; running it in the
+ * background and keeping the result is the caller's job. Never sees an excluded component.
  */
 interface LicenseReportGenerator {
-    fun generate(
-        component: String,
-        version: String,
-    ): GeneratedReport
+    fun generate(target: LicenseTarget): GeneratedReport
 }
 
 /** [files] is the zip of license files, ready to download. */

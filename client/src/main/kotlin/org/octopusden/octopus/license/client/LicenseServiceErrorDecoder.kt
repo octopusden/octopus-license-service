@@ -8,6 +8,7 @@ import org.octopusden.octopus.license.core.exception.InvalidRequestException
 import org.octopusden.octopus.license.core.exception.LicenseFilesNotAvailableException
 import org.octopusden.octopus.license.core.exception.NotFoundException
 import org.octopusden.octopus.license.core.exception.ServiceBusyException
+import org.octopusden.octopus.license.core.exception.ServiceUnavailableException
 import tools.jackson.core.JacksonException
 import tools.jackson.databind.json.JsonMapper
 
@@ -34,7 +35,9 @@ internal class LicenseServiceErrorDecoder(
             HTTP_BAD_REQUEST -> InvalidRequestException(message)
             HTTP_NOT_FOUND -> NotFoundException(message)
             HTTP_CONFLICT -> LicenseFilesNotAvailableException(message)
-            HTTP_SERVICE_UNAVAILABLE -> ServiceBusyException(message)
+            // Only a busy service says when to come back; any other 503 is a system it reads.
+            HTTP_SERVICE_UNAVAILABLE ->
+                if (response.headers().containsKey(RETRY_AFTER)) ServiceBusyException(message) else ServiceUnavailableException(message)
             else -> default.decode(methodKey, buffered)
         }
     }
@@ -44,5 +47,6 @@ internal class LicenseServiceErrorDecoder(
         const val HTTP_NOT_FOUND = 404
         const val HTTP_CONFLICT = 409
         const val HTTP_SERVICE_UNAVAILABLE = 503
+        const val RETRY_AFTER = "Retry-After"
     }
 }

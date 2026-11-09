@@ -1,0 +1,82 @@
+## 1. The `license-target-registry` module
+
+- [x] 1.1 Create the module:
+  - [x] 1.1.1 `settings.gradle.kts`: include `:license-target-registry` with `projectDir = engine/target-registry`.
+  - [x] 1.1.2 `engine/target-registry/build.gradle.kts`: `components-registry-service-client` `3.2.0` and `versions-api` `2.0.14`, versions pinned in `gradle.properties`; JUnit for tests. No Spring, no `core`.
+  - [x] 1.1.3 Confirmed with `:license-target-registry:dependencies --configuration runtimeClasspath`: no Spring, no `:core`; Jackson 2.16 and Feign 12.2 come with the registry client.
+  - [x] 1.1.4 (added on review) `feign-core` `12.2` is `compileOnly`, pinned as `components-registry-feign.version`: the resolver needs `FeignException` to tell an unreachable registry from other failures, and the client already brings Feign at runtime, so declaring it there would mix two Feign versions in production.
+- [x] 1.2 Write failing unit tests for `LicenseTargetDescriber` and its parts (pure, no HTTP):
+  - [x] 1.2.1 Exclusion, one test per rule: archived, internal, `WHISKEY`, the registry's `testComponent` flag, `doc_`/`doc-` names in four casings, configured entry with its own reason, configured match is exact.
+  - [x] 1.2.1a (added on review) One configured entry lists several components under one reason, so a shared reason is written once: `ConfiguredExclusion(components, reason)`, bound from a comma-separated `components` property.
+  - [x] 1.2.1b (added on review) The test-component rule reads the registry's `testComponent` flag (set from the registry's own name patterns), not the label `test-component`; a test shows the label alone no longer excludes, and the adapter test reads the flag from a recorded answer.
+  - [x] 1.2.2 Exclusion order: archived, `WHISKEY` and a `doc_` name together give `Archived component`.
+  - [x] 1.2.3 `docker-tools`, `doc`, `mydoc_x`, `documentation-service` are not excluded.
+  - [x] 1.2.4 `GAV`: entry with extension; with classifier; two entries with spaces around the comma; two-part entry is `Unsupported` and keeps its neighbour; `file:`, `http:`, `https:` entries are `Unsupported`; absent, empty, blank and `" , "` fields declare nothing.
+  - [x] 1.2.5 `docker`: image without tag; with tag; registry host with port and tag; registry host with port and no tag; `GAV` entries come before docker images.
+  - [x] 1.2.6 `DEB` and `RPM` are never read: `RegistryComponent` carries no field for them, so the parser cannot see them.
+  - [x] 1.2.7 Maven artifact patterns: one of two ranges holds the version; none holds it (empty, still resolved); comma-separated patterns split and trimmed; two overlapping entries both kept.
+  - [x] 1.2.8 Artifact versions: build version differs, kept second; equal, listed once; absent, requested version only.
+- [x] 1.3 Implement, as separate units:
+  - [x] 1.3.1 `model/` — `LicenseTarget`, `DistributionSpec`, `DeclaredArtifact`, `ArtifactPattern`, `ComponentVersion`, `TargetResolution`, `ConfiguredExclusion`, one per file.
+  - [x] 1.3.2 `ExclusionRules` — the ordered rules and their fixed reasons; `internal`.
+  - [x] 1.3.3 `DistributionParser` — `GAV` and `docker` fields to `DeclaredArtifact`s; `internal`.
+  - [x] 1.3.4 `LicenseTargetDescriber` — registry facts in, `LicenseTarget` out; selects pattern entries with `VersionRangeFactory` and `NumericVersionFactory`. `RegistryComponent` and `RegistryArtifactPattern` hold the facts in the module's own terms, so the rules and the parser never see the client's DTOs.
+- [x] 1.4 Write failing tests for `RegistryLicenseTargetResolver` against a stub HTTP server (JDK `HttpServer`):
+  - [x] 1.4.1 Resolved component: three calls, target as expected. The fixtures keep the shape of real components-registry answers (a component version, its `maven-artifacts`, `version-names`) with every name replaced by a sample one (`sample-app`), and a build version and docker field set so every field is exercised.
+  - [x] 1.4.2 Excluded component: exactly one call.
+  - [x] 1.4.3 `404` from the registry: `ComponentVersionNotFoundException`.
+  - [x] 1.4.4 `503` from the registry, and a closed port: `ComponentsRegistryUnavailableException`.
+  - [x] 1.4.5 (added on review) The recorded `maven-artifacts` key is `(,0),[0,)`, a union of two ranges; `VersionRangeFactory` parses it and the pattern is selected. The prototype's own range matcher handled only single ranges.
+  - [x] 1.4.6 (added on review) `425` from the registry, still loading its repository (`RepositoryNotPreparedException`): `ComponentsRegistryUnavailableException`, not a `500`.
+- [x] 1.5 Implement `LicenseTargetResolver`, `ComponentVersionNotFoundException`, `ComponentsRegistryUnavailableException` and `RegistryLicenseTargetResolver(registryUrl, exclusions)`. A `FeignException` with status `>= 500`, or `-1` (no answer at all), and a `RepositoryNotPreparedException` (`425`) are unavailable; any other is rethrown.
+- [x] 1.5a (added on review) Packages by role, so a reader sees what each file is for: `LicenseTargetResolver` and its `exception/` at the root as the public entry; `model/` for what it answers with; `impl/RegistryLicenseTargetResolver` as the only I/O; `impl/describer/` for the pure logic the adapter pushes registry facts into (`LicenseTargetDescriber`, `ExclusionRules`, `DistributionParser`, `RegistryComponent`, `RegistryArtifactPattern`). Tests follow the same packages.
+- [x] 1.5b (added on review) The registry client gets `Retryer.Default(100, 500, 2)`: one retry instead of the default four, since a caller waits on every call. The `503` adapter test asserts exactly two calls. The client's 60 s read timeout cannot be set from here; recorded as a risk in design.md.
+- [x] 1.6 `:license-target-registry:test`: 47 tests, 0 failures, 0 skipped (ExclusionRules 18, DistributionParser 16, LicenseTargetDescriber 6, RegistryLicenseTargetResolver 7). No infrastructure needed.
+- [x] 1.7 (added on review) The module moved to `engine/target-registry`: `engine/` groups the modules that produce a report, with the license registry and the Xray/Artifactory scan to follow. A folder, not one module, so each part keeps its own build file and reaches only its own systems. Project name `:license-target-registry` unchanged.
+
+## 2. `core` and `client`: service unavailable
+
+- [x] 2.1 Client test: a `503` with the error envelope raises `ServiceUnavailableException`.
+- [x] 2.2 `ServiceUnavailableException` added to `LicenseServiceException`; `503` mapped in `LicenseServiceErrorDecoder`.
+- [x] 2.3 `:client:test`: 5 tests, 0 failures.
+- [x] 2.4 (added on review) detekt's `SwallowedException` flagged the server re-throwing the module's exceptions without their cause. `LicenseServiceException`, `NotFoundException` and `ServiceUnavailableException` take an optional `cause`; it stays on the server side, only the message crosses the wire.
+- [x] 2.5 (added on review) Merging the skeleton's queue cap brought `ServiceBusyException`, also on `503`. `ServiceBusyException` now extends `ServiceUnavailableException`. The server sends `Retry-After` only when it is busy, and the client maps a `503` with `Retry-After` to `ServiceBusyException` and any other `503` to `ServiceUnavailableException`. A caller that catches `ServiceUnavailableException` gets both. Client tests cover both mappings; `BusyServiceApiTest` resolves through a stub target resolver.
+
+## 3. `server`: resolve at start
+
+- [x] 3.1 API tests in `LicenseReportApiTest`, with a `FakeTargetResolver` bean:
+  - [x] 3.1.1 Not excluded: the generator receives the resolved target.
+  - [x] 3.1.2 Excluded: `EXCLUDED` with the reason in the start answer and on `GET`; the generator never sees it; `GET …/files` raises `LicenseFilesNotAvailableException`.
+  - [x] 3.1.3 Not found: `404` envelope, and `NotFoundException` in the client.
+  - [x] 3.1.4 Unavailable: `ServiceUnavailableException` in the client.
+  - [x] 3.1.5 Blank component or version: the existing test still answers `400`; validation runs before the resolver.
+- [x] 3.2 `LicenseServiceConfigTest` (`ApplicationContextRunner`): without `license-service.components-registry-url` the context fails naming the property; with it the resolver is wired; a configured exclusion binds a comma-separated component list and one reason.
+- [x] 3.3 Implement:
+  - [x] 3.3.1 `LicenseServiceProperties` — `componentsRegistryUrl` (nullable so its absence is reported by name), `exclusions`.
+  - [x] 3.3.2 `LicenseServiceConfig` — a `LicenseTargetResolver` bean; `requireNotNull` on the URL fails startup.
+  - [x] 3.3.3 `LicenseReportServiceImpl.start` — resolves before registering; `Excluded` stored finished as `EXCLUDED`, no executor call; module exceptions mapped to `NotFoundException` and `ServiceUnavailableException`, with their cause.
+  - [x] 3.3.4 `LicenseReportGenerator.generate(target: LicenseTarget)`; `EmptyLicenseReportGenerator` takes it and ignores it.
+  - [x] 3.3.5 `ExceptionInfoHandler` — `ServiceUnavailableException` to `503`.
+  - [x] 3.3.6 `LicenseReportStore` unchanged: `finish` alone stores a report that never ran, already finished.
+  - [x] 3.3.7 `application.yaml` — no component names; `exclusions` come from Spring Cloud Config; `bootstrap-dev.yml` — the URL from `COMPONENTS_REGISTRY_URL`; tests set the URL as a property.
+- [x] 3.4 `:license-service:test`: 26 tests, 0 failures (API 18, config 3, store 5).
+- [x] 3.5 (added on review) Registry outages are a Prometheus metric, not a health indicator (Decision 10):
+  - [x] 3.5.1 API test: one start per outcome raises each `license.target.resolutions{outcome}` by one.
+  - [x] 3.5.2 `LicenseReportServiceImpl` counts each resolution through the `MeterRegistry`.
+
+## 4. Documentation
+
+- [x] 4.1 `docs/architecture.md` — the module in the diagram and the table, its rule and why; the request flow resolves the target before the background step.
+- [x] 4.2 `CLAUDE.md` — the module in "Shape"; the components registry under "Reads".
+- [x] 4.3 (added on review) `docs/architecture.md` and `CLAUDE.md` describe `engine/`: what it holds now and later, and why each part is its own module.
+- [x] 4.4 (added on review) `docs/architecture.md` states the rule: readiness covers what a pod holds; a per-request dependency answers `503` and is watched by a metric.
+
+## 5. Finalization
+
+- [x] 5.1 `./gradlew build qualityCheck` green: 96 tests across all modules, 0 failures, 0 skipped; detekt and ktlint clean.
+- [x] 5.2 Out of scope holds: no Artifactory, Xray or release management call (grep finds only two KDoc mentions); `DEB`/`RPM` have no field to be read through; nothing is cached.
+- [x] 5.3 `engine/target-registry/src` imports neither Spring nor `org.octopusden.octopus.license.core` (grep: none).
+- [x] 5.4 The design's risks hold as written.
+- [x] 5.5 The runner needs no change: a start failure becomes `RunOutcome.Unavailable` with the server's message, and an `EXCLUDED` report goes through the existing "finished without download" path, both already tested.
+- [ ] 5.6 (added on review) Before deploying, Spring Cloud Config must hold `license-service.components-registry-url` for QA and Prod; without it the service does not start (Decision 9).
+- [x] 5.7 (added on review) The repository's internal-content validation flagged real component names in `application.yaml`, tests and docs. Every fixture and example now uses sample names (`sample-app`, `doc_user_guide`, `org.example.sample`); the documentation-component list moved to Spring Cloud Config (`license-service.exclusions`).

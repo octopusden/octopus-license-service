@@ -10,26 +10,41 @@ flowchart TD
     portal["portal (another repository, later)"] -.-> client
     client --> core
     server --> core
-    server -.-> scan["scan (later)"]
-    server -.-> ext["external system clients (later)"]
+    server --> target
+    server -.-> rules
+    server -.-> scan
+    subgraph engine["engine/"]
+        target["license-target-registry"]
+        rules["license registry (later)"]
+        scan["license scan (later)"]
+    end
+    target --> crs["components registry client (published)"]
+    rules -.-> lr["license registry"]
+    scan -.-> xray["Xray, Artifactory"]
 ```
 
 An arrow means "depends on". Dashed parts do not exist yet.
+
+`engine/` holds the modules that produce a report: what a version releases, the license rules, and the scan that finds each file's licenses. It is a folder, not a module: each part is its own Gradle project, so each reaches only the systems it reads.
 
 | Module | Owns | May depend on | Must never depend on |
 | --- | --- | --- | --- |
 | `core` | The wire contract: request, report, summary, error envelope, exceptions | nothing | anything |
 | `client` | The Feign client for the API | `core` | `server` |
-| `runner` | The command line that starts a report, waits for it and writes the files | `client` | `server` |
-| `server` | The Spring Boot service | `core`, later `scan` and the external system clients | `client`, `runner` |
-| `scan` (later) | The license scan algorithm | nothing | Spring, HTTP clients, `core` |
+| `runner` | The command line that starts a report, waits for it and writes the files | `client` | `server`, `engine/*` |
+| `server` | The Spring Boot service | `core`, `engine/*` | `client`, `runner` |
+| `engine/target-registry` (`:license-target-registry`) | What a component version releases, or why it is excluded, from the components registry | the components registry client, `versions-api` | `core`, `server`, Spring, any other system |
+| `engine/` license registry (later) | Loading the license rules from the license registry | the license registry's client | `core`, `server`, Spring, any other system |
+| `engine/` license scan (later) | Finding each released file's libraries and licenses through Xray and Artifactory, checked against the license rules | Xray and Artifactory clients, the other `engine/` models | `core`, `server`, Spring |
 
 Why each rule:
 
 - **`core` depends on nothing**, because every caller imports it: whatever it depends on, every caller pulls in.
-- **`client` and `runner` never see `server`.** A caller needs the HTTP contract, not Spring Boot and Tomcat. The runner talks to the service over HTTP like any other caller.
+- **`client` and `runner` never see `server` or `engine/`.** A caller needs the HTTP contract, not Spring Boot and Tomcat. The runner talks to the service over HTTP like any other caller.
 - **`server` never sees `client` or `runner`.** The service does not call itself and knows nothing about who calls it.
-- **`scan` stays pure.** Data goes in and a result comes out. That keeps it testable without mocks, the way `component-validation` is in octopus-components-registry-service.
+- **`engine/` modules never import `core` or Spring.** They work on their own models, richer than the wire; `server` builds them from configuration and maps their results into `core`.
+- **Each `engine/` module reads only its own systems.** `license-target-registry` answers "what the registry declares", so it never needs Artifactory or Xray, and the scan builds on its answer instead of asking the registry again.
+- **The scan's logic stays apart from its I/O.** Data goes in and a result comes out, so the algorithm is testable without mocks, the way `component-validation` is in octopus-components-registry-service. `license-target-registry` already has that shape: `impl/describer/` is pure, `impl/RegistryLicenseTargetResolver` is the only I/O.
 
 Gradle enforces the dependency rules: a module cannot import what its build file does not declare. This page holds the reasons.
 
@@ -38,10 +53,12 @@ Gradle enforces the dependency rules: a module cannot import what its build file
 ```
 TeamCity step (metarunner)
   runner ──client── POST /rest/api/1/license-reports ──► controller → service
+                                                           ├─ license target, from the components registry
+                                                           │    unknown → 404, unreachable → 503 without Retry-After, nothing stored
+                                                           │    excluded → store: report EXCLUDED, done
                                                            ├─ store: report RUNNING
-                                                           └─ generator, on a background thread
-                                                                └─ later: components registry, Xray,
-                                                                   Artifactory, license registry
+                                                           └─ generator, on a background thread, with the target
+                                                                └─ later: Xray, Artifactory, license registry
   runner ──client── GET …/{id} until DONE, EXCLUDED or FAILED
   runner ──client── GET …/{id}/files ──► zip
   runner writes license-report.json and the zip to --output-dir
@@ -66,9 +83,9 @@ org.octopusden.octopus.license.service
 
 | Package | May use | Never uses |
 | --- | --- | --- |
-| `controller` | `service.LicenseReportService`; only `core` types in and out | `state`, the generator |
-| `service`: the report service | `state.report` (add, finish, find), the generator | `controller` |
-| `service`: the generator | only what it is given | `state`: an eviction never changes a running generation |
+| `controller` | `service.LicenseReportService`; only `core` types in and out | `state`, `engine/`, the generator |
+| `service`: the report service | `state.report` (add, finish, find), `engine/` `LicenseTargetResolver`, the generator | `controller` |
+| `service`: the generator | only what it is given: the license target; later the scan | `state`: an eviction never changes a running generation |
 | `state` | its own `@Scheduled` job | `service`, `controller`: state never calls back into the use case |
 | `configuration` | everything, to wire it | — |
 
@@ -77,19 +94,24 @@ Dependencies point one way: `controller → service → state`. Nothing hides `s
 What each part does on a request:
 
 - the controller only translates HTTP;
-- the service checks the request, registers the report and runs the generation in the background;
+- the service checks the request, resolves the license target, registers the report and runs the generation in the background;
 - the generator produces the result from what it was given;
 - the report store keeps reports in memory until their TTL ends.
+
+## Health and metrics
+
+- **Readiness covers only what this pod holds.** A pod that cannot serve until it has loaded something is unready until it has it. Liveness stays `livenessState` only: a restart fixes nothing outside the pod.
+- **A per-request dependency is never a health indicator.** The components registry, and later Xray and Artifactory, are called per request and shared by every pod. In readiness, an outage would turn every pod unready at once, and block even `GET` of reports already running.
+- **Instead, an outage answers `503` with a message, and is counted.** `license.target.resolutions{outcome}` (`license_target_resolutions_total` in Prometheus) counts each resolution as `resolved`, `excluded`, `not_found` or `unavailable`; an alert watches `unavailable`. A later dependency gets its own counter the same way.
+- **Metrics live in `server`.** `engine/` modules know nothing of Micrometer; the server counts what they answer or throw.
 
 ## Boundaries
 
 **Narrow at the edges, never in the middle.** `LicenseReportSummary` is built for callers. The scan algorithm works on much more: every released file, checksums, nested archives, build-info, and the reasons behind a trust level.
 
-- **`scan` has its own model.** It never uses the `core` DTOs. Otherwise every wire change would ripple into the algorithm, and the algorithm would see only what callers are allowed to see.
-- **The server owns both edges.**
-  - Inbound: it fetches from the external systems and maps what it gets into the `scan` input.
-  - Outbound: it maps the `scan` result into `core` types and the zip.
-- **The `LicenseReportGenerator` implementation is that adapter.** Today it returns an empty `core` summary directly, because it reads nothing.
+- **`engine/` has its own model.** It never uses the `core` DTOs. Otherwise every wire change would ripple into the algorithm, and the algorithm would see only what callers are allowed to see.
+- **`engine/` reads the external systems; the server maps.** The server passes the license target into the scan, and maps the scan's result into `core` types and the zip.
+- **The `LicenseReportGenerator` implementation is that mapping.** Today it returns an empty `core` summary directly, because no scan exists yet.
 
 The service stores nothing. Each result records its inputs (license registry commit, generation time, service version), so a difference between two results for one version can be explained later.
 
