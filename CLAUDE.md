@@ -14,5 +14,6 @@ Generates the third-party license files of a component version: the libraries in
 
 ## Working here
 - Module rules and request flow: [docs/architecture.md](docs/architecture.md)
+- Deferred work: [docs/tech-debt/](docs/tech-debt/README.md), `TD-NNN`, cited from code instead of `TODO`
 - Build: `./gradlew build` · Quality gate: `./gradlew qualityCheck` · Run: `./gradlew :license-service:bootRun`
 - detekt is 2.x and configured in the root build, not by octopus-quality: 1.x cannot run on JDK 25

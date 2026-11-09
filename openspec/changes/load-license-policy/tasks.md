@@ -84,5 +84,6 @@
 - [x] 4.3 `engine/policy-registry/src` imports neither Spring nor `org.octopusden.octopus.license.core` (grep).
 - [x] 4.4 No project, repository or real component name in the repository: fixtures use `SAMPLE`, `sample-license-registry`, `org.example`; grep finds no internal host or project.
 - [x] 4.5 The design's risks hold as written; `TD-001` stays open.
+- [x] 4.8 (added on review) `TD-001` widened from "an `at` parameter on the Bitbucket client" to "read the license registry through octopus-vcs-facade": the service should not depend on one VCS provider. Recorded in `docs/tech-debt/` (a new index and `001-…`), and cited in `BitbucketLicensePolicySource`'s KDoc. Must do.
 - [ ] 4.7 (added on review) Later, in the service's deployment values: startup probe on `/actuator/health/liveness` and a readiness probe on `/actuator/health/readiness`, as components-registry-service has. Until then the stand-wide startup probe reads the aggregate `/actuator/health`, which includes `licenseRegistry`, so a Bitbucket outage at deploy keeps a new pod from starting. Not part of this change.
 - [ ] 4.6 Before deploying, Spring Cloud Config and Vault hold the license registry settings for QA and Prod; without them the service does not start.

@@ -35,7 +35,7 @@ An arrow means "depends on". Dashed parts do not exist yet.
 | `runner` | The command line that starts a report, waits for it and writes the files | `client` | `server`, `engine/*` |
 | `server` | The Spring Boot service | `core`, `engine/*` | `client`, `runner` |
 | `engine/target-registry` (`:license-target-registry`) | What a component version releases, or why it is excluded, from the components registry | the components registry client, `versions-api` | `core`, `server`, Spring, any other system |
-| `engine/policy-registry` (`:license-policy-registry`) | The license policy, read from the license registry through Bitbucket, and the verdict on one named library | the Bitbucket client, `versions-api` | `core`, `server`, Spring, any other system |
+| `engine/policy-registry` (`:license-policy-registry`) | The license policy, read from the license registry through Bitbucket (to move to octopus-vcs-facade, [TD-001](tech-debt/001-read-license-registry-through-vcs-facade.md)), and the verdict on one named library | the Bitbucket client, `versions-api` | `core`, `server`, Spring, any other system |
 | `engine/` license scan (later) | Finding each released file's libraries and licenses through Xray and Artifactory, judged by the license policy | Xray and Artifactory clients, the other `engine/` models | `core`, `server`, Spring |
 
 Why each rule:

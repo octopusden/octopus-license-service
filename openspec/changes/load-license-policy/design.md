@@ -82,13 +82,14 @@ It fills the `engine/` slot the architecture page reserves for the license regis
 - The service image needs no `git` binary, no disk and no SSH key; a read-only token is enough.
 - Rejected: cloning with `git`, as the plugin does. It needs a writable disk and SSH or HTTPS Git credentials in the pod, for some 50 small files.
 - The client brings Jackson 2 and Feign 12, like the components registry client; same handling (Decision 5 of the license target change): `feign-core` is `compileOnly`. The module's adapter test runs the client on its own Feign 12 and Jackson 2.14; in the server it runs on Feign 13 and Jackson 2.21, which `BitbucketOnServerClasspathTest` covers with a load and an error.
+- Accepted as tech debt, not as the target: the source must move to octopus-vcs-facade, so the service is agnostic of the VCS provider (`TD-001`).
 
 ### 3. One consistent commit per load
 
 - The raw-file endpoint of the published client reads the default branch's head; it takes no commit.
 - The adapter reads the head commit, then every file, then the head commit again. When the two differ, it starts over, at most three times, then fails the load.
 - So the service reads the default branch only, and has no branch setting; it is the branch the license plugins clone.
-- `TD-001`: add an `at` parameter to `getRepositoryRawFileContent` in `octopus-external-systems-client`, then read every file at the first commit and drop the re-check.
+- `TD-001` (must do): read the registry through octopus-vcs-facade instead of Bitbucket, pinned to one commit, which drops the re-check and the service's own token. It needs file listing and reading in vcs-facade and its clients first; see `docs/tech-debt/001-read-license-registry-through-vcs-facade.md`.
 
 ### 4. The parser is pure and strict on structure, lenient on content
 
@@ -179,6 +180,6 @@ sealed interface LicenseText {
 
 - **The service is not ready right after a deploy until Bitbucket answers.** Accepted: a report judged without a policy would be wrong; `503` and a down readiness probe say so plainly.
 - **Up to 15 minutes between a registry merge and the service using it.** Accepted: the commit in each summary says which policy judged it.
-- **Re-reading the head commit to get a consistent load.** A merge during a load costs a second load. Removed by `TD-001`.
+- **Re-reading the head commit to get a consistent load.** A merge during a load costs a second load. Removed by `TD-001`, reading through octopus-vcs-facade.
 - **Case-insensitive names can allow what the plugin rejects.** Only when two spellings differ in case alone, which is the same license. Accepted.
 - **The Bitbucket client runs on newer Feign and Jackson in the server than it is built for** (13 and 2.21 against 12 and 2.14), as the components registry client does. Accepted: a server test loads a policy through it on that classpath; a client upgrade is a version bump here.

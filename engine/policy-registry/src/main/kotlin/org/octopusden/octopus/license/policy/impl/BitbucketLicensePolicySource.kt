@@ -16,6 +16,10 @@ import org.octopusden.octopus.license.policy.model.LicensePolicy
  *
  * The published client reads raw files at the default branch's head only, so a load checks the
  * head before and after it reads, and starts over when it moved (D3).
+ *
+ * Temporary, and must be replaced: it ties the service to Bitbucket and to a token of its own. The
+ * replacement reads through octopus-vcs-facade, pinned to one commit, once the facade can list and
+ * read files (TD-001, `docs/tech-debt/001-read-license-registry-through-vcs-facade.md`).
  */
 class BitbucketLicensePolicySource(
     bitbucketUrl: String,
