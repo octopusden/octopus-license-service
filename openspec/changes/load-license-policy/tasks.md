@@ -56,6 +56,13 @@
 - [x] 2.3a (added on review) `LicensePolicyHealthIndicatorTest`: readiness follows the policy in memory, never Bitbucket. Bitbucket going down after the first load leaves `licenseRegistry` UP on the loaded commit; down from the start leaves it DOWN.
 - [x] 2.4 (added on review) OKD's stand-wide `default.yml` uses `/actuator/health` as the startup probe, `/actuator/health/liveness` as liveness, and no readiness probe. Decided as components-registry-service does: probes enabled, the readiness group is `readinessState` and `licenseRegistry`, the liveness group stays `livenessState` only, so a Bitbucket outage never gets the pod restarted by liveness.
 
+## 2b. Refresh metric (added on review)
+
+- [x] 2b.1 Failing tests in `LicensePolicyRefresherTest`: each refresh that asks Bitbucket is counted by outcome (`loaded`, `unchanged`, `unavailable`, `invalid`); a tick that is not due counts nothing.
+- [x] 2b.2 `LicensePolicyRefresher` counts `license.policy.refreshes{outcome}` through the `MeterRegistry`, as the service counts `license.target.resolutions`. Readiness cannot show a failing refresh once a policy is loaded, so the counter is what an alert watches.
+- [x] 2b.3 `LicenseServiceConfigTest` gives its context a `SimpleMeterRegistry`, which the refresher now needs.
+- [x] 2b.4 `:license-service:test`: 52 tests, 0 failures; detekt and ktlint clean.
+
 ## 2a. Server packages by role (added on review)
 
 - [x] 2a.1 Moves, no behaviour change: `store/` → `state/report/`; `policy/` → `state/policy/` (holder, refresher); `LicensePolicyHealthIndicator` → `health/`. `controller/`, `service/` (the use case: report service, generator, `impl/`) and `configuration/` stay. Tests follow the same packages.
@@ -72,7 +79,7 @@
 
 ## 4. Finalization
 
-- [x] 4.1 `./gradlew build qualityCheck` green: 166 tests across all modules, 0 failures, 0 skipped; detekt and ktlint clean.
+- [x] 4.1 `./gradlew build qualityCheck` green: 168 tests across all modules, 0 failures, 0 skipped; detekt and ktlint clean.
 - [x] 4.2 Out of scope holds: no library is judged in a report (`server` never calls `judge`); nothing writes license files; `LicenseVerdict` has no `UNIDENTIFIED`.
 - [x] 4.3 `engine/policy-registry/src` imports neither Spring nor `org.octopusden.octopus.license.core` (grep).
 - [x] 4.4 No project, repository or real component name in the repository: fixtures use `SAMPLE`, `sample-license-registry`, `org.example`; grep finds no internal host or project.

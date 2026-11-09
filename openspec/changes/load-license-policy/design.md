@@ -149,7 +149,8 @@ sealed interface LicenseText {
 - `LicensePolicyRefresher` (`@Scheduled`):
   - before the first load: tries every minute;
   - after it: every 15 minutes asks for the head commit only, and reloads only when it changed;
-  - a failure is logged and keeps the current policy.
+  - a failure is logged and keeps the current policy;
+  - every refresh that asks Bitbucket is counted in `license.policy.refreshes`, tagged `outcome`: `loaded`, `unchanged`, `unavailable`, `invalid`. A tick that is not due asks nothing and counts nothing. Once a policy is loaded readiness stays up, so this counter is what an alert watches; the same pattern as `license.target.resolutions`.
 - `start` reads the holder once: null raises `ServiceUnavailableException` (`503`, "license registry not loaded yet"); otherwise the generation gets that policy instance, so a reload during a generation does not change its answer.
 - A `licenseRegistry` `HealthIndicator` is down while the holder is empty; its details show the commit, the load time, `licensesWithoutText` and `problems`.
 - Probes are enabled, as in components-registry-service: the readiness group is `readinessState` and `licenseRegistry`, the liveness group `livenessState` only. A pod without a policy stays alive, answers `503` and gets no traffic; a Bitbucket outage never restarts it through liveness.

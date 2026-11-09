@@ -1,5 +1,7 @@
 package org.octopusden.octopus.license.service.configuration
 
+import io.micrometer.core.instrument.MeterRegistry
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.DisplayName
@@ -16,6 +18,7 @@ import java.time.Duration
 class LicenseServiceConfigTest {
     private val contextRunner = ApplicationContextRunner()
         .withUserConfiguration(PropertiesConfig::class.java, LicenseServiceConfig::class.java)
+        .withBean(MeterRegistry::class.java, { SimpleMeterRegistry() })
 
     @Test
     @DisplayName("without a components registry URL the service does not start, and says which property is missing")

@@ -46,6 +46,20 @@ The service SHALL check the head of the registry's default branch on a fixed int
 - **WHEN** the head changed and reading the files fails
 - **THEN** reports keep using the previous policy, and the failure is logged
 
+### Requirement: Every refresh is counted by its outcome
+
+The service SHALL count each refresh that asks the license registry in the metric `license.policy.refreshes`, tagged `outcome` with `loaded`, `unchanged`, `unavailable` or `invalid`. A failing refresh after the first load SHALL NOT change readiness.
+
+#### Scenario: Bitbucket down after the first load
+
+- **WHEN** a refresh fails because Bitbucket is unreachable
+- **THEN** the `unavailable` count grows by one, and readiness stays up
+
+#### Scenario: Each outcome
+
+- **WHEN** one refresh loads a policy, one finds the head unchanged, one meets a Bitbucket outage and one reads a registry without a whitelist
+- **THEN** each of the four outcomes grows by one
+
 ### Requirement: The license registry settings are required
 
 The service SHALL fail to start when the Bitbucket URL, token, project or repository of the license registry is not configured, naming the missing property.

@@ -1,5 +1,6 @@
 package org.octopusden.octopus.license.service.configuration
 
+import io.micrometer.core.instrument.MeterRegistry
 import org.octopusden.octopus.license.policy.LicensePolicySource
 import org.octopusden.octopus.license.policy.impl.BitbucketLicensePolicySource
 import org.octopusden.octopus.license.service.state.policy.LicensePolicyHolder
@@ -52,7 +53,8 @@ class LicenseServiceConfig(
         source: LicensePolicySource,
         holder: LicensePolicyHolder,
         clock: Clock,
-    ) = LicensePolicyRefresher(source, holder, properties.licenseRegistry.refreshInterval, clock)
+        meterRegistry: MeterRegistry,
+    ) = LicensePolicyRefresher(source, holder, properties.licenseRegistry.refreshInterval, clock, meterRegistry)
 
     @Bean
     fun licenseReportExecutor() =

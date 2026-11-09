@@ -1,5 +1,6 @@
 package org.octopusden.octopus.license.service.health
 
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
@@ -15,7 +16,7 @@ class LicensePolicyHealthIndicatorTest {
     private val source = FakeLicensePolicySource()
     private val clock = MutableClock()
     private val holder = LicensePolicyHolder()
-    private val refresher = LicensePolicyRefresher(source, holder, REFRESH_INTERVAL, clock)
+    private val refresher = LicensePolicyRefresher(source, holder, REFRESH_INTERVAL, clock, SimpleMeterRegistry())
     private val indicator = LicensePolicyHealthIndicator(holder)
 
     @Test
