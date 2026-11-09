@@ -51,6 +51,7 @@ class BitbucketLicensePolicySourceTest {
     private fun answer(path: String): Triple<Int, String, String> {
         failure?.let { (status, body) -> return Triple(status, body, JSON) }
         return when {
+            path == "$REPO/commits" && heads.isEmpty() -> Triple(OK, page(""), JSON)
             path == "$REPO/commits" -> {
                 val head = if (heads.size > 1) heads.removeFirst() else heads.first()
                 Triple(OK, page("""{"id":"$head","message":"m","author":{"name":"a"},"authorTimestamp":0,"parents":[]}"""), JSON)
@@ -102,6 +103,14 @@ class BitbucketLicensePolicySourceTest {
         heads = ArrayDeque(listOf("c1", "c2", "c3", "c4", "c5", "c6", "c7"))
 
         assertThrows<LicenseRegistryUnavailableException> { source().load() }
+    }
+
+    @Test
+    @DisplayName("a branch without commits is an unavailable registry")
+    fun noCommits() {
+        heads = ArrayDeque()
+
+        assertThrows<LicenseRegistryUnavailableException> { source().headCommit() }
     }
 
     @Test

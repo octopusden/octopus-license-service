@@ -41,9 +41,9 @@ class BitbucketLicensePolicySource(
             client
                 .getCommits(project, repository, mapOf("limit" to 1))
                 .values
-                .first()
-                .id
-        }
+                .firstOrNull()
+                ?.id
+        } ?: throw LicenseRegistryUnavailableException("The license registry's default branch has no commit")
 
     override fun load(): LicensePolicy {
         repeat(MAX_TRIES) {

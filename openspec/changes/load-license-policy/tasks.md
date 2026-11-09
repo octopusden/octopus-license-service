@@ -31,8 +31,9 @@
   - [x] 1.5.3 Head moves during a load: starts over; moves three times: fails.
   - [x] 1.5.4 `401`, `503` and a closed port: `LicenseRegistryUnavailableException`. The `503` answers HTML, not Bitbucket's JSON, as a proxy in maintenance would.
   - [x] 1.5.5 (added on review) A registry without a whitelist is `InvalidLicenseRegistryException`, not unavailable.
+  - [x] 1.5.6 (added on review) A default branch with no commit is `LicenseRegistryUnavailableException`, not an uncaught `NoSuchElementException`.
 - [x] 1.6 Implement `LicensePolicySource` (`headCommit()`, `load()`), `LicenseRegistryUnavailableException` and `BitbucketLicensePolicySource(url, token, project, repository)`, reading the default branch. The client's failures are `FeignException`, its own `BitbucketClientException`s, and `IllegalStateException` from its error decoder for any error it cannot name; all three are unavailable. A bearer token, as Bitbucket Server's personal access tokens use.
-- [x] 1.7 `:license-policy-registry:test`: 56 tests, 0 failures, 0 skipped (judge 16, overrides 9, texts 8, parser 10, worked example 5, Bitbucket source 8). detekt and ktlint clean. No infrastructure needed.
+- [x] 1.7 `:license-policy-registry:test`: 57 tests, 0 failures, 0 skipped (judge 16, overrides 9, texts 8, parser 10, worked example 5, Bitbucket source 9). detekt and ktlint clean. No infrastructure needed.
 
 ## 2. `server`: hold, refresh and use the policy
 
@@ -79,7 +80,7 @@
 
 ## 4. Finalization
 
-- [x] 4.1 `./gradlew build qualityCheck` green: 177 tests across all modules, 0 failures, 0 skipped; detekt and ktlint clean.
+- [x] 4.1 `./gradlew build qualityCheck` green: 178 tests across all modules, 0 failures, 0 skipped; detekt and ktlint clean.
 - [x] 4.2 Out of scope holds: no library is judged in a report (`server` never calls `judge`); nothing writes license files; `LicenseVerdict` has no `UNIDENTIFIED`.
 - [x] 4.3 `engine/policy-registry/src` imports neither Spring nor `org.octopusden.octopus.license.core` (grep).
 - [x] 4.4 No project, repository or real component name in the repository: fixtures use `SAMPLE`, `sample-license-registry`, `org.example`; grep finds no internal host or project.
