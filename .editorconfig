@@ -1,0 +1,16 @@
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+indent_style = space
+indent_size = 4
+
+[*.{kt,kts}]
+# Same limit as detekt's MaxLineLength default, so the two tools agree.
+max_line_length = 120
+ktlint_code_style = ktlint_official
+
+[*.{yml,yaml}]
+indent_size = 2
