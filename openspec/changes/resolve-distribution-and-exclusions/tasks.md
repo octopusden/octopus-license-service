@@ -37,6 +37,7 @@
 - [x] 2.2 `ServiceUnavailableException` added to `LicenseServiceException`; `503` mapped in `LicenseServiceErrorDecoder`.
 - [x] 2.3 `:client:test`: 5 tests, 0 failures.
 - [x] 2.4 (added on review) detekt's `SwallowedException` flagged the server re-throwing the module's exceptions without their cause. `LicenseServiceException`, `NotFoundException` and `ServiceUnavailableException` take an optional `cause`; it stays on the server side, only the message crosses the wire.
+- [x] 2.5 (added on review) Merging the skeleton's queue cap brought `ServiceBusyException`, also on `503`. `ServiceBusyException` now extends `ServiceUnavailableException`. The server sends `Retry-After` only when it is busy, and the client maps a `503` with `Retry-After` to `ServiceBusyException` and any other `503` to `ServiceUnavailableException`. A caller that catches `ServiceUnavailableException` gets both. Client tests cover both mappings; `BusyServiceApiTest` resolves through a stub target resolver.
 
 ## 3. `server`: resolve at start
 
@@ -56,7 +57,6 @@
   - [x] 3.3.6 `LicenseReportStore` unchanged: `finish` alone stores a report that never ran, already finished.
   - [x] 3.3.7 `application.yaml` — no component names; `exclusions` come from Spring Cloud Config; `bootstrap-dev.yml` — the URL from `COMPONENTS_REGISTRY_URL`; tests set the URL as a property.
 - [x] 3.4 `:license-service:test`: 26 tests, 0 failures (API 18, config 3, store 5).
-- [x] 2.5 (added on review) Merging the skeleton's queue cap brought `ServiceBusyException`, also on `503`. `ServiceBusyException` now extends `ServiceUnavailableException`. The server sends `Retry-After` only when it is busy, and the client maps a `503` with `Retry-After` to `ServiceBusyException` and any other `503` to `ServiceUnavailableException`. A caller that catches `ServiceUnavailableException` gets both. Client tests cover both mappings; `BusyServiceApiTest` resolves through a stub target resolver.
 - [x] 3.5 (added on review) Registry outages are a Prometheus metric, not a health indicator (Decision 10):
   - [x] 3.5.1 API test: one start per outcome raises each `license.target.resolutions{outcome}` by one.
   - [x] 3.5.2 `LicenseReportServiceImpl` counts each resolution through the `MeterRegistry`.
