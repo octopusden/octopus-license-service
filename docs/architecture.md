@@ -98,6 +98,13 @@ What each part does on a request:
 - the generator produces the result from what it was given;
 - the report store keeps reports in memory until their TTL ends.
 
+## Health and metrics
+
+- **Readiness covers only what this pod holds.** A pod that cannot serve until it has loaded something is unready until it has it. Liveness stays `livenessState` only: a restart fixes nothing outside the pod.
+- **A per-request dependency is never a health indicator.** The components registry, and later Xray and Artifactory, are called per request and shared by every pod. In readiness, an outage would turn every pod unready at once, and block even `GET` of reports already running.
+- **Instead, an outage answers `503` with a message, and is counted.** `license.target.resolutions{outcome}` (`license_target_resolutions_total` in Prometheus) counts each resolution as `resolved`, `excluded`, `not_found` or `unavailable`; an alert watches `unavailable`. A later dependency gets its own counter the same way.
+- **Metrics live in `server`.** `engine/` modules know nothing of Micrometer; the server counts what they answer or throw.
+
 ## Boundaries
 
 **Narrow at the edges, never in the middle.** `LicenseReportSummary` is built for callers. The scan algorithm works on much more: every released file, checksums, nested archives, build-info, and the reasons behind a trust level.
