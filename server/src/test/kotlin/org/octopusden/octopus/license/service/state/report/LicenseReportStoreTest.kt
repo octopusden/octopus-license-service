@@ -1,4 +1,4 @@
-package org.octopusden.octopus.license.service.store
+package org.octopusden.octopus.license.service.state.report
 
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull

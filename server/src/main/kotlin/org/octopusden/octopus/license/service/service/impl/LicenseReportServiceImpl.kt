@@ -9,8 +9,8 @@ import org.octopusden.octopus.license.core.exception.ServiceUnavailableException
 import org.octopusden.octopus.license.service.service.LicenseFiles
 import org.octopusden.octopus.license.service.service.LicenseReportGenerator
 import org.octopusden.octopus.license.service.service.LicenseReportService
-import org.octopusden.octopus.license.service.store.LicenseReportStore
-import org.octopusden.octopus.license.service.store.StoredReport
+import org.octopusden.octopus.license.service.state.report.LicenseReportStore
+import org.octopusden.octopus.license.service.state.report.StoredReport
 import org.octopusden.octopus.license.target.LicenseTargetResolver
 import org.octopusden.octopus.license.target.exception.ComponentVersionNotFoundException
 import org.octopusden.octopus.license.target.exception.ComponentsRegistryUnavailableException

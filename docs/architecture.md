@@ -66,14 +66,37 @@ TeamCity step (metarunner)
 
 Only `core` types cross the wire, in both directions.
 
-In the server:
+Errors become `{"error": {"code", "message"}}` in one `@RestControllerAdvice`.
+
+## Inside the server
+
+The server's packages are grouped by role, so a new piece has one obvious place:
+
+```
+org.octopusden.octopus.license.service
+├── controller/      HTTP only: LicenseReportController, advice/ExceptionInfoHandler
+├── service/         the use case: LicenseReportService, LicenseReportGenerator, and their impl/
+├── state/           what the server keeps in memory, and the jobs that keep it current
+│   └── report/      LicenseReportStore and ExpiredReportEvictor: reports until their TTL ends
+└── configuration/   properties and wiring
+```
+
+| Package | May use | Never uses |
+| --- | --- | --- |
+| `controller` | `service.LicenseReportService`; only `core` types in and out | `state`, `engine/`, the generator |
+| `service`: the report service | `state.report` (add, finish, find), `engine/` `LicenseTargetResolver`, the generator | `controller` |
+| `service`: the generator | only what it is given: the license target; later the scan | `state`: an eviction never changes a running generation |
+| `state` | its own `@Scheduled` job | `service`, `controller`: state never calls back into the use case |
+| `configuration` | everything, to wire it | — |
+
+Dependencies point one way: `controller → service → state`. Nothing hides `state` behind an interface: the store has one implementation, and the tests use it as it is.
+
+What each part does on a request:
 
 - the controller only translates HTTP;
-- the service checks the request, resolves its license target, registers the report and runs the generation in the background;
-- the store keeps reports in memory;
-- the generator produces the result.
-
-Errors become `{"error": {"code", "message"}}` in one `@RestControllerAdvice`.
+- the service checks the request, resolves the license target, registers the report and runs the generation in the background;
+- the generator produces the result from what it was given;
+- the report store keeps reports in memory until their TTL ends.
 
 ## Boundaries
 
