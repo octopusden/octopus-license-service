@@ -8,8 +8,8 @@ import org.octopusden.octopus.license.core.exception.NotFoundException
 import org.octopusden.octopus.license.service.service.LicenseFiles
 import org.octopusden.octopus.license.service.service.LicenseReportGenerator
 import org.octopusden.octopus.license.service.service.LicenseReportService
-import org.octopusden.octopus.license.service.store.LicenseReportStore
-import org.octopusden.octopus.license.service.store.StoredReport
+import org.octopusden.octopus.license.service.state.report.LicenseReportStore
+import org.octopusden.octopus.license.service.state.report.StoredReport
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.core.task.TaskExecutor

@@ -1,4 +1,4 @@
-package org.octopusden.octopus.license.service.store
+package org.octopusden.octopus.license.service.state.report
 
 import org.octopusden.octopus.license.core.dto.LicenseReport
 import java.time.Clock

@@ -1,6 +1,6 @@
 package org.octopusden.octopus.license.service.configuration
 
-import org.octopusden.octopus.license.service.store.LicenseReportStore
+import org.octopusden.octopus.license.service.state.report.LicenseReportStore
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.scheduling.annotation.EnableScheduling
