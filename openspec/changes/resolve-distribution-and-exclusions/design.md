@@ -16,7 +16,7 @@ An illustrative component `sample-app`, version `1.4.12` (the values are made up
    - `buildSystem: GRADLE`, `archived: false`, `labels: [java]`;
    - `distribution: {external: true, GAV: "org.example.sample:sample-app:zip,org.example.sample:sample-app-config:zip:config", docker: "sample/sample-app"}`;
    - `detailedComponentVersion.buildVersion.version: 1.4.12-0034`.
-2. Exclusion rules, in order: not archived, external, not WHISKEY, no `test-component` label, name does not start with `doc_`/`doc-`, not on the configured list. Not excluded.
+2. Exclusion rules, in order: not archived, external, not WHISKEY, not flagged `testComponent`, name does not start with `doc_`/`doc-`, not on the configured list. Not excluded.
 3. `GET …/components/sample-app/maven-artifacts` returns `{"[1.0,)": {groupPattern: "org.example.sample", artifactPattern: "sample-.*"}, "(,1.0)": {…}}`. Only `[1.0,)` holds `1.4.12`.
 4. The license target:
    - component version `sample-app:1.4.12`; artifact versions `[1.4.12, 1.4.12-0034]`;
@@ -118,9 +118,10 @@ data class ArtifactPattern(val groups: List<String>, val artifacts: List<String>
 
 ### 4. Exclusion rules: fixed order, first match wins, cheapest call first
 
-- Order: archived, internal (`distribution.external == false`), build system `WHISKEY`, label `test-component`, name starts with `doc_`/`doc-` (any case), configured list.
+- Order: archived, internal (`distribution.external == false`), build system `WHISKEY`, the registry's `testComponent` flag, name starts with `doc_`/`doc-` (any case), configured list.
+- The registry sets `testComponent` from its own configured name patterns, so the registry stays the one place that decides what a test component is; a `test-component` label alone does not exclude.
 - All six read only the first registry call, so an excluded component costs one call; `maven-artifacts` and `version-names` are fetched only for a component that is not excluded.
-- Each rule gives one fixed reason, so the same component always reads the same way: `Archived component`, `Internal component: its distribution is not external`, `Built with WHISKEY`, `Test component (label test-component)`, `Documentation component`, or the configured entry's own reason.
+- Each rule gives one fixed reason, so the same component always reads the same way: `Archived component`, `Internal component: its distribution is not external`, `Built with WHISKEY`, `Test component`, `Documentation component`, or the configured entry's own reason.
 - The configured list is passed in as plain data (`List<ConfiguredExclusion(components, reason)>`): one reason covers many components, so it is written once. Matching is exact on the component id.
 
 ### 5. The published components registry client

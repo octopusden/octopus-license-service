@@ -6,8 +6,9 @@
   - [x] 1.1.3 Confirmed with `:license-target-registry:dependencies --configuration runtimeClasspath`: no Spring, no `:core`; Jackson 2.16 and Feign 12.2 come with the registry client.
   - [x] 1.1.4 (added on review) `feign-core` `12.2` is `compileOnly`, pinned as `components-registry-feign.version`: the resolver needs `FeignException` to tell an unreachable registry from other failures, and the client already brings Feign at runtime, so declaring it there would mix two Feign versions in production.
 - [x] 1.2 Write failing unit tests for `LicenseTargetDescriber` and its parts (pure, no HTTP):
-  - [x] 1.2.1 Exclusion, one test per rule: archived, internal, `WHISKEY`, label `test-component`, `doc_`/`doc-` names in four casings, configured entry with its own reason, configured match is exact.
+  - [x] 1.2.1 Exclusion, one test per rule: archived, internal, `WHISKEY`, the registry's `testComponent` flag, `doc_`/`doc-` names in four casings, configured entry with its own reason, configured match is exact.
   - [x] 1.2.1a (added on review) One configured entry lists several components under one reason, so a shared reason is written once: `ConfiguredExclusion(components, reason)`, bound from a comma-separated `components` property.
+  - [x] 1.2.1b (added on review) The test-component rule reads the registry's `testComponent` flag (set from the registry's own name patterns), not the label `test-component`; a test shows the label alone no longer excludes, and the adapter test reads the flag from a recorded answer.
   - [x] 1.2.2 Exclusion order: archived, `WHISKEY` and a `doc_` name together give `Archived component`.
   - [x] 1.2.3 `docker-tools`, `doc`, `mydoc_x`, `documentation-service` are not excluded.
   - [x] 1.2.4 `GAV`: entry with extension; with classifier; two entries with spaces around the comma; two-part entry is `Unsupported` and keeps its neighbour; `file:`, `http:`, `https:` entries are `Unsupported`; absent, empty, blank and `" , "` fields declare nothing.
@@ -29,7 +30,7 @@
   - [x] 1.4.6 (added on review) `425` from the registry, still loading its repository (`RepositoryNotPreparedException`): `ComponentsRegistryUnavailableException`, not a `500`.
 - [x] 1.5 Implement `LicenseTargetResolver`, `ComponentVersionNotFoundException`, `ComponentsRegistryUnavailableException` and `RegistryLicenseTargetResolver(registryUrl, exclusions)`. A `FeignException` with status `>= 500`, or `-1` (no answer at all), and a `RepositoryNotPreparedException` (`425`) are unavailable; any other is rethrown.
 - [x] 1.5a (added on review) Packages by role, so a reader sees what each file is for: `LicenseTargetResolver` and its `exception/` at the root as the public entry; `model/` for what it answers with; `impl/RegistryLicenseTargetResolver` as the only I/O; `impl/describer/` for the pure logic the adapter pushes registry facts into (`LicenseTargetDescriber`, `ExclusionRules`, `DistributionParser`, `RegistryComponent`, `RegistryArtifactPattern`). Tests follow the same packages.
-- [x] 1.6 `:license-target-registry:test`: 44 tests, 0 failures, 0 skipped (ExclusionRules 16, DistributionParser 16, LicenseTargetDescriber 6, RegistryLicenseTargetResolver 6). No infrastructure needed.
+- [x] 1.6 `:license-target-registry:test`: 47 tests, 0 failures, 0 skipped (ExclusionRules 18, DistributionParser 16, LicenseTargetDescriber 6, RegistryLicenseTargetResolver 7). No infrastructure needed.
 - [x] 1.7 (added on review) The module moved to `engine/target-registry`: `engine/` groups the modules that produce a report, with the license registry and the Xray/Artifactory scan to follow. A folder, not one module, so each part keeps its own build file and reaches only its own systems. Project name `:license-target-registry` unchanged.
 
 ## 2. `core` and `client`: service unavailable
@@ -71,7 +72,7 @@
 
 ## 5. Finalization
 
-- [x] 5.1 `./gradlew build qualityCheck` green: 94 tests across all modules, 0 failures, 0 skipped; detekt and ktlint clean.
+- [x] 5.1 `./gradlew build qualityCheck` green: 96 tests across all modules, 0 failures, 0 skipped; detekt and ktlint clean.
 - [x] 5.2 Out of scope holds: no Artifactory, Xray or release management call (grep finds only two KDoc mentions); `DEB`/`RPM` have no field to be read through; nothing is cached.
 - [x] 5.3 `engine/target-registry/src` imports neither Spring nor `org.octopusden.octopus.license.core` (grep: none).
 - [x] 5.4 The design's risks hold as written.

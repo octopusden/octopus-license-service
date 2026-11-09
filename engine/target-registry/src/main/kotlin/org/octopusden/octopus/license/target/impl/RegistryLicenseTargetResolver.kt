@@ -80,6 +80,7 @@ class RegistryLicenseTargetResolver(
             archived = archived,
             external = distribution?.external ?: false,
             buildSystem = buildSystem.name,
+            testComponent = testComponent,
             labels = labels,
             gav = distribution?.gav,
             docker = distribution?.docker,

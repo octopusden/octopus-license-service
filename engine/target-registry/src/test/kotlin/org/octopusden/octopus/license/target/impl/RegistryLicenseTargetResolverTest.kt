@@ -105,6 +105,18 @@ class RegistryLicenseTargetResolverTest {
     }
 
     @Test
+    @DisplayName("the registry's testComponent flag excludes the component")
+    fun testComponentFlag() {
+        val body = requireNotNull(javaClass.getResource("/registry/sample-app-1.4.12.json")).readText()
+        answers["$API/components/sample-app/versions/1.4.12"] = OK to body.replace("\"testComponent\": false", "\"testComponent\": true")
+
+        assertEquals(
+            TargetResolution.Excluded(ComponentVersion("sample-app", "1.4.12"), "Test component"),
+            resolver().resolve("sample-app", "1.4.12"),
+        )
+    }
+
+    @Test
     @DisplayName("a 404 from the registry is a not-found error")
     fun notFound() {
         assertThrows<ComponentVersionNotFoundException> { resolver().resolve("no-such-component", "1.0") }
