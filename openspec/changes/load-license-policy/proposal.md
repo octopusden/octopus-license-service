@@ -31,8 +31,8 @@ The service resolves what a component version releases, but it cannot judge a si
 - The judgement gives the canonical license names, so the license files list one spelling per license.
 - `UNIDENTIFIED` (a file nobody could name) is not the policy's answer: a library without an identity never reaches the policy. The license scan assigns it.
 - The rules are the license plugins': overrides first, the last matching override in sorted key order wins, version ranges are parsed with `versions-api`, then synonyms, then the allowed and hidden lists.
-- One deliberate difference: license names are compared case-insensitively, as in the prototype; the plugins compare them exactly. Xray and POMs spell one license in several casings.
-- A license name on two `merges.txt` lines fails the plugins' build; the service keeps the first line and reports the other.
+- One deliberate difference: a license name is compared as written, as the plugins compare it, and ignoring case only when the registry has it in no spelling. Xray and POMs spell one license in several casings the registry does not list.
+- A license name written the same way on two `merges.txt` lines fails the plugins' build; the service keeps the first line and reports the other.
 
 **Part C: kept in memory, refreshed on a new commit**
 

@@ -6,7 +6,8 @@ import org.octopusden.releng.versions.NumericVersionFactory
  * What the license registry allows at one [commit], and the verdict on one named library. Pure: it
  * is read once (see `LicensePolicySource`) and asked many times.
  *
- * Every name lookup ignores case, a deliberate difference from the license plugins (D5).
+ * Every name is looked up as written, as the license plugins do, then ignoring case when that finds
+ * nothing, a deliberate difference from the plugins (D5).
  *
  * @param problems registry entries skipped because they could not be read; the rest of the policy
  * holds without them (D4).
@@ -16,12 +17,12 @@ class LicensePolicy internal constructor(
     val problems: List<String>,
     private val whitelist: Set<String>,
     hidden: Set<String>,
-    private val canonicalNames: Map<String, String>,
+    private val canonicalNames: NameLookup<String>,
     private val overrides: List<OverrideRule>,
-    private val texts: Map<String, LicenseText>,
+    private val texts: NameLookup<LicenseText>,
     private val versionFactory: NumericVersionFactory,
 ) {
-    private val allowed = (whitelist + hidden).map { canonical(it).lowercase() }.toSet()
+    private val allowed = (whitelist + hidden).map { canonical(it) }.toSet()
 
     /** The whitelisted licenses, by canonical name, that have neither a registry text nor a URL. */
     val licensesWithoutText: List<String> =
@@ -49,13 +50,13 @@ class LicensePolicy internal constructor(
         val verdict =
             when {
                 names.isEmpty() -> LicenseVerdict.UNKNOWN
-                names.any { it.lowercase() in allowed } -> LicenseVerdict.ALLOWED
+                names.any { it in allowed } -> LicenseVerdict.ALLOWED
                 else -> LicenseVerdict.NOT_ALLOWED
             }
         return Judgement(verdict, names, overridden = override != null)
     }
 
-    fun text(license: String): LicenseText? = texts[canonical(license.trim()).lowercase()]
+    fun text(license: String): LicenseText? = texts[canonical(license.trim())]
 
     /** The greatest matching key wins: the plugin applies every match in sorted order, the last one last (D5). */
     private fun overrideFor(coordinates: MavenCoordinates): OverrideRule? {
@@ -63,7 +64,7 @@ class LicensePolicy internal constructor(
         return overrides.filter { it.matches(coordinates, version) }.maxByOrNull { it.key }
     }
 
-    private fun canonical(name: String) = canonicalNames[name.lowercase()] ?: name
+    private fun canonical(name: String) = canonicalNames[name] ?: name
 
     private companion object {
         val UNKNOWN_MARKERS = setOf("", "unknown", "unknown license")

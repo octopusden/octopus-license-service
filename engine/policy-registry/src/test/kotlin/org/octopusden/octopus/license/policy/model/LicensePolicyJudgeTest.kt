@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.CsvSource
 import org.junit.jupiter.params.provider.ValueSource
 import org.octopusden.octopus.license.policy.impl.parser.policy
 import org.octopusden.octopus.license.policy.impl.parser.registryFiles
@@ -121,4 +122,33 @@ class LicensePolicyJudgeTest {
             policy.judge(setOf("MIT")),
         )
     }
+
+    @ParameterizedTest
+    @CsvSource(
+        "GNU Lesser General Public License, LGPL-2.1",
+        "GNU LESSER GENERAL PUBLIC LICENSE, LGPL-3.0",
+        "gnu lesser general public license, LGPL-2.1",
+    )
+    @DisplayName("a name is looked up as written first, and ignoring case only when that finds nothing (D5)")
+    fun exactNameBeforeAnyCasing(
+        found: String,
+        canonical: String,
+    ) {
+        val policy = policy(lgplRegistry())
+        assertEquals(listOf(canonical), policy.judge(setOf(found)).licenses)
+    }
+
+    @Test
+    @DisplayName("names on two merges.txt lines that differ only in case are not a problem: the plugins read them apart")
+    fun namesDifferingInCaseAreNoProblem() {
+        assertEquals(emptyList<String>(), policy(lgplRegistry()).problems)
+    }
+
+    private fun lgplRegistry() =
+        registryFiles(
+            whitelist = "LGPL-2.1|LGPL-3.0",
+            merges = "LGPL-2.1|GNU Lesser General Public License\nLGPL-3.0|GNU LESSER GENERAL PUBLIC LICENSE",
+            texts = "",
+            textFiles = emptyMap(),
+        )
 }

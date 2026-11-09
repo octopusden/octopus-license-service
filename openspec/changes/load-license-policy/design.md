@@ -30,7 +30,7 @@ A small registry at commit `a1b2c3d` (sample content; the shapes are the registr
 | `org.example:sample-lib:2.1` | `GPL-3.0` | no override; `GPL-3.0` not allowed | `NOT_ALLOWED` | `GPL-3.0` |
 | `org.example:other:1.0` | `apache 2`, `GPL-2.0` | `apache 2` is `Apache-2.0`, allowed | `ALLOWED` | `Apache-2.0`, `GPL-2.0` |
 | `npm` package `left-pad` | `Unknown` | nothing known left | `UNKNOWN` | none |
-| `org.example:old:3.0` | `Borland` | hidden, case-insensitive | `ALLOWED` | `BORLAND` |
+| `org.example:old:3.0` | `Borland` | spelled nowhere, so matched ignoring case: hidden | `ALLOWED` | `BORLAND` |
 
 Loading also reports `MIT` as allowed with no text.
 
@@ -38,7 +38,7 @@ Loading also reports `MIT` as allowed with no text.
 
 **Goals:**
 - One module answers "what does the license registry allow, at which commit", reading only Bitbucket.
-- The verdict rules are pure and give the license plugins' answer, except where names differ only in case (Decision 5).
+- The verdict rules are pure and give the license plugins' answer for every name the registry spells; names it spells in no casing it lists are matched ignoring case (Decision 5).
 - A report says which registry commit judged it.
 
 **Non-Goals:**
@@ -132,14 +132,17 @@ sealed interface LicenseText {
 ```
 
 1. Override: among the `thirdparty-licenses.properties` entries whose group and artifact equal the coordinates and whose version range holds the version, the one with the greatest key in sorted order replaces the found licenses, as the plugin's last match does. A value with `|` gives several licenses.
-2. Canonical names: each name is looked up case-insensitively among every name in `merges.txt`, the whitelist and the hidden list, and replaced by its canonical spelling; an unknown name keeps its own spelling.
+2. Canonical names: each name is looked up among every name in `merges.txt`, the whitelist and the hidden list, first as written, then ignoring case when that finds nothing, and replaced by its canonical spelling; an unknown name keeps its own spelling.
 3. Unknown markers are dropped after step 2: blank, `Unknown`, `Unknown license`, any case. The registry merges `none` into `Unknown license`, so it is dropped too. Nothing left: `UNKNOWN`.
 4. Any canonical name in the whitelist or the hidden list: `ALLOWED`.
 5. Otherwise `NOT_ALLOWED`.
 
-- **A deliberate difference from the plugin:** every name lookup is case-insensitive (synonyms, whitelist, hidden list, texts), going further than the prototype, which ignores case for `merges.txt` only. Xray and POMs spell the same license in several casings; matching exactly would turn some into false `NOT_ALLOWED` verdicts. The cost: a name differing from an allowed one only in case passes, where the plugin would reject it.
+- **A deliberate difference from the plugin:** every name lookup (synonyms, whitelist, hidden list, texts) is exact first, as the plugin's, then ignores case when the exact name is found nowhere. Xray and POMs spell the same license in several casings; matching exactly only would turn the casings the registry does not list into false `NOT_ALLOWED` verdicts.
+  - Exact first keeps the registry's word where it spells a name: `merges.txt` puts `GNU Lesser General Public License` under `LGPL-2.1` and `GNU LESSER GENERAL PUBLIC LICENSE` under `LGPL-3.0`, and each keeps its own line, as in the plugin. Ignoring case alone would have made both `LGPL-2.1`.
+  - Ignoring case reaches only names the plugin would call unknown and not allowed, so the service can allow more than the plugin, never rename a name the registry spells. When several registry names match ignoring case, the first in registry order wins.
+  - Names differing only in case on two `merges.txt` lines are not a problem; a name written the same way on two lines is.
 - **Another deliberate difference:** a synonym on the whitelist or the hidden list allows its canonical license. With whitelist `The MIT License` and `MIT|The MIT License` in `merges.txt`, `MIT` is allowed; the plugin merges found names to `MIT` and finds no `MIT` on the whitelist. The registry lists such synonyms (`CDDL-1.0-GPL-2.0` and others) beside their canonical names, so no verdict differs today.
-- Texts: `text(license)` looks up the canonical name case-insensitively in `licenses.properties`. `licensesWithoutText` lists the allowed licenses, whitelist only, with no entry or with an entry skipped as a problem. A URL counts as a text; fetching it is the license files' job.
+- Texts: `text(license)` looks up the canonical name in `licenses.properties`, exact first, then ignoring case. `licensesWithoutText` lists the allowed licenses, whitelist only, with no entry or with an entry skipped as a problem. A URL counts as a text; fetching it is the license files' job.
 - `licenses` in the judgement are the canonical names, sorted, so every report spells a license one way.
 
 ### 6. Version ranges with `versions-api`, as the plugin does
@@ -184,5 +187,5 @@ sealed interface LicenseText {
 - **The service is not ready right after a deploy until Bitbucket answers.** Accepted: a report judged without a policy would be wrong; `503` and a down readiness probe say so plainly.
 - **Up to 15 minutes between a registry merge and the service using it.** Accepted: the commit in each summary says which policy judged it.
 - **Re-reading the head commit to get a consistent load.** A merge during a load costs a second load. Removed by `TD-001`, reading through octopus-vcs-facade.
-- **Case-insensitive names can allow what the plugin rejects, or name another license.** Usually two spellings differing in case alone are one license. Not always: the registry's `merges.txt` has `GNU Lesser General Public License` under `LGPL-2.1` and `GNU LESSER GENERAL PUBLIC LICENSE` under `LGPL-3.0`; the service keeps the first, so the second is reported as `LGPL-2.1`, and every load lists it as a problem. Both are allowed, so no verdict changes. Accepted; the registry line is the fix.
+- **Ignoring case can allow what the plugin rejects.** Only for a name the registry spells in no casing it lists, matching an allowed name in another casing. A casing that matches names of two licenses takes the first in registry order: `Gnu Lesser General Public License` reads as `LGPL-2.1`. Accepted.
 - **The Bitbucket client runs on newer Feign and Jackson in the server than it is built for** (13 and 2.21 against 12 and 2.14), as the components registry client does. Accepted: a server test loads a policy through it on that classpath; a client upgrade is a version bump here.

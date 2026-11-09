@@ -3,6 +3,7 @@ package org.octopusden.octopus.license.policy.impl.parser
 import org.octopusden.octopus.license.policy.exception.InvalidLicenseRegistryException
 import org.octopusden.octopus.license.policy.model.LicensePolicy
 import org.octopusden.octopus.license.policy.model.LicenseText
+import org.octopusden.octopus.license.policy.model.NameLookup
 import org.octopusden.octopus.license.policy.model.OverrideRule
 import org.octopusden.releng.versions.NumericVersionFactory
 import org.octopusden.releng.versions.VersionNames
@@ -60,25 +61,26 @@ object LicenseRegistryParser {
     }
 
     /**
-     * Lower-cased name to its canonical spelling (D5). A `merges.txt` line wins over a list's own
-     * spelling, so a whitelisted synonym such as `CDDL-1.0-GPL-2.0` still reads as `CDDL-1.0`.
+     * Each name to its canonical spelling (D5). A `merges.txt` line wins over a list's own spelling,
+     * so a whitelisted synonym such as `CDDL-1.0-GPL-2.0` still reads as `CDDL-1.0`. Only a name
+     * written the same way on two lines is a problem: the plugin fails the build on it.
      */
     private fun canonicalNames(
         merges: String,
         listed: Set<String>,
         problems: MutableList<String>,
-    ): Map<String, String> {
+    ): NameLookup<String> {
         val merged = mutableMapOf<String, String>()
         lines(merges).forEach { line ->
             val group = names(line)
             group.forEach { name ->
-                val earlier = merged.putIfAbsent(name.lowercase(), group.first())
+                val earlier = merged.putIfAbsent(name, group.first())
                 if (earlier != null && earlier != group.first()) {
                     problems += "$MERGES: '$name' is merged into '$earlier' already; its line for '${group.first()}' is ignored for it"
                 }
             }
         }
-        return listed.associateBy { it.lowercase() } + merged
+        return NameLookup(merged.toList() + listed.map { it to it })
     }
 
     private fun overrides(
@@ -101,15 +103,15 @@ object LicenseRegistryParser {
         }
 
     /**
-     * Lower-cased canonical name to its text. The plugin looks texts up by merged name; so does the
+     * Canonical name to its text. The plugin looks texts up by merged name; so does the
      * policy. When synonyms of one license have entries, the license's own entry wins, else the
      * smallest key, and the others are problems: the plugin would never read them.
      */
     private fun texts(
         files: Map<String, String>,
-        canonicalNames: Map<String, String>,
+        canonicalNames: NameLookup<String>,
         problems: MutableList<String>,
-    ): Map<String, LicenseText> =
+    ): NameLookup<LicenseText> =
         properties(files[TEXTS].orEmpty())
             .mapNotNull { (key, value) ->
                 val name = key.trim()
@@ -118,16 +120,16 @@ object LicenseRegistryParser {
                 if (text == null) {
                     problems += "$TEXTS: the text of '$name' is neither a $TEXTS_DIRECTORY file in the registry nor a URL: '$location'"
                 }
-                text?.let { TextEntry(name, canonicalNames[name.lowercase()] ?: name, it) }
-            }.sortedWith(compareBy({ !it.name.equals(it.canonical, ignoreCase = true) }, { it.name }))
-            .groupBy { it.canonical.lowercase() }
-            .mapValues { (_, entries) ->
+                text?.let { TextEntry(name, canonicalNames[name] ?: name, it) }
+            }.sortedWith(compareBy({ it.name != it.canonical }, { it.name }))
+            .groupBy { it.canonical }
+            .map { (canonical, entries) ->
                 val used = entries.first()
                 entries.drop(1).forEach {
                     problems += "$TEXTS: '${it.name}' and '${used.name}' both give the text of '${it.canonical}'; '${it.name}' is ignored"
                 }
-                used.text
-            }
+                canonical to used.text
+            }.let { NameLookup(it) }
 
     private fun textAt(
         location: String,

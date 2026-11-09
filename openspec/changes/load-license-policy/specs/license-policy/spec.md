@@ -81,9 +81,9 @@ The service SHALL apply overrides before anything else, reading `thirdparty-lice
 - **WHEN** a library is judged without coordinates
 - **THEN** no override applies
 
-### Requirement: License names are canonical and case-insensitive
+### Requirement: License names are canonical, exact first, then ignoring case
 
-The service SHALL replace every license name with its canonical spelling, matching case-insensitively against the names in `merges.txt`, the whitelist and the hidden list; the first name of a `merges.txt` line is the canonical one. A name found nowhere SHALL keep its own spelling. A name on two `merges.txt` lines SHALL keep the first line and be listed among the problems. Matching case-insensitively is a deliberate difference from the license plugins, which match exactly.
+The service SHALL replace every license name with its canonical spelling, matching it against the names in `merges.txt`, the whitelist and the hidden list as written, and ignoring case only when the name is found nowhere as written; the first name of a `merges.txt` line is the canonical one. Ignoring case, the first match in registry order SHALL win. A name found nowhere SHALL keep its own spelling. A name written the same way on two `merges.txt` lines SHALL keep the first line and be listed among the problems; names differing only in case are not a problem. Ignoring case when the exact name is unknown is a deliberate difference from the license plugins, which match exactly.
 
 #### Scenario: Synonym
 
@@ -94,6 +94,11 @@ The service SHALL replace every license name with its canonical spelling, matchi
 
 - **WHEN** a library is found with `apache 2`
 - **THEN** the judgement lists `Apache-2.0`
+
+#### Scenario: Names on two lines differing only in case
+
+- **WHEN** `merges.txt` has `GNU Lesser General Public License` on the `LGPL-2.1` line and `GNU LESSER GENERAL PUBLIC LICENSE` on the `LGPL-3.0` line
+- **THEN** `GNU LESSER GENERAL PUBLIC LICENSE` becomes `LGPL-3.0`, `GNU Lesser General Public License` and `gnu lesser general public license` become `LGPL-2.1`, and neither line is a problem
 
 #### Scenario: Name on two merge lines
 
@@ -153,7 +158,7 @@ The service SHALL read the text of each license from `licenses.properties` as Ja
 - **WHEN** `licenses.properties` maps `H2-1.0` to an `http` URL
 - **THEN** the policy gives that URL as the text of `H2-1.0`, and `H2-1.0` is not a license without text
 
-#### Scenario: Text lookup ignores case
+#### Scenario: Text lookup ignores case when the exact name is unknown
 
 - **WHEN** `licenses.properties` has `Apache-2.0` and the judged license is `apache-2.0`
 - **THEN** the policy gives the `Apache-2.0` text
