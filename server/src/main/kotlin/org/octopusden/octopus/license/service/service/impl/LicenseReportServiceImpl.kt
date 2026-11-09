@@ -3,6 +3,7 @@ package org.octopusden.octopus.license.service.service.impl
 import org.octopusden.octopus.license.core.dto.LicenseReport
 import org.octopusden.octopus.license.core.dto.LicenseReportRequest
 import org.octopusden.octopus.license.core.dto.LicenseReportStatus
+import org.octopusden.octopus.license.core.exception.InvalidRequestException
 import org.octopusden.octopus.license.core.exception.LicenseFilesNotAvailableException
 import org.octopusden.octopus.license.core.exception.NotFoundException
 import org.octopusden.octopus.license.service.service.LicenseFiles
@@ -26,8 +27,8 @@ class LicenseReportServiceImpl(
     private val clock: Clock,
 ) : LicenseReportService {
     override fun start(request: LicenseReportRequest): LicenseReport {
-        require(request.component.isNotBlank()) { "Component must not be blank" }
-        require(request.version.isNotBlank()) { "Version must not be blank" }
+        if (request.component.isBlank()) throw InvalidRequestException("Component must not be blank")
+        if (request.version.isBlank()) throw InvalidRequestException("Version must not be blank")
         val report = LicenseReport(
             id = UUID.randomUUID().toString(),
             component = request.component,

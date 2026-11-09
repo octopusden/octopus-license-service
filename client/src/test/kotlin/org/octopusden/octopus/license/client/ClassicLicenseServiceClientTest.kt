@@ -4,6 +4,7 @@ import com.sun.net.httpserver.HttpServer
 import feign.FeignException
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
@@ -84,7 +85,19 @@ class ClassicLicenseServiceClientTest {
     fun nonEnvelopeErrorStaysFeignError() {
         answer("/rest/api/1/license-reports/$REPORT_ID", HTTP_BAD_GATEWAY, "<html>Bad Gateway</html>")
 
-        assertThrows<FeignException> { client.getReport(REPORT_ID) }
+        val error = assertThrows<FeignException> { client.getReport(REPORT_ID) }
+
+        assertEquals("<html>Bad Gateway</html>", error.contentUTF8())
+    }
+
+    @Test
+    @DisplayName("an enveloped status with no exception type stays a Feign error that keeps the body")
+    fun unmappedEnvelopeKeepsBody() {
+        answerError("/rest/api/1/license-reports/$REPORT_ID", HTTP_INTERNAL_SERVER_ERROR)
+
+        val error = assertThrows<FeignException> { client.getReport(REPORT_ID) }
+
+        assertTrue(error.contentUTF8().contains("answered $HTTP_INTERNAL_SERVER_ERROR"), error.contentUTF8())
     }
 
     private fun answerError(
@@ -111,6 +124,7 @@ class ClassicLicenseServiceClientTest {
         const val HTTP_BAD_REQUEST = 400
         const val HTTP_NOT_FOUND = 404
         const val HTTP_CONFLICT = 409
+        const val HTTP_INTERNAL_SERVER_ERROR = 500
         const val HTTP_BAD_GATEWAY = 502
     }
 }

@@ -1,6 +1,7 @@
 package org.octopusden.octopus.license.client
 
 import feign.Response
+import feign.Util
 import feign.codec.ErrorDecoder
 import org.octopusden.octopus.license.core.dto.ApiErrorResponse
 import org.octopusden.octopus.license.core.exception.InvalidRequestException
@@ -18,18 +19,21 @@ internal class LicenseServiceErrorDecoder(
         methodKey: String,
         response: Response,
     ): Exception {
-        val message = response.body()?.asInputStream()?.use { body ->
+        // The body stream can be read once; the default decoder needs it again for FeignException.
+        val body = response.body()?.asInputStream()?.use { Util.toByteArray(it) }
+        val buffered = response.toBuilder().body(body).build()
+        val message = body?.let {
             try {
-                jsonMapper.readValue(body, ApiErrorResponse::class.java).error.message
+                jsonMapper.readValue(it, ApiErrorResponse::class.java).error.message
             } catch (_: JacksonException) {
                 null
             }
-        } ?: return default.decode(methodKey, response)
+        } ?: return default.decode(methodKey, buffered)
         return when (response.status()) {
             HTTP_BAD_REQUEST -> InvalidRequestException(message)
             HTTP_NOT_FOUND -> NotFoundException(message)
             HTTP_CONFLICT -> LicenseFilesNotAvailableException(message)
-            else -> default.decode(methodKey, response)
+            else -> default.decode(methodKey, buffered)
         }
     }
 

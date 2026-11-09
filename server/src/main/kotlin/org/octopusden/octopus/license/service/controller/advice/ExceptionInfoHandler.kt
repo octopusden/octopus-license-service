@@ -2,6 +2,7 @@ package org.octopusden.octopus.license.service.controller.advice
 
 import org.octopusden.octopus.license.core.dto.ApiError
 import org.octopusden.octopus.license.core.dto.ApiErrorResponse
+import org.octopusden.octopus.license.core.exception.InvalidRequestException
 import org.octopusden.octopus.license.core.exception.LicenseFilesNotAvailableException
 import org.octopusden.octopus.license.core.exception.NotFoundException
 import org.slf4j.LoggerFactory
@@ -21,7 +22,7 @@ class ExceptionInfoHandler {
     @ExceptionHandler(LicenseFilesNotAvailableException::class)
     fun handleFilesNotAvailable(e: LicenseFilesNotAvailableException) = errorResponse(HttpStatus.CONFLICT, e)
 
-    @ExceptionHandler(IllegalArgumentException::class, HttpMessageNotReadableException::class)
+    @ExceptionHandler(InvalidRequestException::class, HttpMessageNotReadableException::class)
     fun handleBadRequest(e: Exception) = errorResponse(HttpStatus.BAD_REQUEST, e)
 
     /**
