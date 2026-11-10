@@ -22,12 +22,12 @@
 
 ## 3. The `license-inventory` module and its model (Decisions 1, 3)
 
-- [ ] 3.1 `settings.gradle.kts`: `:license-inventory` at `engine/inventory`; build file with `:license-target-registry`, `artifactory-client`, `xray-client`, JUnit; `feign-core` `compileOnly`. Confirm with `dependencies`: no Spring, no `:core`, no `:license-policy-registry`.
-- [ ] 3.2 Failing tests for `PackageId` parsing and rendering:
-  - [ ] 3.2.1 `pkg:maven/g/a@v`, `pkg:npm/@scope/name@1.0`, `pkg:golang/golang.org/x/net@0.20.0` round-trip.
-  - [ ] 3.2.2 `generic://sha256:<64 hex>/name.jar` is `ChecksumOnly`.
-  - [ ] 3.2.3 A string that would not render back the same, and an unknown scheme, are `Unrecognized`, verbatim.
-- [ ] 3.3 Model: `LicenseInventory`, `ReleasedFile`, `FileKind`, `FileStatus`, `SelectionReason`, `BuildRef`, `BuildLookup`, `FoundPackage`, `PackageId`, `Evidence`, `Finding`, `FindingCode`, `OwnershipRules`; `LicenseInventoryScanner`; `InventorySourceUnavailableException`.
+- [x] 3.1 `settings.gradle.kts`: `:license-inventory` at `engine/inventory`; build file with `:license-target-registry`, `artifactory-client`, `xray-client`, JUnit; `feign-core` `compileOnly`. Confirm with `dependencies`: no Spring, no `:core`, no `:license-policy-registry`. Confirmed: runtime classpath is `:license-target-registry`, the two clients and the Kotlin stdlib. The clients come from `mavenLocal()` in the module's build file until 1.4.
+- [x] 3.2 Failing tests for `PackageId` parsing and rendering:
+  - [x] 3.2.1 `pkg:maven/g/a@v`, `pkg:npm/@scope/name@1.0`, `pkg:golang/golang.org/x/net@0.20.0` round-trip.
+  - [x] 3.2.2 `generic://sha256:<64 hex>/name.jar` is `ChecksumOnly`.
+  - [x] 3.2.3 A string that would not render back the same, and an unknown scheme, are `Unrecognized`, verbatim. `PackageIdTest` 14 green.
+- [x] 3.3 Model: `LicenseInventory`, `ReleasedFile`, `FileKind`, `FileStatus`, `SelectionReason`, `BuildRef`, `BuildLookup`, `FoundPackage`, `PackageId`, `Evidence`, `Finding`, `FindingCode`, `OwnershipRules`; `LicenseInventoryScanner`; `InventorySourceUnavailableException`.
 
 ## 4. Pure decisions
 
