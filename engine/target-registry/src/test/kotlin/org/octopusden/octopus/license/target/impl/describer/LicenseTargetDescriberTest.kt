@@ -40,6 +40,7 @@ class LicenseTargetDescriberTest {
                 artifactVersions = listOf("1.4.12", "1.4.12-0034"),
                 buildSystem = "GRADLE",
                 labels = setOf("java"),
+                explicit = true,
                 distribution = DistributionSpec(
                     declared = listOf(
                         MavenArtifact("org.example.sample", "sample-app", "zip"),
@@ -51,6 +52,18 @@ class LicenseTargetDescriberTest {
             ),
             target,
         )
+    }
+
+    @Test
+    @DisplayName("an explicit component's target is explicit")
+    fun explicitComponent() {
+        assertEquals(true, describe(registryComponent(explicit = true)).explicit)
+    }
+
+    @Test
+    @DisplayName("an implicit component's target is not explicit, which names its builds {component}_ie")
+    fun implicitComponent() {
+        assertEquals(false, describe(registryComponent(explicit = false)).explicit)
     }
 
     @Test

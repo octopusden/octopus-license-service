@@ -30,6 +30,7 @@ internal object LicenseTargetDescriber {
             artifactVersions = listOfNotNull(component.version, component.buildVersion).distinct(),
             buildSystem = component.buildSystem,
             labels = component.labels,
+            explicit = component.explicit,
             distribution = DistributionSpec(
                 declared = DistributionParser.parse(component.gav, component.docker),
                 patterns = artifactPatterns

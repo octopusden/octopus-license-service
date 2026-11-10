@@ -1,22 +1,24 @@
 ## 1. Clients in octopus-external-systems-client (Decision 14)
 
 - [x] 1.1 Check against our Xray (3.150.37, through `jf xr curl`): `POST /api/v1/artifact/status` exists; a released zip answers `overall` and `details.sca` `DONE`, a pom `NOT_SUPPORTED`, a missing file `{"error": …}`. `summary/artifact` answers a pom with an `errors` entry "not indexed/cached"; `summary/component` returns ids without their scheme.
-- [ ] 1.1a Record a sample answer of each endpoint as a test fixture, names anonymised.
-- [ ] 1.2 `artifactory-client`, additive:
-  - [ ] 1.2.1 Failing tests: an AQL item with `actual_sha1` and `sha256`; a build-info artifact with `path`; `searchBuildsByAQL` reading `build.name`, `build.number`.
-  - [ ] 1.2.2 `AqlItem.actualSha1`, `AqlItem.sha256`, `Artifact.path`; `AqlBuildSearchResponse` and `searchBuildsByAQL(query)`; `getBuildInfo` with an optional `buildRepo`.
-  - [ ] 1.2.3 Existing tests green; no field renamed or removed.
-- [ ] 1.3 New `xray-client` module:
-  - [ ] 1.3.1 Failing tests against a stub server: artifact status (done, pending, not supported); artifact summary with licenses and components, and an error per path; component summary for a batch.
-  - [ ] 1.3.2 `XrayClient`, `XrayClassicClient` on `ClientParametersProvider`, DTOs, error decoder, as `artifactory-client` is built.
-  - [ ] 1.3.3 `settings.gradle.kts`, publication, README line.
-- [ ] 1.4 Release both; pin `artifactory-client.version` and `xray-client.version` in the service's `gradle.properties`.
+- [x] 1.1a Record a sample answer of each endpoint as a test fixture, names anonymised: `xray-client/src/test/resources/xray/`; `status-pending.json` is written by hand, as no scan was pending to record.
+- [x] 1.2 `artifactory-client`, additive:
+  - [x] 1.2.1 Failing tests: an AQL item with `actual_sha1` and `sha256`; a build-info artifact with `path`; `searchBuildsByAQL` reading `build.name`, `build.number`.
+  - [x] 1.2.2 `AqlItem.actualSha1`, `AqlItem.sha256`, `Artifact.path`; `AqlBuildSearchResponse` and `searchBuildsByAQL(query)`; `getBuildInfo` with an optional `buildRepo`.
+  - [x] 1.2.3 Existing tests green; no field renamed or removed. `:artifactory-client:test` 10 green (3 new). `getBuildInfo(name, number, buildRepo)` is an overload, not an optional parameter: a Feign interface cannot default one.
+  - [x] 1.2.4 (added on review) The new methods take `ArtifactoryClient` past detekt's `TooManyFunctions`; a `detekt-baseline.xml` records it, as the Bitbucket, Gitea and TeamCity clients do.
+- [x] 1.3 New `xray-client` module:
+  - [x] 1.3.1 Failing tests against a stub server: artifact status (done, pending, not supported); artifact summary with licenses and components, and an error per path; component summary for a batch.
+  - [x] 1.3.2 `XrayClient`, `XrayClassicClient` on `ClientParametersProvider`, DTOs, error decoder, as `artifactory-client` is built.
+  - [x] 1.3.3 `settings.gradle.kts` and both publication allowlists. No README line: the README covers only the TeamCity test data. `:xray-client:test` 9 green; `qualityStatic` green.
+  - [x] 1.3.4 (added on review) A status the client does not know reads as `UNKNOWN` (`@JsonEnumDefaultValue`), so a new Xray status cannot fail a scan.
+- [ ] 1.4 Release both (branch `add-xray-client` in octopus-external-systems-client, two commits; published locally as `2.0.0-xray-SNAPSHOT` meanwhile); pin `artifactory-client.version` and `xray-client.version` in the service's `gradle.properties`.
 
 ## 2. `explicit` on the license target (Decision 4)
 
-- [ ] 2.1 Failing tests in `LicenseTargetDescriberTest`: explicit and implicit component, one per new spec scenario.
-- [ ] 2.2 `RegistryComponent.explicit` from `distribution.explicit`; `LicenseTarget.explicit`.
-- [ ] 2.3 Confirm `:license-target-registry:test` and `:license-service:test` green.
+- [x] 2.1 Failing tests in `LicenseTargetDescriberTest`: explicit and implicit component, one per new spec scenario.
+- [x] 2.2 `RegistryComponent.explicit` from `distribution.explicit`; `LicenseTarget.explicit`.
+- [x] 2.3 Confirm `:license-target-registry:test` and `:license-service:test` green: 49 and 57.
 
 ## 3. The `license-inventory` module and its model (Decisions 1, 3)
 
