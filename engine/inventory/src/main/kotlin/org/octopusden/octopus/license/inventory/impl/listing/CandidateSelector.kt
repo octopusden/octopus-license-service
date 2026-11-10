@@ -10,12 +10,12 @@ import org.octopusden.octopus.license.target.model.LicenseTarget
 /**
  * Why a candidate is released, or why it is listed but not read (D5).
  *
+ * @param selectedBy holds [SelectionReason.DECLARED] when the candidate stands for a declared artifact.
  * @param skip [FileStatus.NOT_SELECTED] or [FileStatus.METADATA]; null when the file is read.
  * @param matched the declared artifact the candidate stands for, so it is no leftover.
  */
 internal data class Selection(
     val selectedBy: Set<SelectionReason>,
-    val declared: Boolean,
     val skip: FileStatus?,
     val matched: DeclaredArtifact?,
 )
@@ -47,13 +47,14 @@ internal class CandidateSelector(
                     FileStatus.METADATA
                 else -> null
             }
-        return Selection(selectedBy, declared = matched != null, skip = skip, matched = matched)
+        return Selection(selectedBy, skip = skip, matched = matched)
     }
 
     // An image is read whether declared or not; a declared image matches by name, whatever its tag (D10.1, D10.9).
     private fun select(candidate: ImageCandidate): Selection {
         val matched = declaredImages.firstOrNull { it.image == candidate.image }
-        return Selection(setOf(SelectionReason.DOCKER_BUILD), declared = matched != null, skip = null, matched = matched)
+        val selectedBy = setOfNotNull(SelectionReason.DOCKER_BUILD, SelectionReason.DECLARED.takeIf { matched != null })
+        return Selection(selectedBy, skip = null, matched = matched)
     }
 
     private companion object {

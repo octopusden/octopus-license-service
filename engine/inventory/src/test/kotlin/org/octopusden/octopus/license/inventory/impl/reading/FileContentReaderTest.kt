@@ -17,7 +17,7 @@ import org.octopusden.octopus.license.inventory.impl.dependency
 import org.octopusden.octopus.license.inventory.impl.listing.BuildLocator
 import org.octopusden.octopus.license.inventory.impl.listing.ListedFile
 import org.octopusden.octopus.license.inventory.impl.module
-import org.octopusden.octopus.license.inventory.impl.naming.PackageTable
+import org.octopusden.octopus.license.inventory.impl.naming.LibraryTable
 import org.octopusden.octopus.license.inventory.impl.port.BuildDependency
 import org.octopusden.octopus.license.inventory.impl.port.BuildRecord
 import org.octopusden.octopus.license.inventory.impl.port.StoredFile
@@ -31,7 +31,7 @@ import org.octopusden.octopus.license.inventory.model.FileStatus
 import org.octopusden.octopus.license.inventory.model.Finding
 import org.octopusden.octopus.license.inventory.model.FindingCode.NO_LIBRARIES_IN_FILE
 import org.octopusden.octopus.license.inventory.model.FindingCode.UNRESOLVED_INTERNAL_ARCHIVE
-import org.octopusden.octopus.license.inventory.model.FoundPackage
+import org.octopusden.octopus.license.inventory.model.FoundLibrary
 import org.octopusden.octopus.license.inventory.model.PackageId
 import org.octopusden.octopus.license.inventory.model.SelectionReason
 
@@ -39,7 +39,7 @@ class FileContentReaderTest {
     private val records = FakeBuildRecords()
     private val store = FakeArtifactStore()
     private val scanner = FakeBinaryScanner()
-    private val table = PackageTable()
+    private val table = LibraryTable()
     private val reader =
         FileContentReader(scanner, store, BuildLocator(records), BuildDependencyReader(Ownership(OWNERSHIP)), SbomReader(store))
 
@@ -68,7 +68,6 @@ class FileContentReaderTest {
         ListedFile(
             entry,
             FileKind.MAVEN,
-            declared = true,
             selectedBy = setOf(SelectionReason.DECLARED),
             stored = file,
             build = build,
@@ -83,7 +82,7 @@ class FileContentReaderTest {
         id: String,
         licenses: Set<String> = emptySet(),
         vararg evidence: org.octopusden.octopus.license.inventory.model.Evidence,
-    ) = FoundPackage(PackageId.parse(id), licenses, evidence.toSet(), setOf(entry))
+    ) = FoundLibrary(PackageId.parse(id), licenses, evidence.toSet(), setOf(entry))
 
     /** Our own archive `name`, stored at its Maven path, built by its own build that depends on [dependencies]. */
     private fun ownArchive(
@@ -127,7 +126,7 @@ class FileContentReaderTest {
                 pkg("pkg:maven/com.fasterxml.jackson.core/jackson-databind@2.17.0", emptySet(), BUILD_RECORD),
                 pkg("pkg:maven/org.springframework/spring-core@6.1.4", setOf("Apache-2.0"), BINARY_SCAN),
             ),
-            table.packages(),
+            table.libraries(),
         )
     }
 
@@ -140,7 +139,7 @@ class FileContentReaderTest {
 
         assertEquals(
             listOf(pkg("pkg:maven/org.springframework/spring-core@6.1.4", setOf("Apache-2.0"), BINARY_SCAN, BUILD_RECORD)),
-            table.packages(),
+            table.libraries(),
         )
     }
 
@@ -166,7 +165,7 @@ class FileContentReaderTest {
 
         read(record)
 
-        assertEquals(listOf(pkg("pkg:npm/lodash@4.17.21", setOf("MIT"), SBOM)), table.packages())
+        assertEquals(listOf(pkg("pkg:npm/lodash@4.17.21", setOf("MIT"), SBOM)), table.libraries())
     }
 
     @Test
@@ -178,7 +177,7 @@ class FileContentReaderTest {
 
         read(zipBuild(extraFiles = listOf("a.cdx.json", "b.cdx.json")))
 
-        assertEquals(emptySet<String>(), table.packages().single().licenses)
+        assertEquals(emptySet<String>(), table.libraries().single().licenses)
     }
 
     @Test
@@ -190,14 +189,14 @@ class FileContentReaderTest {
         val reading = read(zipBuild(extraFiles = listOf("a.cdx.json")), yaml)
 
         assertEquals(FileStatus.PLAIN_FILE, reading.status)
-        assertEquals(emptyList<FoundPackage>(), table.packages())
+        assertEquals(emptyList<FoundLibrary>(), table.libraries())
     }
 
     @Test
     @DisplayName("neither Xray nor a build: NOT_READABLE and nothing found")
     fun notReadable() {
         assertEquals(FileStatus.NOT_READABLE, read(build = null).status)
-        assertEquals(emptyList<FoundPackage>(), table.packages())
+        assertEquals(emptyList<FoundLibrary>(), table.libraries())
     }
 
     @Test
@@ -217,7 +216,7 @@ class FileContentReaderTest {
                 pkg("pkg:maven/org.apache.commons/commons-text@1.11.0", setOf("Apache-2.0"), BINARY_SCAN, BUILD_RECORD),
                 pkg("pkg:maven/$GROUP/portal-plugins@$BUILD_VERSION", setOf("Unknown"), BINARY_SCAN),
             ),
-            table.packages(),
+            table.libraries(),
         )
     }
 
@@ -229,7 +228,7 @@ class FileContentReaderTest {
 
         read(zipBuild(ownDependency("portal-plugins", scope = "modpackages")))
 
-        assertEquals(emptyList<FoundPackage>(), table.packages())
+        assertEquals(emptyList<FoundLibrary>(), table.libraries())
     }
 
     @Test
@@ -244,7 +243,7 @@ class FileContentReaderTest {
 
         val reading = read(zipBuild(ownDependency("portal-model")))
 
-        assertEquals(listOf(PackageId.parse("pkg:maven/$GROUP/portal-model@$BUILD_VERSION")), table.packages().map { it.id })
+        assertEquals(listOf(PackageId.parse("pkg:maven/$GROUP/portal-model@$BUILD_VERSION")), table.libraries().map { it.id })
         assertEquals(
             listOf(Finding(NO_LIBRARIES_IN_FILE, "portal-model-$BUILD_VERSION.zip", "inner archive without libraries, build-info ignored")),
             reading.findings,
@@ -267,7 +266,7 @@ class FileContentReaderTest {
         assertEquals(
             setOf("pkg:maven/x/y@1", "pkg:maven/org.apache.commons/commons-text@1.11.0"),
             table
-                .packages()
+                .libraries()
                 .map {
                     it.id.toString()
                 }.toSet(),
@@ -299,7 +298,7 @@ class FileContentReaderTest {
 
         read(zipBuild(ownDependency("level-1")))
 
-        val found = table.packages().map { it.id.toString() }.toSet()
+        val found = table.libraries().map { it.id.toString() }.toSet()
         assertEquals(true, "pkg:maven/lib/at-11@1" in found)
         assertEquals(false, "pkg:maven/lib/at-12@1" in found)
     }
@@ -319,7 +318,7 @@ class FileContentReaderTest {
         assertEquals(
             setOf("pkg:maven/lib/in-a@1", "pkg:maven/lib/in-b@1"),
             table
-                .packages()
+                .libraries()
                 .map {
                     it.id.toString()
                 }.filter { it.contains("/in-") }

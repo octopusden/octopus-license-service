@@ -8,7 +8,7 @@ import org.octopusden.octopus.license.inventory.model.Evidence.BUILD_RECORD
 import org.octopusden.octopus.license.inventory.model.PackageId
 
 class LicenseFillerTest {
-    private val table = PackageTable()
+    private val table = LibraryTable()
 
     private fun found(
         id: String,
@@ -34,7 +34,7 @@ class LicenseFillerTest {
                 "pkg:npm/react@18.2.0" to emptySet(),
                 "pkg:pypi/requests@2.31.0" to emptySet(),
             ),
-            table.packages().associate { it.id.toString() to it.licenses },
+            table.libraries().associate { it.id.toString() to it.licenses },
         )
     }
 

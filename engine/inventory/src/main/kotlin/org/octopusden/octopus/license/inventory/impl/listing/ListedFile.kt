@@ -21,7 +21,6 @@ import org.octopusden.octopus.license.inventory.model.SelectionReason
 internal data class ListedFile(
     val entry: String,
     val kind: FileKind,
-    val declared: Boolean,
     val selectedBy: Set<SelectionReason>,
     val stored: StoredFile? = null,
     val build: BuildRecord? = null,
@@ -29,7 +28,9 @@ internal data class ListedFile(
     val skip: FileStatus? = null,
     val ownId: PackageId? = null,
     val findings: List<Finding> = emptyList(),
-)
+) {
+    val declared get() = SelectionReason.DECLARED in selectedBy
+}
 
 /** @param findings about the whole version: [org.octopusden.octopus.license.inventory.model.FindingCode.NO_DISTRIBUTION]. */
 internal data class Listing(

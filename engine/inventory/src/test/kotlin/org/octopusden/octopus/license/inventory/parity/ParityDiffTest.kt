@@ -12,7 +12,7 @@ import org.octopusden.octopus.license.inventory.model.FileKind
 import org.octopusden.octopus.license.inventory.model.FileStatus
 import org.octopusden.octopus.license.inventory.model.Finding
 import org.octopusden.octopus.license.inventory.model.FindingCode
-import org.octopusden.octopus.license.inventory.model.FoundPackage
+import org.octopusden.octopus.license.inventory.model.FoundLibrary
 import org.octopusden.octopus.license.inventory.model.LicenseInventory
 import org.octopusden.octopus.license.inventory.model.PackageId
 import org.octopusden.octopus.license.inventory.model.ReleasedFile
@@ -48,7 +48,6 @@ class ParityDiffTest {
         ReleasedFile(
             "org.example.portal:sample-portal:zip",
             FileKind.MAVEN,
-            true,
             setOf(DECLARED, PATTERN),
             "rnd-maven-release-local/org/example/portal/sample-portal/2.4.0-118/sample-portal-2.4.0-118.zip",
             BuildRef("sample-portal_ee", "2.4.0-118"),
@@ -61,7 +60,6 @@ class ParityDiffTest {
         ReleasedFile(
             "org.example.portal:helper-tool:jar",
             FileKind.MAVEN,
-            false,
             emptySet(),
             null,
             BuildRef("sample-portal_ee", "2.4.0-118"),
@@ -73,8 +71,7 @@ class ParityDiffTest {
         ReleasedFile(
             "sample/portal:2.4.0-118",
             FileKind.DOCKER,
-            true,
-            setOf(DOCKER_BUILD),
+            setOf(DOCKER_BUILD, DECLARED),
             "rnd-docker-release-local/sample/portal/2.4.0-118/manifest.json",
             BuildRef("sample-portal_ee_docker", "2.4.0-118"),
             BuildLookup.CONVENTION,
@@ -89,16 +86,16 @@ class ParityDiffTest {
             listOf(BuildRef("sample-portal_ee", "2.4.0-118"), BuildRef("sample-portal_ee_docker", "2.4.0-118")),
             listOf(zip, helper, image),
             listOf(
-                FoundPackage(
+                FoundLibrary(
                     id("pkg:maven/com.fasterxml.jackson.core/jackson-databind@2.17.0"),
                     setOf("Apache-2.0"),
                     setOf(BUILD_RECORD),
                     setOf(zip.entry),
                 ),
-                FoundPackage(id("pkg:maven/org.example.portal/sample-portal@2.4.0-118"), emptySet(), setOf(BINARY_SCAN), setOf(zip.entry)),
-                FoundPackage(id("pkg:docker/sha256__abc@latest"), emptySet(), setOf(BINARY_SCAN), setOf(image.entry)),
-                FoundPackage(id("pkg:rpm/openssl-libs@3.0.7"), setOf("OpenSSL"), setOf(BINARY_SCAN), setOf(image.entry)),
-                FoundPackage(id("pkg:pypi/subscription-manager@1.29"), setOf("GPL-2.0"), setOf(BINARY_SCAN), setOf(image.entry)),
+                FoundLibrary(id("pkg:maven/org.example.portal/sample-portal@2.4.0-118"), emptySet(), setOf(BINARY_SCAN), setOf(zip.entry)),
+                FoundLibrary(id("pkg:docker/sha256__abc@latest"), emptySet(), setOf(BINARY_SCAN), setOf(image.entry)),
+                FoundLibrary(id("pkg:rpm/openssl-libs@3.0.7"), setOf("OpenSSL"), setOf(BINARY_SCAN), setOf(image.entry)),
+                FoundLibrary(id("pkg:pypi/subscription-manager@1.29"), setOf("GPL-2.0"), setOf(BINARY_SCAN), setOf(image.entry)),
             ),
             listOf(
                 Finding(
@@ -127,7 +124,7 @@ class ParityDiffTest {
             listOf(
                 "file org.example.portal:sample-portal:zip: status: prototype CHECKED, service BUILD_INFO_ONLY",
             ),
-            diff(inventory.copy(files = listOf(zip.copy(evidence = setOf(BUILD_RECORD)), helper, image))),
+            diff(inventory.copy(releasedFiles = listOf(zip.copy(evidence = setOf(BUILD_RECORD)), helper, image))),
         )
     }
 
@@ -136,7 +133,7 @@ class ParityDiffTest {
     fun filesOnOneSide() {
         assertEquals(
             listOf("file org.example.portal:helper-tool:jar: only in the prototype"),
-            diff(inventory.copy(files = listOf(zip, image))),
+            diff(inventory.copy(releasedFiles = listOf(zip, image))),
         )
         assertEquals(
             listOf(
@@ -144,15 +141,15 @@ class ParityDiffTest {
                     "[org.example.portal:sample-portal:zip, org.example.portal:helper-tool:jar, sample/portal:2.4.0-118], " +
                     "service [sample/portal:2.4.0-118, org.example.portal:sample-portal:zip, org.example.portal:helper-tool:jar]",
             ),
-            diff(inventory.copy(files = listOf(image, zip, helper))),
+            diff(inventory.copy(releasedFiles = listOf(image, zip, helper))),
         )
     }
 
     @Test
     @DisplayName("a package only on one side, or with other licenses, sources or files")
     fun packages() {
-        val extra = FoundPackage(id("pkg:npm/react@18.2.0"), emptySet(), setOf(BUILD_RECORD), setOf(zip.entry))
-        val changed = inventory.packages.first().copy(licenses = setOf("MIT"), evidence = setOf(BINARY_SCAN, BUILD_RECORD))
+        val extra = FoundLibrary(id("pkg:npm/react@18.2.0"), emptySet(), setOf(BUILD_RECORD), setOf(zip.entry))
+        val changed = inventory.libraries.first().copy(licenses = setOf("MIT"), evidence = setOf(BINARY_SCAN, BUILD_RECORD))
 
         assertEquals(
             listOf(
@@ -161,7 +158,7 @@ class ParityDiffTest {
                 "package pkg:maven/com.fasterxml.jackson.core/jackson-databind@2.17.0: " +
                     "sources: prototype [build-info], service [build-info, xray-artifact]",
             ),
-            diff(inventory.copy(packages = listOf(changed) + inventory.packages.drop(1) + extra)),
+            diff(inventory.copy(libraries = listOf(changed) + inventory.libraries.drop(1) + extra)),
         )
     }
 

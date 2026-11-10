@@ -13,7 +13,7 @@ internal class ChecksumNamer(
     private val store: ArtifactStore,
     private val ownership: Ownership,
 ) {
-    fun name(table: PackageTable) {
+    fun name(table: LibraryTable) {
         table.ids.filterIsInstance<PackageId.ChecksumOnly>().forEach { unnamed ->
             if (ownership.isInternalFileName(unnamed.fileName)) return@forEach
             val copies = store.bySha256(unnamed.sha256)

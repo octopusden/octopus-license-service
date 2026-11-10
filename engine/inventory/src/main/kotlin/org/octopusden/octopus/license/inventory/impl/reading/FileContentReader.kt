@@ -2,7 +2,7 @@ package org.octopusden.octopus.license.inventory.impl.reading
 
 import org.octopusden.octopus.license.inventory.impl.listing.BuildLocator
 import org.octopusden.octopus.license.inventory.impl.listing.ListedFile
-import org.octopusden.octopus.license.inventory.impl.naming.PackageTable
+import org.octopusden.octopus.license.inventory.impl.naming.LibraryTable
 import org.octopusden.octopus.license.inventory.impl.port.ArtifactStore
 import org.octopusden.octopus.license.inventory.impl.port.BinaryScanner
 import org.octopusden.octopus.license.inventory.impl.port.BuildRecord
@@ -36,7 +36,7 @@ internal class FileContentReader(
     fun read(
         file: ListedFile,
         conventionBuild: String,
-        table: PackageTable,
+        table: LibraryTable,
     ): FileReading {
         val stored = requireNotNull(file.stored) { "${file.entry} was not located" }
         val judgement =
@@ -50,7 +50,7 @@ internal class FileContentReader(
     /** One released file's walk: where its packages go, and which nested builds it has followed. */
     private inner class Visit(
         private val foundIn: String,
-        private val table: PackageTable,
+        private val table: LibraryTable,
         private val findings: MutableList<Finding>,
     ) {
         private val visited = mutableSetOf<Triple<String, String, String>>()

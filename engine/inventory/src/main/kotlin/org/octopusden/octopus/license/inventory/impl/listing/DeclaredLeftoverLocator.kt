@@ -34,7 +34,7 @@ internal class DeclaredLeftoverLocator(
         declared: MavenArtifact,
         target: LicenseTarget,
     ): ListedFile {
-        val listed = ListedFile(declared.entry(), FileKind.MAVEN, declared = true, selectedBy = setOf(SelectionReason.DECLARED))
+        val listed = ListedFile(declared.entry(), FileKind.MAVEN, selectedBy = setOf(SelectionReason.DECLARED))
         return target.artifactVersions
             .firstNotNullOfOrNull { version ->
                 val folder = "${declared.groupId.replace('.', '/')}/${declared.artifactId}/$version"
@@ -54,7 +54,6 @@ internal class DeclaredLeftoverLocator(
             ListedFile(
                 declared.image + declared.tag?.let { ":$it" }.orEmpty(),
                 FileKind.DOCKER,
-                declared = true,
                 selectedBy = setOf(SelectionReason.DECLARED),
             )
         return (declared.tag?.let(::listOf) ?: target.artifactVersions)
@@ -80,7 +79,6 @@ internal class DeclaredLeftoverLocator(
         return ListedFile(
             entry = declared.entry,
             kind = if (fileShare) FileKind.FILE_SHARE else FileKind.MAVEN,
-            declared = true,
             selectedBy = setOf(SelectionReason.DECLARED),
             skip = FileStatus.UNSUPPORTED,
             findings =

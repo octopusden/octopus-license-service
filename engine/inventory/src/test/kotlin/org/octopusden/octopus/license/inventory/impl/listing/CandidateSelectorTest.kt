@@ -33,7 +33,7 @@ class CandidateSelectorTest {
         val selection = CandidateSelector(target(listOf(MavenArtifact(GROUP, "sample-portal", "zip")), listOf(pattern))).select(maven())
 
         assertEquals(
-            Selection(setOf(DECLARED, PATTERN), declared = true, skip = null, matched = MavenArtifact(GROUP, "sample-portal", "zip")),
+            Selection(setOf(DECLARED, PATTERN), skip = null, matched = MavenArtifact(GROUP, "sample-portal", "zip")),
             selection,
         )
     }
@@ -94,15 +94,15 @@ class CandidateSelectorTest {
     }
 
     @Test
-    @DisplayName("an image is always selected; declared when a declared image has its name, tag or no tag")
+    @DisplayName("an image is always selected, and also DECLARED when a declared image has its name, tag or no tag")
     fun images() {
         val selector = CandidateSelector(target(listOf(DockerImage("sample/portal"))))
 
         assertEquals(
-            Selection(setOf(DOCKER_BUILD), declared = true, skip = null, matched = DockerImage("sample/portal")),
+            Selection(setOf(DOCKER_BUILD, DECLARED), skip = null, matched = DockerImage("sample/portal")),
             selector.select(image()),
         )
-        assertEquals(Selection(setOf(DOCKER_BUILD), declared = false, skip = null, matched = null), selector.select(image("sample/other")))
+        assertEquals(Selection(setOf(DOCKER_BUILD), skip = null, matched = null), selector.select(image("sample/other")))
     }
 
     @Test

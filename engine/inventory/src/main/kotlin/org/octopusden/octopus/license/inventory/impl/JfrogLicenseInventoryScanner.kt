@@ -7,8 +7,8 @@ import org.octopusden.octopus.license.inventory.impl.listing.ConventionBuilds
 import org.octopusden.octopus.license.inventory.impl.listing.ListedFile
 import org.octopusden.octopus.license.inventory.impl.listing.ReleasedFileLister
 import org.octopusden.octopus.license.inventory.impl.naming.ChecksumNamer
+import org.octopusden.octopus.license.inventory.impl.naming.LibraryTable
 import org.octopusden.octopus.license.inventory.impl.naming.LicenseFiller
-import org.octopusden.octopus.license.inventory.impl.naming.PackageTable
 import org.octopusden.octopus.license.inventory.impl.port.ScanPorts
 import org.octopusden.octopus.license.inventory.impl.reading.BuildDependencyReader
 import org.octopusden.octopus.license.inventory.impl.reading.FileContentReader
@@ -53,7 +53,7 @@ class JfrogLicenseInventoryScanner internal constructor(
         val locator = BuildLocator(scan.records)
         val listing = ReleasedFileLister(scan.records, scan.store, locator).list(target)
         val reader = FileContentReader(scan.scanner, scan.store, locator, BuildDependencyReader(ownership), SbomReader(scan.store))
-        val table = PackageTable()
+        val table = LibraryTable()
         val findings = linkedSetOf<Finding>()
         val files =
             listing.files.map { listed ->
@@ -69,7 +69,7 @@ class JfrogLicenseInventoryScanner internal constructor(
             ChecksumNamer(scan.store, ownership).name(table)
             LicenseFiller(scan.database).fill(table)
         }
-        return LicenseInventory(target.componentVersion, listing.builds.map { it.ref }, files, table.packages(), findings.toList())
+        return LicenseInventory(target.componentVersion, listing.builds.map { it.ref }, files, table.libraries(), findings.toList())
     }
 
     private fun ListedFile.released(
@@ -79,7 +79,6 @@ class JfrogLicenseInventoryScanner internal constructor(
     ) = ReleasedFile(
         entry = entry,
         kind = kind,
-        declared = declared,
         selectedBy = selectedBy,
         path = stored?.fullPath,
         build = build?.ref,

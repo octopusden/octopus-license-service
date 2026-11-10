@@ -15,7 +15,7 @@ import org.octopusden.octopus.license.inventory.model.Finding
 import org.octopusden.octopus.license.inventory.model.FindingCode.NOT_IN_XRAY
 import org.octopusden.octopus.license.inventory.model.FindingCode.NOT_SCANNABLE
 import org.octopusden.octopus.license.inventory.model.FindingCode.NO_DISTRIBUTION
-import org.octopusden.octopus.license.inventory.model.FoundPackage
+import org.octopusden.octopus.license.inventory.model.FoundLibrary
 import org.octopusden.octopus.license.inventory.model.ReleasedFile
 import org.octopusden.octopus.license.inventory.model.SelectionReason.DECLARED
 import org.octopusden.octopus.license.inventory.model.SelectionReason.DOCKER_BUILD
@@ -130,14 +130,13 @@ class JfrogLicenseInventoryScannerTest {
     fun files() {
         workedExample()
 
-        val files = inventoryScanner.scan(workedTarget).files
+        val files = inventoryScanner.scan(workedTarget).releasedFiles
 
         assertEquals(
             listOf(
                 ReleasedFile(
                     zipEntry,
                     FileKind.MAVEN,
-                    true,
                     setOf(DECLARED, PATTERN),
                     zip.fullPath,
                     BuildRef("${COMPONENT}_ee", BUILD_VERSION),
@@ -149,7 +148,6 @@ class JfrogLicenseInventoryScannerTest {
                 ReleasedFile(
                     "$GROUP:$COMPONENT:pom",
                     FileKind.MAVEN,
-                    false,
                     setOf(PATTERN),
                     null,
                     BuildRef("${COMPONENT}_ee", BUILD_VERSION),
@@ -160,7 +158,6 @@ class JfrogLicenseInventoryScannerTest {
                 ReleasedFile(
                     "$GROUP:$COMPONENT-config:yaml",
                     FileKind.MAVEN,
-                    false,
                     setOf(PATTERN),
                     yaml.fullPath,
                     BuildRef("${COMPONENT}_ee", BUILD_VERSION),
@@ -171,7 +168,6 @@ class JfrogLicenseInventoryScannerTest {
                 ReleasedFile(
                     "$GROUP:helper-tool:jar",
                     FileKind.MAVEN,
-                    false,
                     emptySet(),
                     null,
                     BuildRef("${COMPONENT}_ee", BUILD_VERSION),
@@ -182,8 +178,7 @@ class JfrogLicenseInventoryScannerTest {
                 ReleasedFile(
                     imageEntry,
                     FileKind.DOCKER,
-                    true,
-                    setOf(DOCKER_BUILD),
+                    setOf(DOCKER_BUILD, DECLARED),
                     image.fullPath,
                     BuildRef("${COMPONENT}_ee_docker", BUILD_VERSION),
                     BuildLookup.CONVENTION,
@@ -201,36 +196,36 @@ class JfrogLicenseInventoryScannerTest {
     fun packages() {
         workedExample()
 
-        val packages = inventoryScanner.scan(workedTarget).packages
+        val packages = inventoryScanner.scan(workedTarget).libraries
 
         assertEquals(
             listOf(
-                FoundPackage(
+                FoundLibrary(
                     pkg("com.fasterxml.jackson.core/jackson-databind@2.17.0"),
                     setOf("Apache-2.0"),
                     setOf(BUILD_RECORD),
                     setOf(zipEntry),
                 ),
-                FoundPackage(pkg("com.google.guava/guava@32.1.2-jre"), setOf("Apache-2.0"), setOf(BINARY_SCAN), setOf(imageEntry)),
-                FoundPackage(
+                FoundLibrary(pkg("com.google.guava/guava@32.1.2-jre"), setOf("Apache-2.0"), setOf(BINARY_SCAN), setOf(imageEntry)),
+                FoundLibrary(
                     pkg("io.netty/netty-common@4.1.107.Final"),
                     setOf("Apache-2.0"),
                     setOf(BINARY_SCAN, CHECKSUM_MATCH),
                     setOf(zipEntry),
                 ),
-                FoundPackage(
+                FoundLibrary(
                     pkg("org.apache.commons/commons-text@1.11.0"),
                     setOf("Apache-2.0"),
                     setOf(BINARY_SCAN, BUILD_RECORD),
                     setOf(zipEntry),
                 ),
-                FoundPackage(
+                FoundLibrary(
                     pkg("org.example.portal/portal-plugins@$BUILD_VERSION"),
                     setOf("Unknown"),
                     setOf(BINARY_SCAN),
                     setOf(zipEntry),
                 ),
-                FoundPackage(pkg("org.springframework/spring-core@6.1.4"), setOf("Apache-2.0"), setOf(BINARY_SCAN), setOf(zipEntry)),
+                FoundLibrary(pkg("org.springframework/spring-core@6.1.4"), setOf("Apache-2.0"), setOf(BINARY_SCAN), setOf(zipEntry)),
             ),
             packages,
         )
@@ -264,7 +259,7 @@ class JfrogLicenseInventoryScannerTest {
         )
 
         assertEquals(listOf(Finding(NOT_IN_XRAY, zipEntry, "Xray has not indexed this file")), inventory.findings)
-        assertEquals(setOf(BUILD_RECORD), inventory.files.single().evidence)
+        assertEquals(setOf(BUILD_RECORD), inventory.releasedFiles.single().evidence)
     }
 
     @Test
@@ -273,7 +268,7 @@ class JfrogLicenseInventoryScannerTest {
         val inventory = inventoryScanner.scan(target())
 
         assertEquals(listOf(NO_DISTRIBUTION), inventory.findings.map { it.code })
-        assertEquals(emptyList<FoundPackage>(), inventory.packages)
+        assertEquals(emptyList<FoundLibrary>(), inventory.libraries)
         assertEquals(emptyList<List<String>>(), database.asked)
     }
 

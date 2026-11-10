@@ -79,7 +79,6 @@ internal class ReleasedFileLister(
     ) = ListedFile(
         entry = candidate.entry,
         kind = kind,
-        declared = selection.declared,
         selectedBy = selection.selectedBy,
         build = build,
         buildFoundBy = BuildLookup.CONVENTION,

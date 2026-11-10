@@ -41,7 +41,7 @@
   - [x] 4.1.7 `ShippingScopes`: each runtime scope; Android release and embed; debug and test variants; custom configuration.
   - [x] 4.1.8 `BuildDependencyReader`: producing module by sha1 and by name; none; npm `prod` only; Gradle-supplied skipped; local file; third-party archive is a package; our archive under runtime is followed; under a custom configuration only with Xray proof; test scope never.
   - [x] 4.1.9 `CycloneDxParser`: purl without qualifiers; license id, name, expression; component without purl skipped.
-  - [x] 4.1.10 `PackageTable`: merge by id; union of licenses, evidence, files; rename drops the unnamed licenses and merges into an existing row.
+  - [x] 4.1.10 `LibraryTable` (first named `PackageTable`): merge by id; union of licenses, evidence, files; rename drops the unnamed licenses and merges into an existing row.
   - [x] 4.1.11 `Ownership`: internal group prefix; internal file name (`group.` prefix); own repository by prefix and `local` suffix.
   - [x] 4.1.12 `XrayComponentIds`: `gav://..` cleanup; `go` to `golang`; each listed scheme; unknown kept; Maven and npm back to Xray ids.
   - [x] 4.1.13 `RepositoryPreference`: release local, local, other, then name.
@@ -61,6 +61,9 @@
 - [x] 5.8 (added on review) Within one released file, findings of nested archives and of dependencies come out in a different interleaving than the prototype's (it follows an archive in the middle of its dependency loop). Each finding is still there once; the parity check compares findings as sets.
 - [x] 5.9 (added on review) Rule D10.10 (a package Xray lists under no license is not found) lives in the Xray adapter, tested in 6.1.3; rule D10.11 (a URL `docker` entry) is the target's parsing, already covered there.
 - [x] 5.10 Confirm: `:license-inventory:test` 151 green; ktlint and detekt clean.
+
+- [x] 5.11 (added on review) `declared` is derived from `selectedBy`: a declared image is `{DOCKER_BUILD, DECLARED}`, so the flag no longer repeats what the set says. The parity view drops `DECLARED` from an image's selection, as the prototype records it in `in_registry` only.
+- [x] 5.12 (added on review) `LicenseInventory.files` and `packages` are `releasedFiles` and `libraries`, `FoundPackage` is `FoundLibrary` and `PackageTable` is `LibraryTable`: a library is the word the reports use, and it says the list is what is inside the files. `PackageId` keeps its name, as a package URL is the id's format. `:license-inventory:test` 178 green.
 
 ## 6. Adapters (Decisions 12, 13)
 

@@ -9,13 +9,13 @@ import org.octopusden.octopus.license.inventory.impl.Ownership
 import org.octopusden.octopus.license.inventory.impl.stored
 import org.octopusden.octopus.license.inventory.model.Evidence.BINARY_SCAN
 import org.octopusden.octopus.license.inventory.model.Evidence.CHECKSUM_MATCH
-import org.octopusden.octopus.license.inventory.model.FoundPackage
+import org.octopusden.octopus.license.inventory.model.FoundLibrary
 import org.octopusden.octopus.license.inventory.model.PackageId
 
 class ChecksumNamerTest {
     private val sha256 = "ab".repeat(32)
     private val store = FakeArtifactStore()
-    private val table = PackageTable()
+    private val table = LibraryTable()
     private val namer = ChecksumNamer(store, Ownership(OWNERSHIP))
 
     private fun unnamed(fileName: String) =
@@ -40,14 +40,14 @@ class ChecksumNamerTest {
 
         assertEquals(
             listOf(
-                FoundPackage(
+                FoundLibrary(
                     PackageId.parse("pkg:maven/io.netty/netty-common@4.1.107.Final"),
                     emptySet(),
                     setOf(BINARY_SCAN, CHECKSUM_MATCH),
                     setOf("zip"),
                 ),
             ),
-            table.packages(),
+            table.libraries(),
         )
     }
 
@@ -60,7 +60,7 @@ class ChecksumNamerTest {
 
         namer.name(table)
 
-        assertEquals(listOf("pkg:maven/org.example2/lib@2.0"), table.packages().map { it.id.toString() })
+        assertEquals(listOf("pkg:maven/org.example2/lib@2.0"), table.libraries().map { it.id.toString() })
     }
 
     @Test
@@ -70,7 +70,7 @@ class ChecksumNamerTest {
 
         namer.name(table)
 
-        assertEquals(listOf(id), table.packages().map { it.id })
+        assertEquals(listOf(id), table.libraries().map { it.id })
         assertEquals(emptyList<String>(), store.asked)
     }
 
@@ -82,7 +82,7 @@ class ChecksumNamerTest {
 
         namer.name(table)
 
-        assertEquals(listOf(id), table.packages().map { it.id })
+        assertEquals(listOf(id), table.libraries().map { it.id })
     }
 
     @Test
@@ -92,7 +92,7 @@ class ChecksumNamerTest {
 
         namer.name(table)
 
-        assertEquals(setOf("Unknown"), table.packages().single().licenses)
+        assertEquals(setOf("Unknown"), table.libraries().single().licenses)
     }
 
     @Test
@@ -113,8 +113,8 @@ class ChecksumNamerTest {
         namer.name(table)
 
         assertEquals(
-            listOf(FoundPackage(netty, setOf("Apache-2.0"), setOf(BINARY_SCAN, CHECKSUM_MATCH), setOf("image", "zip"))),
-            table.packages(),
+            listOf(FoundLibrary(netty, setOf("Apache-2.0"), setOf(BINARY_SCAN, CHECKSUM_MATCH), setOf("image", "zip"))),
+            table.libraries(),
         )
     }
 }

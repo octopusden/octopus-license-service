@@ -79,7 +79,7 @@ LicenseInventoryScanner (interface)            ← server
    │                                           FileStatusJudge, BuildDependencyReader,
    │                                           ShippingScopes, CycloneDxParser           (pure)
    ├─ impl/naming/    step C: names, licenses  ChecksumNamer, LicenseFiller              (I/O through ports)
-   │                                           PackageTable                              (pure)
+   │                                           LibraryTable                              (pure)
    ├─ impl/Ownership                           which groups, file names and repositories are ours (pure)
    ├─ impl/port/      BuildRecords, ArtifactStore, BinaryScanner, LicenseDatabase       (interfaces + their data)
    └─ impl/adapter/   ArtifactoryBuildRecords, ArtifactoryArtifactStore, XrayBinaryScanner,
@@ -102,7 +102,7 @@ LicenseInventoryScanner (interface)            ← server
 | `BuildDependencyReader` | pure | From a build record and the file: npm production packages, the producing module's shipped packages, our nested archives, findings | `npm_dependencies`, dependency loop |
 | `ShippingScopes` | pure | Whether a build-info scope ships: runtime scopes, Android release/embed, never test or debug | `is_runtime_scope`, `NOT_SHIPPED_SCOPE` |
 | `SbomReader` / `CycloneDxParser` | I/O / pure | SBOM files of a build: find, download, parse purls and licenses | `sbom_components` |
-| `PackageTable` | pure | The merged rows: one per package id, licenses, evidence and files joined; renaming a row | `rows` |
+| `LibraryTable` | pure | The merged rows: one per library id, licenses, evidence and files joined; renaming a row | `rows` |
 | `ChecksumNamer` | I/O | Renames checksum-only packages that are not ours to the Maven coordinates their checksum is stored under | `maven_purl_by_checksum` loop |
 | `LicenseFiller` | I/O | Fills licenses of packages that have none, from the license database | `xray_component_licences` loop |
 | `Ownership` | pure | Is a Maven group ours, a file name ours, a repository ours | `INTERNAL_GROUPS`, `is_internal` prefix, `rnd-*local` |
@@ -131,15 +131,14 @@ interface LicenseInventoryScanner {
 data class LicenseInventory(
     val componentVersion: ComponentVersion,
     val builds: List<BuildRef>,              // the convention builds found
-    val files: List<ReleasedFile>,           // every listed file, read or not, in listing order
-    val packages: List<FoundPackage>,        // merged across files, sorted by rendered id
+    val releasedFiles: List<ReleasedFile>,   // what the version releases: every listed file, read or not, in listing order
+    val libraries: List<FoundLibrary>,       // what was found inside them, merged across files, sorted by rendered id
     val findings: List<Finding>,             // distinct, in the order found
 )
 
 data class ReleasedFile(
     val entry: String,                       // g:a:ext[:classifier], image:tag, or the registry entry
     val kind: FileKind,                      // MAVEN, DOCKER, FILE_SHARE
-    val declared: Boolean,
     val selectedBy: Set<SelectionReason>,    // DECLARED, PATTERN, DOCKER_BUILD; empty when NOT_SELECTED
     val path: String?,                       // repo/path/name in Artifactory
     val build: BuildRef?,
@@ -147,11 +146,13 @@ data class ReleasedFile(
     val buildAgent: String?,
     val status: FileStatus,
     val evidence: Set<Evidence>,             // READ only: BINARY_SCAN when Xray indexed it, BUILD_RECORD when its build is known
-)
+) {
+    val declared get() = SelectionReason.DECLARED in selectedBy   // a declared image is {DOCKER_BUILD, DECLARED}
+}
 
 enum class FileStatus { NOT_SELECTED, METADATA, NOT_FOUND, UNSUPPORTED, PLAIN_FILE, NOT_READABLE, READ }
 
-data class FoundPackage(
+data class FoundLibrary(
     val id: PackageId,
     val licenses: Set<String>,               // as sources name them; empty when none did
     val evidence: Set<Evidence>,             // BINARY_SCAN, SBOM, BUILD_RECORD, CHECKSUM_MATCH
@@ -214,7 +215,7 @@ internal interface LicenseDatabase {
 
 ### 3. The inventory is the prototype's rows, typed
 
-- `ReleasedFile` is a row of `artifacts.csv`; `FoundPackage` is a row of `components.csv` before stage 11 (`purl`, `xray_licences`, `sources`, `artifacts`).
+- `ReleasedFile` is a row of `artifacts.csv`; `FoundLibrary` is a row of `components.csv` before stage 11 (`purl`, `xray_licences`, `sources`, `artifacts`).
 - Statuses use neutral words (component diagram, its D-001): `READ` with `evidence` replaces `CHECKED` (`BINARY_SCAN` present) and `BUILD_INFO_ONLY` (absent); `NOT_READABLE` replaces `NOT_IN_XRAY`. The parity check maps them back.
 - `PackageId` is typed but renders exactly as the prototype's purl strings. A purl whose parsed form would not render back to the same string is kept `Unrecognized`, verbatim, so parsing can never change an id.
 - Findings keep the prototype's codes, subjects and details, so the next change grades from the same codes and the parity check compares them as text. The prototype's violations (`ARTIFACT_NOT_FOUND`, `UNSUPPORTED_DISTRIBUTION_ENTRY`, `NOT_IN_XRAY`, `NO_BUILD_INFO`, `NO_DISTRIBUTION`) and notes (the rest) differ only by code, so the kind is derived from the code, not stored.
@@ -243,7 +244,7 @@ internal interface LicenseDatabase {
 
 ### 5. Listing (step A)
 
-- Docker: an artifact of a `docker` module, or any artifact whose path ends in `manifest.json`, is an image only when its name is `manifest.json` (not `list.manifest.json`); other files of those modules are not listed. The entry is the path's folder as `image:tag`. Always selected (`DOCKER_BUILD`); declared when the entry or its image name equals a declared image's name, and that declared image is then no leftover. Located by its `manifest.json` path at its own tag; missing is `NOT_FOUND`.
+- Docker: an artifact of a `docker` module, or any artifact whose path ends in `manifest.json`, is an image only when its name is `manifest.json` (not `list.manifest.json`); other files of those modules are not listed. The entry is the path's folder as `image:tag`. Always selected (`DOCKER_BUILD`), and also `DECLARED` when its image name equals a declared image's name, and that declared image is then no leftover. Located by its `manifest.json` path at its own tag; missing is `NOT_FOUND`.
 - Maven: group from the module id; artifact id, classifier and extension from the file name (`PublishedFileName`), the artifact id falling back to the module's when the file name lacks `-{version}`. Entry `g:a:ext[:classifier]`.
 - Selection: declared (exact entry) and/or pattern (group and artifact each fully match one pattern of the same entry); neither is `NOT_SELECTED`. Not declared, and extension in `pom module md5 sha1 sha256 asc` or classifier in `sources javadoc tests test-sources test-fixtures`: `METADATA`.
 - A selected file is located by sha1; missing is `NOT_FOUND` with finding `ARTIFACT_NOT_FOUND`.

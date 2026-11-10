@@ -50,17 +50,22 @@ data class ParityView(
         private val CODES = FindingCode.entries.map { it.name }.toSet()
 
         fun of(inventory: LicenseInventory): ParityView {
-            val kinds = inventory.files.associate { it.entry to it.kind }
+            val kinds = inventory.releasedFiles.associate { it.entry to it.kind }
             return ParityView(
                 builds = inventory.builds.map { it.toString() },
                 files =
-                    inventory.files.map { file ->
+                    inventory.releasedFiles.map { file ->
                         val status = status(file.status, file.evidence)
                         FileView(
                             entry = file.entry,
                             kind = kind(file.kind),
                             declared = file.declared,
-                            selectedBy = file.selectedBy.map(::selectedBy).toSet(),
+                            // The prototype names an image's own reason only; whether the registry declares it is `in_registry`.
+                            selectedBy = file.selectedBy
+                                .filterNot { file.kind == FileKind.DOCKER && it == SelectionReason.DECLARED }
+                                .map(
+                                    ::selectedBy,
+                                ).toSet(),
                             path = file.path,
                             build = file.build?.toString(),
                             buildFoundBy = file.buildFoundBy?.name?.lowercase(),
@@ -69,7 +74,7 @@ data class ParityView(
                         )
                     },
                 packages =
-                    inventory.packages
+                    inventory.libraries
                         .filter {
                             listed(
                                 type(it.id),

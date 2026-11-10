@@ -7,7 +7,7 @@ import org.octopusden.octopus.license.inventory.model.PackageId
 internal class LicenseFiller(
     private val database: LicenseDatabase,
 ) {
-    fun fill(table: PackageTable) {
+    fun fill(table: LibraryTable) {
         val missing =
             table
                 .withoutLicenses()

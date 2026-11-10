@@ -1,14 +1,14 @@
 package org.octopusden.octopus.license.inventory.impl.naming
 
 import org.octopusden.octopus.license.inventory.model.Evidence
-import org.octopusden.octopus.license.inventory.model.FoundPackage
+import org.octopusden.octopus.license.inventory.model.FoundLibrary
 import org.octopusden.octopus.license.inventory.model.PackageId
 
 /**
- * The packages of one scan, one row per id, filled by every source of every file and then renamed
+ * The libraries of one scan, one row per id, filled by every source of every file and then renamed
  * and given licenses. Not thread-safe: one scan, one table.
  */
-internal class PackageTable {
+internal class LibraryTable {
     private class Row(
         val licenses: MutableSet<String> = linkedSetOf(),
         val evidence: MutableSet<Evidence> = linkedSetOf(),
@@ -53,8 +53,8 @@ internal class PackageTable {
         rows[id]?.licenses?.addAll(licenses)
     }
 
-    fun packages(): List<FoundPackage> =
+    fun libraries(): List<FoundLibrary> =
         rows
-            .map { (id, row) -> FoundPackage(id, row.licenses.toSet(), row.evidence.toSet(), row.foundIn.toSet()) }
+            .map { (id, row) -> FoundLibrary(id, row.licenses.toSet(), row.evidence.toSet(), row.foundIn.toSet()) }
             .sortedBy { it.id.toString() }
 }
