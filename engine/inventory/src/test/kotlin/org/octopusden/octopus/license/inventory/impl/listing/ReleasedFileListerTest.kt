@@ -183,23 +183,23 @@ class ReleasedFileListerTest {
             "native-lib-$VERSION.tar.gz",
             path = "org/example/lib/native-lib/$VERSION",
             properties = mapOf(
-                "build.name" to "PMSTDLIB",
+                "build.name" to "shared-native-build",
                 "build.number" to "7.1.3",
             ),
         )
         store.add(tar)
-        records.add(build(name = "PMSTDLIB", number = "7.1.3"))
+        records.add(build(name = "shared-native-build", number = "7.1.3"))
 
         val file = lister.list(target(listOf(MavenArtifact("org.example.lib", "native-lib", "tar.gz")))).files.single()
 
         assertEquals("org.example.lib:native-lib:tar.gz", file.entry)
         assertEquals(setOf(DECLARED), file.selectedBy)
         assertEquals(tar, file.stored)
-        assertEquals("PMSTDLIB", file.build?.ref?.name)
+        assertEquals("shared-native-build", file.build?.ref?.name)
         assertEquals(BuildLookup.PROPERTIES, file.buildFoundBy)
         assertEquals(PackageId.parse("pkg:maven/org.example.lib/native-lib@$VERSION"), file.ownId)
         assertEquals(
-            listOf(Finding(BUILD_NAME_DIFFERS, "org.example.lib:native-lib:tar.gz", "PMSTDLIB (convention ${COMPONENT}_ee)")),
+            listOf(Finding(BUILD_NAME_DIFFERS, "org.example.lib:native-lib:tar.gz", "shared-native-build (convention ${COMPONENT}_ee)")),
             file.findings,
         )
     }

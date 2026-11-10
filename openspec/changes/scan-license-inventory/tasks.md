@@ -45,7 +45,7 @@
   - [x] 4.1.11 `Ownership`: internal group prefix; internal file name (`group.` prefix); own repository by prefix and `local` suffix.
   - [x] 4.1.12 `XrayComponentIds`: `gav://..` cleanup; `go` to `golang`; each listed scheme; unknown kept; Maven and npm back to Xray ids.
   - [x] 4.1.13 `RepositoryPreference`: release local, local, other, then name.
-- [x] 4.1.14 (added on review) A docker module's file with no recorded path names no image and is not listed; the prototype would stop the component with an error there. Build-info records the path with the file name (`tds/mpi/1.2.484-8315/manifest.json`, checked on a run-14 build), which the client's KDoc first had wrong.
+- [x] 4.1.14 (added on review) A docker module's file with no recorded path names no image and is not listed; the prototype would stop the component with an error there. Build-info records the path with the file name (`{image}/{tag}/manifest.json`, checked on a run-14 docker build), which the client's KDoc first had wrong.
 - [x] 4.1.15 (added on review) `Ownership` is checked before an archive is followed (`isOwnArchive`) and by `shipsByProof`, both with the prototype's id prefix test.
 - [x] 4.2 Confirm `:license-inventory:test` green; record the count: 117 green across 14 classes; ktlint and detekt clean.
 
@@ -83,7 +83,7 @@
 
 - [x] 8.1 `parityTest` source set and task, not part of `check`; inputs from environment variables (`PROTOTYPE_RUN_DIR`, `COMPONENTS_REGISTRY_URL`, `JFROG_URL`, `JFROG_TOKEN`, `INTERNAL_GROUPS`, `OWN_REPOSITORY_PREFIXES`, optional `PARITY_COMPONENTS`). A missing variable fails the task by name. The report is `engine/inventory/build/parity/report.md`.
 - [x] 8.2 The projection of both sides and the diff, with unit tests on two hand-made component JSONs (same, and one difference of each kind): `ParityView`, `ParityDiff` in the test source set, so `ParityDiffTest` runs in every build; 6 green. Packages are compared after the prototype's stage-11 drops (docker layers, OS packages, Python seen only in images); findings as sets, without the prototype's verdict violations, with "licence" read as "license".
-- [ ] 8.3 Run the prototype locally with `--only w4web3,dmp-bundle` and then the parity check; record the differences here, each fixed or explained by Decision 11.
+- [ ] 8.3 Run the prototype locally with `--only` for two components of run 14, one with nested archives and npm modules, one with docker images, and then the parity check; record the differences here, each fixed or explained by Decision 11.
 - [ ] 8.4 Same for all components of run 14's scope; record the result here.
 
 ## 9. Finalization

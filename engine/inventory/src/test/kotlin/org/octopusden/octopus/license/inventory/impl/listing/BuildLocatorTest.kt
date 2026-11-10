@@ -17,7 +17,7 @@ class BuildLocatorTest {
             number = "12",
             modules = arrayOf(module(files = listOf(builtFile("x.tar.gz", sha1 = "sha1-lib.tar.gz")))),
         )
-    private val byProperties = build(name = "PMSTDLIB", number = "7.1.3")
+    private val byProperties = build(name = "shared-native-build", number = "7.1.3")
 
     @Test
     @DisplayName("the file's build.name and build.number properties come first")
@@ -26,7 +26,7 @@ class BuildLocatorTest {
             stored(
                 "lib.tar.gz",
                 properties = mapOf(
-                    "build.name" to "PMSTDLIB",
+                    "build.name" to "shared-native-build",
                     "build.number" to "7.1.3",
                 ),
             ),

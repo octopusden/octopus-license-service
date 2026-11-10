@@ -92,8 +92,8 @@ The service SHALL look up each declared Maven artifact and image not matched by 
 
 #### Scenario: Built by another build
 
-- **WHEN** a declared `org.example.lib:native-lib:tar.gz` is stored with properties naming build `PMSTDLIB/7.1.3`
-- **THEN** the file is listed with build `PMSTDLIB/7.1.3`, found by properties, and finding `BUILD_NAME_DIFFERS`
+- **WHEN** a declared `org.example.lib:native-lib:tar.gz` is stored with properties naming build `shared-native-build/7.1.3`
+- **THEN** the file is listed with build `shared-native-build/7.1.3`, found by properties, and finding `BUILD_NAME_DIFFERS`
 
 #### Scenario: No properties
 
