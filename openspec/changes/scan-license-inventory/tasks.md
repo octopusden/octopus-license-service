@@ -64,12 +64,16 @@
 
 ## 6. Adapters (Decisions 12, 13)
 
-- [ ] 6.1 Failing tests against a stub HTTP server, with the fixtures of 1.1:
-  - [ ] 6.1.1 `ArtifactoryBuildRecords`: found; missing and `500` are no build; builds by sha1.
-  - [ ] 6.1.2 `ArtifactoryArtifactStore`: by sha1, path and sha256; preferred copy; `503` is `InventorySourceUnavailableException`.
-  - [ ] 6.1.3 `XrayBinaryScanner`: pending then done; not supported and not scanned are not indexed without waiting; still pending after the timeout is not indexed; an error for the path is not indexed; reads `details.sca`, not `overall`.
-  - [ ] 6.1.4 `XrayLicenseDatabase`: batches; scheme-less ids in the answer; a failed batch.
-- [ ] 6.2 Implement the four adapters and the public `JfrogLicenseInventoryScanner(url, token, ownership, xrayWait)` constructor.
+- [x] 6.1 Failing tests against a stub HTTP server, with the fixtures of 1.1:
+  - [x] 6.1.1 `ArtifactoryBuildRecords`: found; missing and `500` are no build; builds by sha1.
+  - [x] 6.1.2 `ArtifactoryArtifactStore`: by sha1, path and sha256; preferred copy; `503` is `InventorySourceUnavailableException`.
+  - [x] 6.1.3 `XrayBinaryScanner`: pending then done; not supported and not scanned are not waited for; still pending after the budget reads the summary anyway, and the budget is shared by the scan's files; an error for the path is not indexed; reads `details.sca`, not `overall`; a package listed under no license is not found (D10.10).
+  - [x] 6.1.4 `XrayLicenseDatabase`: batches; scheme-less ids in the answer; a failed batch.
+- [x] 6.2 Implement the four adapters and the public `JfrogLicenseInventoryScanner(url, token, ownership, xrayWait)` constructor.
+- [x] 6.3 (added on review) The status only decides whether to wait; the summary is always read, as the prototype reads it. A status other than `DONE` alone no longer means "not indexed", which could have lost a list the prototype read (Decision 12, spec updated).
+- [x] 6.4 (added on review) `JfrogCalls` retries three times, 1 s then 2 s apart, as the prototype did; the Artifactory client reports every error but `404` as a server error, so a client error is retried too (Decision 13).
+- [x] 6.5 (added on review) Ports are built per scan (`JfrogPorts.create`), so the Xray wait budget is one report's.
+- [x] 6.6 Confirm: `:license-inventory:test` 172 green, against a stub HTTP server for the adapters; ktlint and detekt clean.
 
 ## 7. Docs
 

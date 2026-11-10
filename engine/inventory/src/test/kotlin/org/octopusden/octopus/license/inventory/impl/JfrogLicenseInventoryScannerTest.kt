@@ -36,7 +36,7 @@ class JfrogLicenseInventoryScannerTest {
                 "pkg:maven/io.netty/netty-common@4.1.107.Final" to setOf("Apache-2.0"),
             ),
         )
-    private val inventoryScanner = JfrogLicenseInventoryScanner(ScanPorts(records, store, scanner, database), OWNERSHIP)
+    private val inventoryScanner = JfrogLicenseInventoryScanner({ ScanPorts(records, store, scanner, database) }, OWNERSHIP)
 
     private val zipName = "$COMPONENT-$BUILD_VERSION.zip"
     private val yamlName = "$COMPONENT-config-$BUILD_VERSION.yaml"

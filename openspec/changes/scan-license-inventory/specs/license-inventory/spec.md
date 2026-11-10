@@ -151,7 +151,7 @@ The service SHALL give a located file the status `PLAIN_FILE`, with finding `NOT
 
 ### Requirement: The service waits until Xray has finished scanning a file
 
-The service SHALL ask Xray for a file's license scan status before reading its scan, and SHALL wait while the scan is pending, up to the configured timeout per report (5 minutes by default). A file whose scan is not done when the wait ends, for any reason, SHALL count as not indexed.
+The service SHALL ask Xray for a file's license scan status before reading its scan, and SHALL wait while the scan is pending, up to the configured timeout per report (5 minutes by default, one budget for all the report's files). It SHALL then read the file's scan whatever the status, and a scan Xray answers with an error for the file SHALL count as not indexed.
 
 #### Scenario: Scan finishes while waiting
 
@@ -160,18 +160,18 @@ The service SHALL ask Xray for a file's license scan status before reading its s
 
 #### Scenario: Not supported
 
-- **WHEN** Xray reports the file not supported
-- **THEN** the file is not indexed, and its status follows from its build
+- **WHEN** Xray reports the file not supported, and its scan answers an error for the file
+- **THEN** the file is not indexed, without waiting, and its status follows from its build
 
 #### Scenario: Timeout
 
-- **WHEN** the file is still pending when the timeout passes
+- **WHEN** the file is still pending when the timeout passes, and its scan answers an error for the file
 - **THEN** the file is not indexed: it is read from its build only, with finding `NOT_IN_XRAY`
 
 #### Scenario: Not scanned
 
 - **WHEN** Xray reports the file's license scan `NOT_SCANNED`
-- **THEN** the file is not indexed, without waiting
+- **THEN** the service does not wait, and reads the file's scan as the prototype does
 
 ### Requirement: A read file's packages come from every source it has
 

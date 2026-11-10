@@ -315,8 +315,9 @@ Kept because the prototype's results are the baseline; each may be revisited aft
 
 - Before reading a file's scan, `XrayBinaryScanner` asks `POST /xray/api/v1/artifact/status` and reads `details.sca.status` (the license scan; the overall status also covers security scans the service does not need).
 - Pending (`PENDING`, `SCANNING`): poll every `xray-scan-poll-interval` (10 s), up to `xray-scan-timeout` (5 min) per report.
-- `DONE`: read the summary.
-- Anything else (`NOT_SUPPORTED`, `NOT_SCANNED`, `FAILED`), an error answer, or still pending at the timeout: "not indexed", exactly as the prototype treats a file Xray has no scan of. The file is then read from its build only, and finding `NOT_IN_XRAY` names it.
+- Then, whatever the status, it reads the artifact summary, exactly as the prototype reads it: an `errors` entry for the path means "not indexed", and the file is read from its build only, with finding `NOT_IN_XRAY`. So `NOT_SUPPORTED`, `NOT_SCANNED`, `FAILED`, a status call answered with a client error, or a scan still pending at the timeout all end as the prototype would have them; the status only decides whether to wait.
+- The 5 minutes are one budget for the whole scan, not per file.
+- Treating every status but `DONE` as "not indexed" was weighed and rejected: a file whose status and summary disagree would lose a list the prototype read.
 - The wait lives in the adapter: the algorithm only sees "indexed" or "not indexed".
 - Checked against our Xray (3.150.37): a released zip answers `DONE`, a pom `NOT_SUPPORTED`, a missing file an `error` body; the artifact summary answers a pom with an `errors` entry ("not indexed/cached"); the component summary answers ids without their scheme (`com.google.guava:guava:32.1.2-jre`, `react:18.2.0`).
 
@@ -324,7 +325,7 @@ Kept because the prototype's results are the baseline; each may be revisited aft
 
 - Artifactory or Xray unreachable, `5xx` after retries, or `401`/`403`: `InventorySourceUnavailableException(system)`; the scan fails, as the prototype's component ended in `ERROR`.
 - Tolerated as the prototype tolerates them: build-info missing or unreadable (no build); an SBOM that cannot be downloaded or parsed (skipped); a license batch that fails (no licenses); Xray answering with an error for a path (not indexed).
-- Retries: the clients' default retryer, as the prototype retried each call 3 times.
+- Retries: each call is tried three times, 1 s then 2 s apart, on no answer or a server error, as the prototype retried (`JfrogCalls`). The Artifactory client reports every error but `404` as a server error, so an Artifactory client error is tried three times too; harmless, only slower.
 
 ### 14. Clients in octopus-external-systems-client
 
