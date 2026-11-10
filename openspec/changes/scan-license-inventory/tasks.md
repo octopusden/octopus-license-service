@@ -81,8 +81,8 @@
 
 ## 8. Parity check (Decision 16)
 
-- [ ] 8.1 `parityTest` source set and task, not part of `check`; inputs from environment variables.
-- [ ] 8.2 The projection of both sides and the diff, with unit tests on two hand-made component JSONs (same, and one difference of each kind).
+- [x] 8.1 `parityTest` source set and task, not part of `check`; inputs from environment variables (`PROTOTYPE_RUN_DIR`, `COMPONENTS_REGISTRY_URL`, `JFROG_URL`, `JFROG_TOKEN`, `INTERNAL_GROUPS`, `OWN_REPOSITORY_PREFIXES`, optional `PARITY_COMPONENTS`). A missing variable fails the task by name. The report is `engine/inventory/build/parity/report.md`.
+- [x] 8.2 The projection of both sides and the diff, with unit tests on two hand-made component JSONs (same, and one difference of each kind): `ParityView`, `ParityDiff` in the test source set, so `ParityDiffTest` runs in every build; 6 green. Packages are compared after the prototype's stage-11 drops (docker layers, OS packages, Python seen only in images); findings as sets, without the prototype's verdict violations, with "licence" read as "license".
 - [ ] 8.3 Run the prototype locally with `--only w4web3,dmp-bundle` and then the parity check; record the differences here, each fixed or explained by Decision 11.
 - [ ] 8.4 Same for all components of run 14's scope; record the result here.
 
