@@ -45,3 +45,12 @@ tasks.register<Test>("parityTest") {
     useJUnitPlatform()
     outputs.upToDateWhen { false }
 }
+
+// Kover would otherwise run every Test task, this one included, to build its coverage report.
+extensions.configure<kotlinx.kover.gradle.plugin.dsl.KoverProjectExtension> {
+    currentProject {
+        instrumentation {
+            disabledForTestTasks.add("parityTest")
+        }
+    }
+}

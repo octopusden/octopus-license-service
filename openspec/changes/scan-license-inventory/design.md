@@ -286,7 +286,7 @@ internal interface LicenseDatabase {
 
 ### 10. Ported as it is, odd or not
 
-Kept because the prototype's results are the baseline; each may be revisited after parity is shown:
+Kept because the prototype's results are the baseline; each may be revisited after parity is shown ([TD-002](../../../docs/tech-debt/002-revisit-prototype-scan-rules.md)):
 
 1. A docker image is always read, declared or not.
 2. Patterns and declared entries both select; a pattern-only pom is still `METADATA`.

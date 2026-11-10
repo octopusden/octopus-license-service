@@ -88,6 +88,7 @@
 
 ## 9. Finalization
 
-- [ ] 9.1 `./gradlew build` and `qualityCheck` green.
-- [ ] 9.2 Out of scope holds: grep shows no `LicensePolicy`, verdict or trust code in `:license-inventory`; `server` is unchanged.
-- [ ] 9.3 Every risk in the design still stands or says why not; deferred work has a `TD-NNN`.
+- [x] 9.1 `./gradlew build` and `qualityCheck` green.
+  - [x] 9.1.1 (added on review) Kover ran every `Test` task for its report, `parityTest` included, which fails without the real systems; `disabledForTestTasks` takes it out.
+- [x] 9.2 Out of scope holds: grep shows no `LicensePolicy`, verdict or trust code in `:license-inventory`; `server` is unchanged. Checked: no match in `engine/inventory/src/main`; `git diff` against `license-registry-verdicts` shows no change under `server`, `runner`, `client` or `core` main sources.
+- [x] 9.3 Every risk in the design still stands or says why not; deferred work has a `TD-NNN`: TD-002, revisiting the rules of Decision 10 after parity. The clients' release is task 1.4, still open.
