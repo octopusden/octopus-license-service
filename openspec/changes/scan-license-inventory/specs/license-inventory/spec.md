@@ -88,7 +88,7 @@ The service SHALL list each `manifest.json`, other than `list.manifest.json`, of
 
 ### Requirement: Declared entries no convention build produced are looked up directly
 
-The service SHALL look up each declared Maven artifact and image not matched by a convention file: a Maven artifact at `g/a/v/a-v[-classifier].ext` for each artifact version in order, an image at its tag or, without one, at each artifact version. When several stored copies exist it SHALL take a release local repository first, then any local one, then any other, then by repository name. It SHALL find the file's build from its `build.name` and `build.number` properties, then from a build that published its sha1, and SHALL add finding `BUILD_NAME_DIFFERS` when that build is not a convention build.
+The service SHALL look up each declared Maven artifact and image not matched by a convention file: a Maven artifact at `g/a/v/a-v[-classifier].ext` for each artifact version in order, an image at its tag or, without one, at each artifact version. When several stored copies exist it SHALL take a repository whose name contains `release` and ends with `local` first, then any whose name ends with `local`, then any other, each group by repository name. It SHALL find the file's build from its `build.name` and `build.number` properties, then from a build that published its sha1, and SHALL add finding `BUILD_NAME_DIFFERS` when that build is not a convention build.
 
 #### Scenario: Built by another build
 
@@ -115,9 +115,14 @@ The service SHALL look up each declared Maven artifact and image not matched by 
 - **WHEN** the target declares an unsupported entry
 - **THEN** it is listed `UNSUPPORTED` with finding `UNSUPPORTED_DISTRIBUTION_ENTRY`, and nothing is looked up
 
+#### Scenario: Leftover image without a tag
+
+- **WHEN** the `docker` field declares `sample/batch` with no tag, no convention image matches it, and it exists at artifact version `2.4.0-118`
+- **THEN** the file is listed as `sample/batch:2.4.0-118`
+
 #### Scenario: Nothing to read
 
-- **WHEN** no listed file is selected, declared or an image
+- **WHEN** every listed file is `NOT_SELECTED` or `METADATA`, or nothing is listed
 - **THEN** the inventory has finding `NO_DISTRIBUTION` and no packages
 
 ### Requirement: A located file's status follows from Xray and its build
@@ -211,6 +216,11 @@ The service SHALL read a dependency of the producing module when one of its scop
 - **WHEN** a dependency's scope is `fullDebugEmbed`
 - **THEN** it is not read
 
+#### Scenario: Checksum id
+
+- **WHEN** a shipped dependency's id is `sha256:ab12…:file`
+- **THEN** no package is found for it, and finding `LOCAL_FILE_DEPENDENCY` names it
+
 #### Scenario: Local jar
 
 - **WHEN** a shipped dependency's id is `VTS-SDK-6.3.0.jar`
@@ -218,7 +228,7 @@ The service SHALL read a dependency of the producing module when one of its scop
 
 ### Requirement: Our own archives inside a file are followed into their builds
 
-The service SHALL follow a dependency whose type is `zip`, `tar`, `tgz`, `gz`, `war` or `ear` and whose group starts with an internal group, instead of reading it as a package, when one of its scopes ships, or when none of its scopes mentions `test` or `debug` and Xray's scan of the current file lists exactly its group, artifact and version. It SHALL locate the archive by its Maven path, then by its sha1, and its build as for declared entries; with no file or no build it SHALL add finding `UNRESOLVED_INTERNAL_ARCHIVE`. It SHALL read the archive as a file, its packages counting for the outer released file, following each build and dependency once per released file and no deeper than 10 levels. An archive whose Xray scan lists no library other than itself and docker layers SHALL contribute only Xray's packages, with finding `NO_LIBRARIES_IN_FILE`.
+The service SHALL follow a dependency whose type is `zip`, `tar`, `tgz`, `gz`, `war` or `ear` and whose group starts with an internal group, instead of reading it as a package, when one of its scopes ships, or when none of its scopes mentions `test` or `debug` and Xray's scan of the current file lists exactly its group, artifact and version. It SHALL locate the archive by its Maven path, then by its sha1, and its build as for declared entries; with no file or no build it SHALL add finding `UNRESOLVED_INTERNAL_ARCHIVE`. It SHALL read the archive as a file, its packages counting for the outer released file, following each build and dependency once per released file, and only from a file at depth 10 or less, the released file being depth 0. An archive whose Xray scan lists no library other than itself and docker layers SHALL contribute only Xray's packages, with finding `NO_LIBRARIES_IN_FILE`.
 
 #### Scenario: Plugin zip under a custom configuration
 
@@ -245,6 +255,11 @@ The service SHALL follow a dependency whose type is `zip`, `tar`, `tgz`, `gz`, `
 - **WHEN** a followed dependency carries the sha1 of its sources classifier and the archive exists at its Maven path
 - **THEN** the archive at the Maven path is read
 
+#### Scenario: Depth limit
+
+- **WHEN** archives are nested twelve deep
+- **THEN** the archive at depth 11 is read and the one at depth 12 is not followed
+
 #### Scenario: Cycle
 
 - **WHEN** two archives depend on each other
@@ -252,7 +267,7 @@ The service SHALL follow a dependency whose type is `zip`, `tar`, `tgz`, `gz`, `
 
 ### Requirement: Checksum-only files are named by a Maven copy
 
-After reading every file, the service SHALL look up each package Xray knows only by checksum, unless its file name starts with an internal group followed by `.` or a copy with its sha256 is stored in a repository with an own-repository prefix, among every stored file with that sha256. When a copy's path ends in `{artifact}/{version}` and its name starts with `{artifact}-{version}`, the package SHALL become `pkg:maven/{group}/{artifact}@{version}`, with evidence `CHECKSUM_MATCH` added, without the licenses found for the unnamed file, merged with a package of that id if one exists.
+After reading every file, the service SHALL look up each package Xray knows only by checksum, unless its file name starts with an internal group followed by `.` or a copy with its sha256 is stored in a repository whose name starts with an own-repository prefix and ends with `local`, among every stored file with that sha256, in the order Artifactory answers. When a copy's path ends in `{artifact}/{version}` and its name starts with `{artifact}-{version}`, the package SHALL become `pkg:maven/{group}/{artifact}@{version}`, with evidence `CHECKSUM_MATCH` added, without the licenses found for the unnamed file, merged with a package of that id if one exists.
 
 #### Scenario: Renamed copy of a Maven Central jar
 
@@ -290,12 +305,22 @@ The service SHALL ask Xray for the licenses of every Maven and npm package that 
 
 ### Requirement: The inventory lists every file and merges packages across files
 
-The inventory SHALL hold every listed file in listing order with its status, selection, path and build; every package once, with the union of its licenses, evidence and the files it was found in; and every finding once.
+The inventory SHALL hold every listed file in listing order with its status, selection, path and build; every package once, sorted by its rendered id, with the union of its licenses, evidence and the files it was found in; and every finding once, with the prototype's code, subject and detail.
 
 #### Scenario: Library in two files
 
 - **WHEN** `guava` is found in the zip and in the image
 - **THEN** the inventory has one `guava` package found in both
+
+#### Scenario: Finding text
+
+- **WHEN** a selected Maven file of build `sample-portal_ee/2.4.0-118` is missing from Artifactory
+- **THEN** the finding is `ARTIFACT_NOT_FOUND` for its entry with detail `listed in sample-portal_ee/2.4.0-118 but not in Artifactory`
+
+#### Scenario: Library in several SBOMs of one build
+
+- **WHEN** two SBOM files of the build list `pkg:npm/lodash@4.17.21`, the first with `MIT` and the second with no license
+- **THEN** the SBOM gives it no license, as the last file read wins
 
 #### Scenario: Ids render as the prototype's
 

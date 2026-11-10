@@ -111,7 +111,7 @@ LicenseInventoryScanner (interface)            ← server
 | `BinaryScanner` | port | What a binary scanner recognises in a stored file, or "not indexed" | `xray_scan` |
 | `LicenseDatabase` | port | Licenses of packages by coordinates | `xray_component_licences` |
 | `XrayComponentIds` | pure | Xray component id ↔ `PackageId`, both directions | `normalise`, `xray_component_id` |
-| `RepositoryPreference` | pure | Which stored copy wins: release local, then local, then any, then by name | `pick` |
+| `RepositoryPreference` | pure | Which stored copy wins: a repository named `…release…local`, then any `…local`, then any other, then by name | `pick` |
 
 Shared rules, one owner each (the reason these are extracted):
 
@@ -132,7 +132,7 @@ data class LicenseInventory(
     val componentVersion: ComponentVersion,
     val builds: List<BuildRef>,              // the convention builds found
     val files: List<ReleasedFile>,           // every listed file, read or not, in listing order
-    val packages: List<FoundPackage>,        // merged across files, sorted by id
+    val packages: List<FoundPackage>,        // merged across files, sorted by rendered id
     val findings: List<Finding>,             // distinct, in the order found
 )
 
@@ -217,7 +217,23 @@ internal interface LicenseDatabase {
 - `ReleasedFile` is a row of `artifacts.csv`; `FoundPackage` is a row of `components.csv` before stage 11 (`purl`, `xray_licences`, `sources`, `artifacts`).
 - Statuses use neutral words (component diagram, its D-001): `READ` with `evidence` replaces `CHECKED` (`BINARY_SCAN` present) and `BUILD_INFO_ONLY` (absent); `NOT_READABLE` replaces `NOT_IN_XRAY`. The parity check maps them back.
 - `PackageId` is typed but renders exactly as the prototype's purl strings. A purl whose parsed form would not render back to the same string is kept `Unrecognized`, verbatim, so parsing can never change an id.
-- Findings keep the prototype's codes for notes and violations, so the next change grades from the same codes.
+- Findings keep the prototype's codes, subjects and details, so the next change grades from the same codes and the parity check compares them as text. The prototype's violations (`ARTIFACT_NOT_FOUND`, `UNSUPPORTED_DISTRIBUTION_ENTRY`, `NOT_IN_XRAY`, `NO_BUILD_INFO`, `NO_DISTRIBUTION`) and notes (the rest) differ only by code, so the kind is derived from the code, not stored.
+
+  | Code | Subject | Detail |
+  | --- | --- | --- |
+  | `NOT_SCANNABLE` | entry | `plain file, Xray does not index this type` |
+  | `NOT_IN_XRAY` | entry | `Xray has not indexed this file` |
+  | `NO_BUILD_INFO` | entry | `no build by properties, checksum or {convention}` |
+  | `ARTIFACT_NOT_FOUND` | entry | convention Maven file: `listed in {build}/{number} but not in Artifactory`; convention image: `image in build-info but not in Artifactory`; declared leftover: `tried versions {v1}, {v2}` |
+  | `UNSUPPORTED_DISTRIBUTION_ENTRY` | entry | a `file:`/`http:`/`https:` entry: empty; a malformed `GAV` entry: `unsupported GAV format '{entry}'` (the prototype's text, not the target's reason) |
+  | `BUILD_NAME_DIFFERS` | entry | `{build} (convention {convention})` |
+  | `NO_DISTRIBUTION` | component | no convention build: `no build {convention}(_docker)/{version} and no artifact in the registry GAV or docker field`; otherwise `the builds publish nothing that matches the registry GAV or maven-artifacts pattern` |
+  | `NO_PRODUCING_MODULE` | file name | `{build}/{number}` |
+  | `NO_LIBRARIES_IN_FILE` | file name | `inner archive without libraries, build-info ignored` |
+  | `LOCAL_FILE_DEPENDENCY` | dependency id | `shipped file without Maven coordinates; check its license by hand` |
+  | `UNRESOLVED_INTERNAL_ARCHIVE` | dependency id | `covered by the Xray scan only` |
+
+- The prototype writes "licence" in one detail; the service writes "license", and the parity check compares with that one spelling normalised.
 
 ### 4. Convention builds
 
@@ -232,7 +248,8 @@ internal interface LicenseDatabase {
 - Selection: declared (exact entry) and/or pattern (group and artifact each fully match one pattern of the same entry); neither is `NOT_SELECTED`. Not declared, and extension in `pom module md5 sha1 sha256 asc` or classifier in `sources javadoc tests test-sources test-fixtures`: `METADATA`.
 - A selected file is located by sha1; missing is `NOT_FOUND` with finding `ARTIFACT_NOT_FOUND`.
 - Declared leftovers (Maven entries and images no convention file matched): `Unsupported` is `UNSUPPORTED` with finding `UNSUPPORTED_DISTRIBUTION_ENTRY`; Maven by path `g/a/v/a-v[-c].ext` at each artifact version; an image at its tag, else at each artifact version. Its build via `BuildLocator`; a build not named by convention is finding `BUILD_NAME_DIFFERS`.
-- Nothing selected at all: finding `NO_DISTRIBUTION`, and steps B and C are skipped.
+- Nothing to read at all (every listed file is `NOT_SELECTED` or `METADATA`, or nothing is listed): finding `NO_DISTRIBUTION`, and steps B and C are skipped. A `NOT_FOUND` or `UNSUPPORTED` file counts as something to read here.
+- Listing order, which the parity check compares: the convention build, then its `_docker` build, each module and each published file in build-info order; then declared leftovers, the `GAV` field's entries in field order, then the `docker` field's. A leftover image's entry is `image:tag` with the tag it was found at.
 
 ### 6. Reading (step B)
 
@@ -252,12 +269,14 @@ internal interface LicenseDatabase {
 - A dependency is read when any of its scopes ships (`compile`, `runtime`, `runtimeClasspath`, `embed`; or matching `Release\w*RuntimeClasspath$|Embed$` with no `test`/`debug` in it), or when it is our own archive that ships by proof.
 - Our own archive: type `zip tar tgz gz war ear`, group starting with an internal group. Shipped by proof: no scope mentions `test` or `debug`, and Xray's scan of the current file lists exactly `pkg:maven/g/a@v`.
 - `Gradle API`, `Local Groovy`, `Gradle TestKit`: skipped. An id without three non-empty coordinate parts: finding `LOCAL_FILE_DEPENDENCY`.
-- Our own archive is followed, never listed as a package: located by path `g/a/v/a-v.{type}`, else by its sha1 (coordinates first: a dependency resolved by several configurations can carry its sources' checksum); its build via `BuildLocator`; no file or no build: finding `UNRESOLVED_INTERNAL_ARCHIVE`. Each `(build name, number, dependency id)` is followed once per released file; deeper than 10 stops.
+- Our own archive is followed, never listed as a package: located by path `g/a/v/a-v.{type}`, else by its sha1 (coordinates first: a dependency resolved by several configurations can carry its sources' checksum); its build via `BuildLocator`; no file or no build: finding `UNRESOLVED_INTERNAL_ARCHIVE`. Each `(build name, number, dependency id)` is followed once per released file. An archive is followed only from a file at depth 10 or less (the released file is depth 0), so the deepest archive read is at depth 11, as in the prototype.
+- An id with fewer than three `:`-separated parts, an empty group, artifact or version, or starting with `sha256`, has no Maven coordinates: finding `LOCAL_FILE_DEPENDENCY`.
 - Any other dependency is `pkg:maven/g/a@v`, evidence `BUILD_RECORD`, no license.
 
 ### 8. Checksum naming (step C)
 
-- After every file is read, each `ChecksumOnly` package that is not ours (file name starts with an internal group plus `.`, or a copy with that sha256 sits in an own repository) is looked up by sha256 across Artifactory.
+- After every file is read, each `ChecksumOnly` package that is not ours (file name starts with an internal group plus `.`, or a copy with that sha256 sits in a repository whose name starts with an own-repository prefix and ends with `local`) is looked up by sha256 across Artifactory.
+- Copies are tried in the order Artifactory answers, not by `RepositoryPreference`.
 - The first copy whose path is `…/{a}/{v}/` and whose name starts with `{a}-{v}` renames it to `pkg:maven/{group from path}/{a}@{v}`, evidence plus `CHECKSUM_MATCH`, merged into an existing row of that id.
 - Found nowhere: it stays `ChecksumOnly`.
 
@@ -276,6 +295,10 @@ Kept because the prototype's results are the baseline; each may be revisited aft
 5. A nested archive's packages count for the outer released file.
 6. Renaming a checksum-only package drops the licenses Xray gave the unnamed file; the fill step asks again by coordinates.
 7. Our own Maven packages and the file's own coordinates stay in the inventory; evaluation calls them internal.
+8. A package in several SBOM files of one build gets the licenses of the last file read, not their union (the prototype's dictionary overwrites).
+9. When several declared images share an image name, a convention image matches only the first; the others stay leftovers and are looked up at their own tags.
+10. Xray's artifact summary lists packages only under a license, so a package Xray reports with no license entry at all is not found from the scan.
+11. The `file:`/`http:`/`https:` check applies to `docker` entries too in the prototype; the target parses only `GAV` entries that way, so a `docker` entry written as a URL becomes an image (Decision 11).
 
 ### 11. Deliberate differences from the prototype
 
@@ -286,6 +309,7 @@ Kept because the prototype's results are the baseline; each may be revisited aft
 | Patterns compiled as Java regexes | The registry stores Java regexes; the prototype patched one Python incompatibility | None known |
 | Waits for Xray to finish scanning (Decision 12) | A new RC is scanned seconds before the report | None on already scanned files |
 | Caches live for one report, not one batch run | A service has no batch | None: one report sees one state |
+| A `docker` entry written as a URL is an image, not unsupported (already in the target) | The target parses URIs only in `GAV` | None in run 14 |
 
 ### 12. Waiting for Xray
 
@@ -311,6 +335,7 @@ Kept because the prototype's results are the baseline; each may be revisited aft
 - `artifactory-client`, additive only:
   - `AqlItem.actualSha1` (`actual_sha1`) and `AqlItem.sha256`;
   - `Artifact.path` in build-info modules (docker images carry their manifest path there);
+  - `getBuildInfo` with an optional `buildRepo`, as the prototype asks `?buildRepo=artifactory-build-info`;
   - `searchBuildsByAQL(query)` returning `build.name`, `build.number` rows, since build AQL results are not item-shaped.
 - The service pins both versions in `gradle.properties`. Until they are published, the service builds against a local `publishToMavenLocal`.
 

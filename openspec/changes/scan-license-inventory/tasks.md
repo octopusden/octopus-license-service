@@ -4,7 +4,7 @@
 - [ ] 1.1a Record a sample answer of each endpoint as a test fixture, names anonymised.
 - [ ] 1.2 `artifactory-client`, additive:
   - [ ] 1.2.1 Failing tests: an AQL item with `actual_sha1` and `sha256`; a build-info artifact with `path`; `searchBuildsByAQL` reading `build.name`, `build.number`.
-  - [ ] 1.2.2 `AqlItem.actualSha1`, `AqlItem.sha256`, `Artifact.path`; `AqlBuildSearchResponse` and `searchBuildsByAQL(query)`.
+  - [ ] 1.2.2 `AqlItem.actualSha1`, `AqlItem.sha256`, `Artifact.path`; `AqlBuildSearchResponse` and `searchBuildsByAQL(query)`; `getBuildInfo` with an optional `buildRepo`.
   - [ ] 1.2.3 Existing tests green; no field renamed or removed.
 - [ ] 1.3 New `xray-client` module:
   - [ ] 1.3.1 Failing tests against a stub server: artifact status (done, pending, not supported); artifact summary with licenses and components, and an error per path; component summary for a batch.
@@ -52,6 +52,7 @@
 - [ ] 5.3 Failing tests with fakes, one per spec scenario of "A read file's packages…", "Only shipped dependencies…" and "Our own archives…", then `FileContentReader` and `SbomReader`.
 - [ ] 5.4 Failing tests with fakes for checksum naming and license fill (batches of 100, a failed batch), then `ChecksumNamer` and `LicenseFiller`.
 - [ ] 5.5 `JfrogLicenseInventoryScanner`: the worked example of the design end to end with fakes; `NO_DISTRIBUTION`; findings distinct; memoized ports ask each build, file and scan once per report.
+- [ ] 5.6 (added on review) Finding subjects and details: one test per row of the table in Decision 3; listing order of Decision 5; the four extra odd rules of Decision 10 (8–11).
 
 ## 6. Adapters (Decisions 12, 13)
 
