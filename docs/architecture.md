@@ -12,19 +12,19 @@ flowchart TD
     server --> core
     server --> target
     server --> policy
-    server -.-> scan
+    server -.-> inventory
     subgraph engine["engine/"]
         target["license-target-registry"]
         policy["license-policy-registry"]
-        scan["license scan (later)"]
+        inventory["license-inventory"]
     end
     target --> crs["components registry client (published)"]
     policy --> bitbucket["Bitbucket client (published)"]
-    scan -.-> policy
-    scan -.-> xray["Xray, Artifactory"]
+    inventory --> target
+    inventory --> jfrog["Artifactory and Xray clients (published)"]
 ```
 
-An arrow means "depends on". Dashed parts do not exist yet.
+An arrow means "depends on". A dashed arrow does not exist yet: the server calls the license scan once evaluation lands.
 
 `engine/` holds the modules that produce a report: what a version releases, the license policy, and the scan that finds each file's licenses. It is a folder, not a module: each part is its own Gradle project, so each reaches only the systems it reads.
 
@@ -36,7 +36,7 @@ An arrow means "depends on". Dashed parts do not exist yet.
 | `server` | The Spring Boot service | `core`, `engine/*` | `client`, `runner` |
 | `engine/target-registry` (`:license-target-registry`) | What a component version releases, or why it is excluded, from the components registry | the components registry client, `versions-api` | `core`, `server`, Spring, any other system |
 | `engine/policy-registry` (`:license-policy-registry`) | The license policy, read from the license registry through Bitbucket (to move to octopus-vcs-facade, [TD-001](tech-debt/001-read-license-registry-through-vcs-facade.md)), and the verdict on one named library | the Bitbucket client, `versions-api` | `core`, `server`, Spring, any other system |
-| `engine/` license scan (later) | Finding each released file's libraries and licenses through Xray and Artifactory, judged by the license policy | Xray and Artifactory clients, the other `engine/` models | `core`, `server`, Spring |
+| `engine/inventory` (`:license-inventory`) | The license scan: every file a version releases and every library in it, with the licenses its sources name; not judged | `license-target-registry` (its model only), the Artifactory and Xray clients | `core`, `server`, Spring, `license-policy-registry` |
 
 Why each rule:
 
@@ -45,7 +45,9 @@ Why each rule:
 - **`server` never sees `client` or `runner`.** The service does not call itself and knows nothing about who calls it.
 - **`engine/` modules never import `core` or Spring.** They work on their own models, richer than the wire; `server` builds them from configuration and maps their results into `core`.
 - **Each `engine/` module reads only its own systems.** `license-target-registry` answers "what the registry declares", so it never needs Artifactory or Xray, and the scan builds on its answer instead of asking the registry again.
-- **The scan's logic stays apart from its I/O.** Data goes in and a result comes out, so the algorithm is testable without mocks, the way `component-validation` is in octopus-components-registry-service. `license-target-registry` and `license-policy-registry` already have that shape: `impl/describer/` and `impl/parser/` with `LicensePolicy` are pure; `impl/RegistryLicenseTargetResolver` and `impl/BitbucketLicensePolicySource` are the only I/O.
+- **The scan's logic stays apart from its I/O.** Data goes in and a result comes out, so the algorithm is testable without mocks, the way `component-validation` is in octopus-components-registry-service. `license-target-registry` and `license-policy-registry` have that shape: `impl/describer/` and `impl/parser/` with `LicensePolicy` are pure; `impl/RegistryLicenseTargetResolver` and `impl/BitbucketLicensePolicySource` are the only I/O.
+- **The license scan needs lookups mid-decision** (a nested archive's build, an SBOM's bytes), so it cannot take all its data up front. Its decisions are pure classes; four orchestrators sequence them through four ports (`BuildRecords`, `ArtifactStore`, `BinaryScanner`, `LicenseDatabase`), tested against in-memory fakes; only `impl/adapter/` sees a client type. Xray sits behind two of the ports, so replacing it changes two adapters.
+- **`license-inventory` does not judge.** It names licenses as its sources give them; whether a library is ours, counted or allowed is evaluation's, with the license policy.
 
 Gradle enforces the dependency rules: a module cannot import what its build file does not declare. This page holds the reasons.
 
@@ -61,7 +63,7 @@ TeamCity step (metarunner)
                                                            │    excluded → store: report EXCLUDED, done
                                                            ├─ store: report RUNNING
                                                            └─ generator, on a background thread, with the target and that policy
-                                                                └─ later: Xray, Artifactory
+                                                                └─ later: the license scan (license-inventory), then evaluation
   runner ──client── GET …/{id} until DONE, EXCLUDED or FAILED
   runner ──client── GET …/{id}/files ──► zip
   runner writes license-report.json and the zip to --output-dir

@@ -77,7 +77,7 @@
 
 ## 7. Docs
 
-- [ ] 7.1 `docs/architecture.md`: the license scan module and its dependency rules; `CLAUDE.md` module list. Server wiring is the evaluation change's (Decision 15).
+- [x] 7.1 `docs/architecture.md`: the license scan module and its dependency rules; `CLAUDE.md` module list. Server wiring is the evaluation change's (Decision 15).
 
 ## 8. Parity check (Decision 16)
 
