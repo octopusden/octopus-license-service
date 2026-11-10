@@ -51,12 +51,16 @@
 
 ## 5. Orchestration over ports (Decisions 2, 5–9)
 
-- [ ] 5.1 Ports `BuildRecords`, `ArtifactStore`, `BinaryScanner`, `LicenseDatabase` and their data (`BuildRecord`, `BuildModule`, `BuiltFile`, `BuildDependency`, `StoredFile`); in-memory fakes in the test source set.
-- [ ] 5.2 Failing tests with fakes, one per spec scenario of the listing requirements, then `ReleasedFileLister` and `BuildLocator`.
-- [ ] 5.3 Failing tests with fakes, one per spec scenario of "A read file's packages…", "Only shipped dependencies…" and "Our own archives…", then `FileContentReader` and `SbomReader`.
-- [ ] 5.4 Failing tests with fakes for checksum naming and license fill (batches of 100, a failed batch), then `ChecksumNamer` and `LicenseFiller`.
-- [ ] 5.5 `JfrogLicenseInventoryScanner`: the worked example of the design end to end with fakes; `NO_DISTRIBUTION`; findings distinct; memoized ports ask each build, file and scan once per report.
-- [ ] 5.6 (added on review) Finding subjects and details: one test per row of the table in Decision 3; listing order of Decision 5; the four extra odd rules of Decision 10 (8–11).
+- [x] 5.1 Ports `BuildRecords`, `ArtifactStore`, `BinaryScanner`, `LicenseDatabase` and their data (`BuildRecord`, `BuildModule`, `BuiltFile`, `BuildDependency`, `StoredFile`); in-memory fakes in the test source set.
+- [x] 5.2 Failing tests with fakes, one per spec scenario of the listing requirements, then `ReleasedFileLister` and `BuildLocator`.
+- [x] 5.3 Failing tests with fakes, one per spec scenario of "A read file's packages…", "Only shipped dependencies…" and "Our own archives…", then `FileContentReader` and `SbomReader`.
+- [x] 5.4 Failing tests with fakes for checksum naming and license fill (batches of 100, a failed batch), then `ChecksumNamer` and `LicenseFiller`.
+- [x] 5.5 `JfrogLicenseInventoryScanner`: the worked example of the design end to end with fakes; `NO_DISTRIBUTION`; findings distinct; memoized ports ask each build, file and scan once per report.
+- [x] 5.6 (added on review) Finding subjects and details: one test per row of the table in Decision 3; listing order of Decision 5; the four extra odd rules of Decision 10 (8–11).
+- [x] 5.7 (added on review) The declared-leftover route is its own class, `DeclaredLeftoverLocator`: kept inside `ReleasedFileLister` it took the lister past detekt's function limit, and it is a second route with its own rules.
+- [x] 5.8 (added on review) Within one released file, findings of nested archives and of dependencies come out in a different interleaving than the prototype's (it follows an archive in the middle of its dependency loop). Each finding is still there once; the parity check compares findings as sets.
+- [x] 5.9 (added on review) Rule D10.10 (a package Xray lists under no license is not found) lives in the Xray adapter, tested in 6.1.3; rule D10.11 (a URL `docker` entry) is the target's parsing, already covered there.
+- [x] 5.10 Confirm: `:license-inventory:test` 151 green; ktlint and detekt clean.
 
 ## 6. Adapters (Decisions 12, 13)
 
