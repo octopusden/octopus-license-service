@@ -31,21 +31,23 @@
 
 ## 4. Pure decisions
 
-- [ ] 4.1 Failing tests, then implement each:
-  - [ ] 4.1.1 `ConventionBuilds`: explicit, implicit, `_docker`.
-  - [ ] 4.1.2 `PublishedFileName`: plain, classifier, other artifact id in the module, `.tar.gz`, name without `-{version}`.
-  - [ ] 4.1.3 `ArtifactPatternMatcher`: full match only; group and artifact from the same entry; `[\w-\.]`; invalid pattern equals literally.
-  - [ ] 4.1.4 `CandidateSelector`: declared, pattern, both, neither; metadata by extension and by classifier; declared metadata is read.
-  - [ ] 4.1.5 `CandidateExtractor`: Maven entries; docker `manifest.json` to `image:tag`; `list.manifest.json` and layers dropped; declared by image name.
-  - [ ] 4.1.6 `FileStatusJudge`: one test per spec scenario of "A located file's status".
-  - [ ] 4.1.7 `ShippingScopes`: each runtime scope; Android release and embed; debug and test variants; custom configuration.
-  - [ ] 4.1.8 `BuildDependencyReader`: producing module by sha1 and by name; none; npm `prod` only; Gradle-supplied skipped; local file; third-party archive is a package; our archive under runtime is followed; under a custom configuration only with Xray proof; test scope never.
-  - [ ] 4.1.9 `CycloneDxParser`: purl without qualifiers; license id, name, expression; component without purl skipped.
-  - [ ] 4.1.10 `PackageTable`: merge by id; union of licenses, evidence, files; rename drops the unnamed licenses and merges into an existing row.
-  - [ ] 4.1.11 `Ownership`: internal group prefix; internal file name (`group.` prefix); own repository by prefix and `local` suffix.
-  - [ ] 4.1.12 `XrayComponentIds`: `gav://..` cleanup; `go` to `golang`; each listed scheme; unknown kept; Maven and npm back to Xray ids.
-  - [ ] 4.1.13 `RepositoryPreference`: release local, local, other, then name.
-- [ ] 4.2 Confirm `:license-inventory:test` green; record the count.
+- [x] 4.1 Failing tests, then implement each:
+  - [x] 4.1.1 `ConventionBuilds`: explicit, implicit, `_docker`.
+  - [x] 4.1.2 `PublishedFileName`: plain, classifier, other artifact id in the module, `.tar.gz`, name without `-{version}`.
+  - [x] 4.1.3 `ArtifactPatternMatcher`: full match only; group and artifact from the same entry; `[\w-\.]`; invalid pattern equals literally.
+  - [x] 4.1.4 `CandidateSelector`: declared, pattern, both, neither; metadata by extension and by classifier; declared metadata is read.
+  - [x] 4.1.5 `CandidateExtractor`: Maven entries; docker `manifest.json` to `image:tag`; `list.manifest.json` and layers dropped; declared by image name.
+  - [x] 4.1.6 `FileStatusJudge`: one test per spec scenario of "A located file's status".
+  - [x] 4.1.7 `ShippingScopes`: each runtime scope; Android release and embed; debug and test variants; custom configuration.
+  - [x] 4.1.8 `BuildDependencyReader`: producing module by sha1 and by name; none; npm `prod` only; Gradle-supplied skipped; local file; third-party archive is a package; our archive under runtime is followed; under a custom configuration only with Xray proof; test scope never.
+  - [x] 4.1.9 `CycloneDxParser`: purl without qualifiers; license id, name, expression; component without purl skipped.
+  - [x] 4.1.10 `PackageTable`: merge by id; union of licenses, evidence, files; rename drops the unnamed licenses and merges into an existing row.
+  - [x] 4.1.11 `Ownership`: internal group prefix; internal file name (`group.` prefix); own repository by prefix and `local` suffix.
+  - [x] 4.1.12 `XrayComponentIds`: `gav://..` cleanup; `go` to `golang`; each listed scheme; unknown kept; Maven and npm back to Xray ids.
+  - [x] 4.1.13 `RepositoryPreference`: release local, local, other, then name.
+- [x] 4.1.14 (added on review) A docker module's file with no recorded path names no image and is not listed; the prototype would stop the component with an error there. Build-info records the path with the file name (`tds/mpi/1.2.484-8315/manifest.json`, checked on a run-14 build), which the client's KDoc first had wrong.
+- [x] 4.1.15 (added on review) `Ownership` is checked before an archive is followed (`isOwnArchive`) and by `shipsByProof`, both with the prototype's id prefix test.
+- [x] 4.2 Confirm `:license-inventory:test` green; record the count: 117 green across 14 classes; ktlint and detekt clean.
 
 ## 5. Orchestration over ports (Decisions 2, 5–9)
 
