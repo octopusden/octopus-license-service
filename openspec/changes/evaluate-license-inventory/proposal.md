@@ -39,7 +39,7 @@ This change ports that step, wires the scan and the evaluation into the server, 
 ### A note on parity of the verdicts
 
 - The verdict comes from `LicensePolicy.judge`, which follows the license plugins' rules, not the prototype's `verdict()`; the two differ in three small ways (design, Decision 6).
-- Re-judging run 14's 49,767 judged libraries with the service's rules against the same registry gives one different verdict (`pkg:maven/jtidy/jtidy@r872-jdk5`, a license name the registry spells in two casings). The service keeps one judging rule for every caller instead of a second, prototype-only one.
+- Replaying run 14's 99,258 library rows through the service's evaluation against the same registry gives one different verdict (`pkg:maven/jtidy/jtidy@r872-jdk5`) and four libraries overridden in the service only, all because the policy matches override versions by their numbers, as the plugin does. The service keeps one judging rule for every caller instead of a second, prototype-only one.
 - License names in the report are the policy's canonical spelling; the prototype printed them as found. Parity compares the verdict, whether an override applied, and the licenses as found, which together decide the names.
 
 ## Affected areas

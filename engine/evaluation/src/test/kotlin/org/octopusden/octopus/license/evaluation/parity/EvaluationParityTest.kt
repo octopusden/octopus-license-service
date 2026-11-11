@@ -96,10 +96,28 @@ class EvaluationParityTest {
     }
 
     @Test
-    @DisplayName("a verdict that differs with other licenses found, or another override, is a difference")
+    @DisplayName(
+        "an override on one side only, on the same licenses found, is a policy rule too: which override matches is the policy's (D6)",
+    )
+    fun overridePolicyRule() {
+        val otherOverride = service.withLibrary("pkg:maven/org.example/sample-lib@1.5", LibraryView("NOT_ALLOWED", false, setOf("GPL-3.0")))
+
+        val diffs = EvaluationParityDiff.diff(prototype, otherOverride)
+
+        assertEquals(
+            listOf(
+                "library pkg:maven/org.example/sample-lib@1.5: verdict: prototype ALLOWED, service NOT_ALLOWED",
+                "library pkg:maven/org.example/sample-lib@1.5: overridden: prototype true, service false",
+            ),
+            diffs.policyRules,
+        )
+        assertEquals(emptyList<String>(), diffs.others)
+    }
+
+    @Test
+    @DisplayName("a verdict that differs with other licenses found is a difference")
     fun verdictDifference() {
         val otherLicenses = service.withLibrary("pkg:npm/left-pad@1.3.0", LibraryView("ALLOWED", false, setOf("MIT")))
-        val otherOverride = service.withLibrary("pkg:maven/org.example/sample-lib@1.5", LibraryView("NOT_ALLOWED", false, setOf("GPL-3.0")))
 
         assertEquals(
             listOf(
@@ -108,13 +126,19 @@ class EvaluationParityTest {
             ),
             EvaluationParityDiff.diff(prototype, otherLicenses).others,
         )
-        assertEquals(
-            listOf(
-                "library pkg:maven/org.example/sample-lib@1.5: verdict: prototype ALLOWED, service NOT_ALLOWED",
-                "library pkg:maven/org.example/sample-lib@1.5: overridden: prototype true, service false",
-            ),
-            EvaluationParityDiff.diff(prototype, otherOverride).others,
-        )
+    }
+
+    @Test
+    @DisplayName(
+        "INTERNAL or UNIDENTIFIED on one side only is a difference, whatever the licenses: evaluation decides those, not the policy",
+    )
+    fun ownVerdictDifference() {
+        val internal = service.withLibrary("pkg:npm/left-pad@1.3.0", LibraryView("INTERNAL", false, emptySet()))
+
+        val diffs = EvaluationParityDiff.diff(prototype, internal)
+
+        assertEquals(listOf("library pkg:npm/left-pad@1.3.0: verdict: prototype UNKNOWN, service INTERNAL"), diffs.others)
+        assertEquals(emptyList<String>(), diffs.policyRules)
     }
 
     @Test

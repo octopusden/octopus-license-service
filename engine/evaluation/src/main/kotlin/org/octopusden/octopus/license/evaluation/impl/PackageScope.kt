@@ -27,7 +27,7 @@ internal class PackageScope(
         when (library.id.type) {
             DOCKER -> Scope.IMAGE_LAYER
             in OS_PACKAGE_TYPES -> Scope.OS_PACKAGE
-            PYPI if library.foundIn.all { it in images } -> Scope.BASE_IMAGE_PYTHON
+            PYPI if library.foundIn.isNotEmpty() && library.foundIn.all { it in images } -> Scope.BASE_IMAGE_PYTHON
             else -> Scope.COUNTED
         }
 

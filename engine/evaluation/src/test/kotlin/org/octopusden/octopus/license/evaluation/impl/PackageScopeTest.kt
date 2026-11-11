@@ -41,6 +41,12 @@ class PackageScopeTest {
         assertEquals(Scope.COUNTED, scope.of(library("pkg:pypi/attrs@23.2.0", foundIn = setOf(ZIP))))
     }
 
+    @Test
+    @DisplayName("a Python package found in no file is counted: only one found in images, and nowhere else, is base-image Python (D3.3)")
+    fun pythonFoundNowhere() {
+        assertEquals(Scope.COUNTED, scope.of(library("pkg:pypi/attrs@23.2.0", foundIn = emptySet())))
+    }
+
     @ParameterizedTest(name = "{0}")
     @ValueSource(
         strings = [

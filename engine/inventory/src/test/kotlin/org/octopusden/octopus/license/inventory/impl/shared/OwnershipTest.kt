@@ -70,6 +70,14 @@ class OwnershipTest {
     }
 
     @Test
+    @DisplayName("a Maven id an SBOM wrote without a version is still ours by its group, as the prototype reads the rendering (D2)")
+    fun oursMavenWithoutVersion() {
+        assertTrue(isOurs("pkg:maven/org.example.portal/portal-plugins"))
+        assertFalse(isOurs("pkg:maven/org.springframework/spring-core"))
+        assertEquals(emptyList<String>(), asked)
+    }
+
+    @Test
     @DisplayName("an npm, Python or unrecognized package is never ours, and nothing is asked (D2)")
     fun neverOurs() {
         assertFalse(isOurs("pkg:npm/left-pad@1.3.0", copyInOwnRepository = true))

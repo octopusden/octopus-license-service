@@ -21,7 +21,8 @@ internal class Ownership(
     ) = when (id) {
         is PackageId.Purl -> id.mavenCoordinates()?.let { isInternalGroup(it.groupId) } ?: false
         is PackageId.ChecksumOnly -> isInternalFileName(id.fileName) || copyInOwnRepository(id.sha256)
-        is PackageId.Unrecognized -> false
+        // The prototype reads the rendering, so a Maven id kept verbatim (an SBOM's, without a version) is ours by its group too.
+        is PackageId.Unrecognized -> id.raw.startsWith(MAVEN_PREFIX) && isInternalGroup(id.raw.removePrefix(MAVEN_PREFIX))
     }
 
     /** [groupOrId] may be a whole dependency id: the group comes first. */
@@ -34,5 +35,6 @@ internal class Ownership(
 
     private companion object {
         const val LOCAL = "local"
+        const val MAVEN_PREFIX = "pkg:maven/"
     }
 }

@@ -85,6 +85,14 @@
 - [x] 6.3 `:license-evaluation` `parityTest` source set and task, outside `check`, Kover disabled for it; `PrototypeParityTest` with the environment of Decision 11. The report has a policy-rules column per component; only differences outside it fail the run. Compiles; not run here (6.4).
 - [ ] 6.4 Run: a fresh local prototype run over the components of run 14, then `./gradlew :license-evaluation:parityTest`. Record the result here: components compared, differences outside "policy rules" (expected 0), the "policy rules" list.
 
+## 6a. Review against the prototype's stage 11 (added on review)
+
+- [x] 6a.1 Replayed run 14 offline through `LicenseEvaluator` and the real `LicenseRegistryParser` (registry `50085de`; `ours` taken from the group, and from the prototype's `INTERNAL` for checksum-only files): 99,258 rows, package types all equal, 1 verdict and 31 `overridden` flags differ, all from override versions (Decision 6). Decision 6 named name casing as the cause of the `jtidy` verdict; it is the override for `r872-jdk15` matching `r872-jdk5`. Corrected.
+- [x] 6a.2 `Ownership.isOurs`: a Maven id kept verbatim (an SBOM's purl without a version) is ours by its group, as the prototype's `is_internal` reads the rendering. Before, it was never ours.
+- [x] 6a.3 `PackageScope`: a `pypi` library found in no file is counted; the prototype's `kinds == {"docker"}` is false for it. Cannot happen from a scan; held by a test.
+- [x] 6a.4 `EvaluationParityDiff`: an override on one side only, on the same licenses found, is a policy rule, not a failure; `INTERNAL` or `UNIDENTIFIED` on one side only always fails. Before, the 31 rows of 6a.1 would have failed the parity run.
+- [x] 6a.5 Confirm: `:license-inventory:test` 202, `:license-evaluation:test` 36; `./gradlew build qualityCheck` green.
+
 ## 7. Docs
 
 - [x] 7.1 `docs/architecture.md`: the evaluation module in the module graph and table; `license-inventory` records ours (Decision 2); the request flow runs the scan and the evaluation; the scan counter under Health and metrics; "Boundaries" no longer says the generator returns an empty summary.

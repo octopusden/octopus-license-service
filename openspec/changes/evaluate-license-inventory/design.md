@@ -200,16 +200,16 @@ data class FoundLibrary(
 
 - `LicensePolicy.judge` follows the license plugins (load-license-policy, Decisions 5 and 6). It differs from the prototype's `verdict()` in three ways:
   - names: exact first, then ignoring case, the first registry line winning; the prototype ignores case only, the last line winning;
-  - overrides: the greatest matching key, ranges by `versions-api`; the prototype takes the first match in file order, ranges by its own parser;
+  - overrides: the greatest matching key, versions compared by `versions-api` as the plugin compares them, which reads the numbers only (`2.7.3-atlassian-hosted` is `2.7.3`, `1.7R2` matches an override for `1.6R1`); the prototype takes the first match in file order and matches a single version as written;
   - allowed: whitelist and hidden list compared after their own canonical names, unknown markers ignoring case; the prototype compares them as written.
-- Measured: re-judging run 14's 49,767 judged libraries (all but `INTERNAL` and `REVIEW_HASH_ONLY`) with these rules against the registry (`50085de`) gives 1 different verdict: `pkg:maven/jtidy/jtidy@r872-jdk5`, `NOT_ALLOWED` in the prototype, `ALLOWED` in the service (`JTidy`, spelled in two casings in the registry).
-- So evaluation calls the policy. A prototype-shaped judge would be a second rule for "is this license allowed", in the service only to reproduce one verdict.
+- Measured, on review, by replaying all 99,258 library rows of run 14 through `LicenseEvaluator` with the registry at `50085de`: 1 verdict differs and 31 rows (4 libraries) differ in `overridden`, all from override versions. `jtidy:jtidy:r872-jdk5` takes the override for `r872-jdk15` (`NOT_ALLOWED` in the prototype, `ALLOWED` in the service); `xalan:xalan:2.7.3-atlassian-hosted`, `wsdl4j:wsdl4j:1.6.2` and `rhino:js:1.7R2` are overridden in the service only, with the same verdict. No verdict differs from names or the allowed lists.
+- So evaluation calls the policy. A prototype-shaped judge would be a second rule for "is this license allowed", in the service only to reproduce these rows. Whether override versions should match as written instead is the policy's question, for every caller.
 - The parity check lists such a difference under "policy rules" (Decision 10), not as a failure.
 
 ### 7. License names: canonical in the report, compared as found in parity
 
 - `AssessedLibrary.licenses` are the policy's canonical names, sorted, so every report spells a license one way (load-license-policy, Decision 5).
-- The prototype printed `override or licences found or {"Unknown"}` as written. Measured on run 14: the service's names differ from that column on 668 of 49,767 judged rows, all with the same verdict but the one in Decision 6.
+- The prototype printed `override or licences found or {"Unknown"}` as written; the service's names differ from that column in spelling on several hundred rows of run 14, with the same verdict.
 - Parity compares what decides those names: the licenses as found (`FoundLibrary.licenses`, already the inventory's parity), the verdict and `overridden`. Equal inputs and an equal override give equal names; the rendering is not compared.
 
 ### 8. Ordering and totals
@@ -252,7 +252,7 @@ data class FoundLibrary(
   - input: `PROTOTYPE_RUN_DIR` from a local prototype run made just before, plus the inventory's environment and the license registry's (`BITBUCKET_URL`, `BITBUCKET_TOKEN`, `LICENSE_REGISTRY_PROJECT`, `LICENSE_REGISTRY_REPOSITORY`, as in `bootstrap-dev.yml`);
   - per component: resolve, scan, evaluate with the policy loaded once at the start;
   - compared: the inventory view (as today), then per library `verdict` (prototype `REVIEW_HASH_ONLY` read as `UNIDENTIFIED`) and `overridden`; `os_packages_skipped`, `docker_python_skipped`; `os_skipped` per artifact; the `LICENCE_NOT_ALLOWED` subjects, derived from the verdicts;
-  - a verdict difference whose found licenses and override agree is reported under "policy rules" (Decision 6), separately from the rest;
+  - on the same licenses found, a difference in what the policy answers (`ALLOWED`, `NOT_ALLOWED`, `UNKNOWN`, or whether an override applied) is reported under "policy rules" (Decision 6), separately from the rest; `INTERNAL` or `UNIDENTIFIED` on one side only is always a failure;
   - output: `build/parity/report.md`, one line per component, then each difference. Done means no difference outside Decision 6.
 - The prototype's run should use the same registry commit as the policy the service loads: both read `master` at the time of the run.
 
@@ -270,7 +270,7 @@ data class FoundLibrary(
 
 ## Risks / Trade-offs
 
-- **One verdict differs from run 14 by design.** The parity check reports it under "policy rules"; the registry can remove it by spelling `JTidy` one way. Accepted: one judging rule for every caller.
+- **One verdict and four libraries' overrides differ from run 14 by design.** The parity check reports them under "policy rules". They come from matching override versions by their numbers, as the plugin does. Accepted for now: one judging rule for every caller; changing it is a change to the license policy.
 - **The inventory now answers "ours".** A later reader may expect it in evaluation, as the component design first drew it; the design and `docs/architecture.md` say where it is and why (Decision 2).
 - **A report now takes as long as a scan.** Up to 5 minutes more while Xray finishes, with 4 generation threads; queued reports wait. Accepted for the report-only rollout; threads and timeout are configuration (inventory, Decision 12).
 - **A report can now fail on Artifactory or Xray.** The runner already logs `FAILED` as a warning (`BuildLog`); the counter shows outages.
