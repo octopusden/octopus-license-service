@@ -86,7 +86,9 @@
 
 - [x] 8.1 `parityTest` source set and task, not part of `check`; inputs from environment variables (`PROTOTYPE_RUN_DIR`, `COMPONENTS_REGISTRY_URL`, `JFROG_URL`, `JFROG_TOKEN`, `INTERNAL_GROUPS`, `OWN_REPOSITORY_PREFIXES`, optional `PARITY_COMPONENTS`). A missing variable fails the task by name. The report is `engine/inventory/build/parity/report.md`.
 - [x] 8.2 The projection of both sides and the diff, with unit tests on two hand-made component JSONs (same, and one difference of each kind): `ParityView`, `ParityDiff` in the test source set, so `ParityDiffTest` runs in every build; 6 green. Packages are compared after the prototype's stage-11 drops (docker layers, OS packages, Python seen only in images); findings as sets, without the prototype's verdict violations, with "licence" read as "license".
-- [ ] 8.3 Run the prototype locally with `--only` for two components of run 14, one with nested archives and npm modules, one with docker images, and then the parity check; record the differences here, each fixed or explained by Decision 11.
+- [x] 8.3 Run the prototype locally with `--only` for two components of run 14, one with nested archives and npm modules, one with docker images, and then the parity check; record the differences here, each fixed or explained by Decision 11.
+  - Released files, their builds and the libraries in them match exactly for both components.
+  - Three license sets differed (`HdrHistogram@2.2.2` in both, `jakarta.annotation-api@2.0.0` in one), all read only from Xray's scan of the file, which both sides call and merge the same way. Xray's answer changed between the prototype run and the scan a few minutes later; asking Xray again ten times gave the service's answer every time. Not a porting difference: the moving-target risk in the design.
 - [ ] 8.4 Same for all components of run 14's scope; record the result here.
 
 ## 8a. Review against the prototype (Decision 17)
