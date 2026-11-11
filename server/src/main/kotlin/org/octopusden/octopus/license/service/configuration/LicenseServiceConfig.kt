@@ -1,6 +1,10 @@
 package org.octopusden.octopus.license.service.configuration
 
 import io.micrometer.core.instrument.MeterRegistry
+import org.octopusden.octopus.license.evaluation.LicenseEvaluator
+import org.octopusden.octopus.license.inventory.LicenseInventoryScanner
+import org.octopusden.octopus.license.inventory.impl.JfrogLicenseInventoryScanner
+import org.octopusden.octopus.license.inventory.model.OwnershipRules
 import org.octopusden.octopus.license.policy.LicensePolicySource
 import org.octopusden.octopus.license.policy.impl.BitbucketLicensePolicySource
 import org.octopusden.octopus.license.service.state.policy.LicensePolicyHolder
@@ -18,6 +22,9 @@ import java.time.Clock
 @EnableScheduling
 class LicenseServiceConfig(
     private val properties: LicenseServiceProperties,
+    private val componentsRegistryService: ComponentsRegistryServiceProperties,
+    private val bitbucket: BitbucketProperties,
+    private val artifactory: ArtifactoryProperties,
 ) {
     @Bean
     fun clock(): Clock = Clock.systemUTC()
@@ -28,9 +35,7 @@ class LicenseServiceConfig(
     @Bean
     fun licenseTargetResolver(): LicenseTargetResolver =
         RegistryLicenseTargetResolver(
-            requireNotNull(properties.componentsRegistryUrl?.takeIf { it.isNotBlank() }) {
-                "license-service.components-registry-url is not set"
-            },
+            requiredSetting(componentsRegistryService.url, "components-registry-service.url"),
             properties.exclusions,
         )
 
@@ -38,10 +43,10 @@ class LicenseServiceConfig(
     fun licensePolicySource(): LicensePolicySource =
         with(properties.licenseRegistry) {
             BitbucketLicensePolicySource(
-                required(bitbucketUrl, "bitbucket-url"),
-                required(token, "token"),
-                required(project, "project"),
-                required(repository, "repository"),
+                requiredSetting(bitbucket.host, "bitbucket.host"),
+                requiredSetting(bitbucket.token, "bitbucket.token"),
+                requiredSetting(project, "license-service.license-registry.project"),
+                requiredSetting(repository, "license-service.license-registry.repository"),
             )
         }
 
@@ -56,6 +61,23 @@ class LicenseServiceConfig(
         meterRegistry: MeterRegistry,
     ) = LicensePolicyRefresher(source, holder, properties.licenseRegistry.refreshInterval, clock, meterRegistry)
 
+    /** One scanner for every generation thread: it keeps no state between scans. */
+    @Bean
+    fun licenseInventoryScanner(): LicenseInventoryScanner =
+        JfrogLicenseInventoryScanner(
+            requiredSetting(artifactory.url, "artifactory.url"),
+            requiredSetting(artifactory.token, "artifactory.token"),
+            OwnershipRules(
+                requiredList(properties.ownership.internalGroups, "license-service.ownership.internal-groups"),
+                requiredList(properties.ownership.ownRepositoryPrefixes, "license-service.ownership.own-repository-prefixes"),
+            ),
+            properties.xray.scanTimeout,
+            properties.xray.scanPollInterval,
+        )
+
+    @Bean
+    fun licenseEvaluator() = LicenseEvaluator()
+
     @Bean
     fun licenseReportExecutor() =
         ThreadPoolTaskExecutor().apply {
@@ -65,8 +87,13 @@ class LicenseServiceConfig(
             setThreadNamePrefix("license-report-")
         }
 
-    private fun required(
+    private fun requiredSetting(
         value: String?,
         setting: String,
-    ) = requireNotNull(value?.takeIf { it.isNotBlank() }) { "license-service.license-registry.$setting is not set" }
+    ) = requireNotNull(value?.takeIf { it.isNotBlank() }) { "$setting is not set" }
+
+    private fun requiredList(
+        values: List<String>,
+        setting: String,
+    ) = values.map { it.trim() }.filter { it.isNotEmpty() }.also { require(it.isNotEmpty()) { "$setting is not set" } }
 }

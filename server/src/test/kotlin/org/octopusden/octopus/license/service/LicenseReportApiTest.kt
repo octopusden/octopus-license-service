@@ -18,15 +18,21 @@ import org.octopusden.octopus.license.client.impl.LicenseServiceClientParameters
 import org.octopusden.octopus.license.core.dto.LicenseReport
 import org.octopusden.octopus.license.core.dto.LicenseReportRequest
 import org.octopusden.octopus.license.core.dto.LicenseReportStatus
+import org.octopusden.octopus.license.core.dto.Verdict
+import org.octopusden.octopus.license.core.dto.Violation
 import org.octopusden.octopus.license.core.exception.InvalidRequestException
 import org.octopusden.octopus.license.core.exception.LicenseFilesNotAvailableException
 import org.octopusden.octopus.license.core.exception.NotFoundException
 import org.octopusden.octopus.license.core.exception.ServiceUnavailableException
+import org.octopusden.octopus.license.inventory.LicenseInventoryScanner
+import org.octopusden.octopus.license.inventory.model.Evidence
+import org.octopusden.octopus.license.inventory.model.FoundLibrary
+import org.octopusden.octopus.license.inventory.model.PackageId
 import org.octopusden.octopus.license.policy.LicensePolicySource
 import org.octopusden.octopus.license.policy.model.LicensePolicy
 import org.octopusden.octopus.license.service.service.GeneratedReport
 import org.octopusden.octopus.license.service.service.LicenseReportGenerator
-import org.octopusden.octopus.license.service.service.impl.EmptyLicenseReportGenerator
+import org.octopusden.octopus.license.service.service.impl.EvaluatingLicenseReportGenerator
 import org.octopusden.octopus.license.service.state.policy.LicensePolicyHolder
 import org.octopusden.octopus.license.service.state.policy.LicensePolicyRefresherTest.Companion.samplePolicy
 import org.octopusden.octopus.license.service.state.policy.LicensePolicyRefresherTest.FakeLicensePolicySource
@@ -50,7 +56,6 @@ import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
-import java.time.Clock
 import java.time.Duration
 import java.time.Instant
 import java.util.concurrent.CopyOnWriteArrayList
@@ -61,11 +66,15 @@ import java.util.zip.ZipInputStream
 @SpringBootTest(
     webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
     properties = [
-        "license-service.components-registry-url=http://localhost:1",
-        "license-service.license-registry.bitbucket-url=http://localhost:1",
-        "license-service.license-registry.token=token",
+        "components-registry-service.url=http://localhost:1",
+        "bitbucket.host=http://localhost:1",
+        "bitbucket.token=token",
+        "artifactory.url=http://localhost:1",
+        "artifactory.token=token",
         "license-service.license-registry.project=SAMPLE",
         "license-service.license-registry.repository=sample-license-registry",
+        "license-service.ownership.internal-groups=org.example",
+        "license-service.ownership.own-repository-prefixes=rnd-",
     ],
 )
 class LicenseReportApiTest {
@@ -202,8 +211,8 @@ class LicenseReportApiTest {
             ?.count() ?: 0.0
 
     @Test
-    @DisplayName("a started report finishes DONE with an empty summary and an empty zip")
-    fun reportFinishesWithEmptyResult() {
+    @DisplayName("a started report finishes DONE with the scanned libraries counted and judged, and an empty zip")
+    fun reportFinishesWithEvaluatedLibraries() {
         val started = client.startReport(LicenseReportRequest(COMPONENT, VERSION))
 
         val done = awaitFinished(started.id)
@@ -213,10 +222,33 @@ class LicenseReportApiTest {
         assertEquals(LicenseReportStatus.DONE, done.status)
         val summary = requireNotNull(done.summary) { "a DONE report carries a summary" }
         assertEquals(buildProperties.version, summary.inputs.serviceVersion)
-        assertTrue(summary.libraryCounts.isEmpty())
-        assertTrue(summary.violations.isEmpty())
+        assertEquals(
+            mapOf(Verdict.ALLOWED to 1, Verdict.NOT_ALLOWED to 0, Verdict.UNKNOWN to 1, Verdict.UNIDENTIFIED to 0),
+            summary.libraryCounts,
+        )
+        assertEquals(listOf(Violation("pkg:npm/left-pad@1.3.0", Verdict.UNKNOWN, emptyList(), listOf(ZIP))), summary.violations)
         assertNull(ZipInputStream(ByteArrayInputStream(files)).nextEntry, "the zip holds no entries")
     }
+
+    @Test
+    @DisplayName("Xray unreachable during the scan: the report finishes FAILED with the scan's message, counted unavailable")
+    fun unavailableScanIsFailed() {
+        val before = scans("unavailable")
+
+        val failed = awaitFinished(client.startReport(LicenseReportRequest(FakeInventoryScanner.UNAVAILABLE_COMPONENT, VERSION)).id)
+
+        assertEquals(LicenseReportStatus.FAILED, failed.status)
+        assertEquals("Xray answered 503 after 3 tries", failed.error)
+        assertNull(failed.summary)
+        assertEquals(before + 1, scans("unavailable"))
+    }
+
+    private fun scans(outcome: String): Double =
+        meterRegistry
+            .find("license.inventory.scans")
+            .tag("outcome", outcome)
+            .counter()
+            ?.count() ?: 0.0
 
     @Test
     @DisplayName("SYS-007: the summary records when it was generated")
@@ -430,10 +462,11 @@ class LicenseReportApiTest {
     class ControllableGeneratorConfig {
         @Bean
         @Primary
-        fun controllableGenerator(
-            clock: Clock,
-            buildProperties: BuildProperties,
-        ) = ControllableGenerator(EmptyLicenseReportGenerator(clock, buildProperties))
+        fun controllableGenerator(delegate: EvaluatingLicenseReportGenerator) = ControllableGenerator(delegate)
+
+        @Bean
+        @Primary
+        fun fakeInventoryScanner(): LicenseInventoryScanner = FakeInventoryScanner(LIBRARIES)
 
         @Bean
         @Primary
@@ -454,6 +487,19 @@ class LicenseReportApiTest {
         const val REGISTRY_DOWN_COMPONENT = "registry-down-component"
         const val VERSION = "1.2.3"
         const val REGISTRY_COMMIT = "a1b2c3d"
+        const val ZIP = "org.example:some-component:zip"
+        val LIBRARIES =
+            listOf(
+                FoundLibrary(
+                    PackageId.parse("pkg:maven/org.example/some-lib@1.0"),
+                    emptySet(),
+                    setOf(Evidence.BINARY_SCAN),
+                    setOf(ZIP),
+                    true,
+                ),
+                FoundLibrary(PackageId.parse("pkg:npm/left-pad@1.3.0"), emptySet(), setOf(Evidence.BINARY_SCAN), setOf(ZIP), false),
+                FoundLibrary(PackageId.parse("pkg:npm/react@18.2.0"), setOf("MIT"), setOf(Evidence.BINARY_SCAN), setOf(ZIP), false),
+            )
         val OUTCOMES = listOf("resolved", "excluded", "not_found", "unavailable")
         const val UNKNOWN_ID = "00000000-0000-0000-0000-000000000000"
         const val HTTP_OK = 200

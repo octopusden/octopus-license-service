@@ -16,7 +16,7 @@ import org.octopusden.octopus.license.inventory.model.PackageId
 class ChecksumNamerTest {
     private val sha256 = "ab".repeat(32)
     private val store = FakeArtifactStore()
-    private val table = LibraryTable()
+    private val table = LibraryTable(Ownership(OWNERSHIP))
     private val namer = ChecksumNamer(store, Ownership(OWNERSHIP))
 
     private fun unnamed(fileName: String) =
@@ -46,6 +46,7 @@ class ChecksumNamerTest {
                     emptySet(),
                     setOf(BINARY_SCAN, CHECKSUM_MATCH),
                     setOf("zip"),
+                    false,
                 ),
             ),
             table.libraries(),
@@ -76,24 +77,46 @@ class ChecksumNamerTest {
     }
 
     @Test
-    @DisplayName("ours by a copy in an own repository: stays checksum-only")
+    @DisplayName("ours by a copy in an own repository: stays checksum-only, and is ours (D2)")
     fun oursByRepository() {
         val id = unnamed("parser.jar")
         store.add(stored("parser-1.2.jar", path = "org/example/parser/1.2", repo = "rnd-maven-release-local", sha256 = sha256))
 
         namer.name(table)
 
-        assertEquals(listOf(id), table.libraries().map { it.id })
+        assertEquals(listOf(id to true), table.libraries().map { it.id to it.ours })
     }
 
     @Test
-    @DisplayName("found nowhere: stays checksum-only with its licenses")
+    @DisplayName("named after a copy under an internal group: ours by its new id (D2)")
+    fun namedOurs() {
+        unnamed("plugins.zip")
+        store.add(
+            stored(
+                "portal-plugins-2.4.0.zip",
+                path = "org/example/portal/portal-plugins/2.4.0",
+                repo = "maven-central-cache",
+                sha256 = sha256,
+            ),
+        )
+
+        namer.name(table)
+
+        assertEquals(
+            listOf("pkg:maven/org.example.portal/portal-plugins@2.4.0" to true),
+            table.libraries().map { it.id.toString() to it.ours },
+        )
+    }
+
+    @Test
+    @DisplayName("found nowhere: stays checksum-only with its licenses, and is not ours")
     fun nowhere() {
         unnamed("mystery.jar")
 
         namer.name(table)
 
         assertEquals(setOf("Unknown"), table.libraries().single().licenses)
+        assertEquals(false, table.libraries().single().ours)
     }
 
     @Test
@@ -114,7 +137,7 @@ class ChecksumNamerTest {
         namer.name(table)
 
         assertEquals(
-            listOf(FoundLibrary(netty, setOf("Apache-2.0"), setOf(BINARY_SCAN, CHECKSUM_MATCH), setOf("image", "zip"))),
+            listOf(FoundLibrary(netty, setOf("Apache-2.0"), setOf(BINARY_SCAN, CHECKSUM_MATCH), setOf("image", "zip"), false)),
             table.libraries(),
         )
     }

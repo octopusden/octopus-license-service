@@ -54,7 +54,7 @@ class JfrogLicenseInventoryScanner internal constructor(
         val locator = BuildLocator(scan.records)
         val listing = ReleasedFileLister(scan.records, scan.store, locator).list(target)
         val reader = FileContentReader(scan.scanner, scan.store, locator, BuildDependencyReader(ownership), SbomReader(scan.store))
-        val table = LibraryTable()
+        val table = LibraryTable(ownership)
         val findings = linkedSetOf<Finding>()
         val files =
             listing.files.map { listed ->

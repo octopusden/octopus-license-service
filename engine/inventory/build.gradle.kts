@@ -1,3 +1,7 @@
+plugins {
+    `java-test-fixtures`
+}
+
 dependencies {
     api(project(":license-target-registry"))
     implementation(
@@ -14,6 +18,13 @@ dependencies {
     testImplementation(platform("org.junit:junit-bom:${project.property("junit.version")}"))
     testImplementation("org.junit.jupiter:junit-jupiter")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+
+    // The parity view and diff, shared with the evaluation's parity check (evaluation design, D11).
+    // Jackson reads the prototype's JSON; it comes with the Artifactory client, as in parityTest.
+    testFixturesImplementation(
+        "org.octopusden.octopus.octopus-external-systems-clients:artifactory-client:" +
+            project.property("artifactory-client.version"),
+    )
 }
 
 // The parity check against a prototype run (design, Decision 16): real systems, so never part of `check`.

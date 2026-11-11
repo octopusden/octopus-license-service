@@ -12,11 +12,12 @@ import org.octopusden.octopus.license.client.impl.ClassicLicenseServiceClient
 import org.octopusden.octopus.license.client.impl.LicenseServiceClientParametersProvider
 import org.octopusden.octopus.license.core.dto.LicenseReportRequest
 import org.octopusden.octopus.license.core.exception.ServiceBusyException
+import org.octopusden.octopus.license.inventory.LicenseInventoryScanner
 import org.octopusden.octopus.license.policy.LicensePolicySource
 import org.octopusden.octopus.license.policy.model.LicensePolicy
 import org.octopusden.octopus.license.service.service.GeneratedReport
 import org.octopusden.octopus.license.service.service.LicenseReportGenerator
-import org.octopusden.octopus.license.service.service.impl.EmptyLicenseReportGenerator
+import org.octopusden.octopus.license.service.service.impl.EvaluatingLicenseReportGenerator
 import org.octopusden.octopus.license.service.state.policy.LicensePolicyHolder
 import org.octopusden.octopus.license.service.state.policy.LicensePolicyRefresherTest.FakeLicensePolicySource
 import org.octopusden.octopus.license.service.state.report.LicenseReportStore
@@ -26,7 +27,6 @@ import org.octopusden.octopus.license.target.model.DistributionSpec
 import org.octopusden.octopus.license.target.model.LicenseTarget
 import org.octopusden.octopus.license.target.model.TargetResolution
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.boot.info.BuildProperties
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.test.context.TestConfiguration
 import org.springframework.boot.test.web.server.LocalServerPort
@@ -37,7 +37,6 @@ import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
-import java.time.Clock
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 
@@ -47,11 +46,15 @@ import java.util.concurrent.TimeUnit
     properties = [
         "license-service.generation-threads=1",
         "license-service.max-queued-reports=0",
-        "license-service.components-registry-url=http://localhost:1",
-        "license-service.license-registry.bitbucket-url=http://localhost:1",
-        "license-service.license-registry.token=token",
+        "components-registry-service.url=http://localhost:1",
+        "bitbucket.host=http://localhost:1",
+        "bitbucket.token=token",
+        "artifactory.url=http://localhost:1",
+        "artifactory.token=token",
         "license-service.license-registry.project=SAMPLE",
         "license-service.license-registry.repository=sample-license-registry",
+        "license-service.ownership.internal-groups=org.example",
+        "license-service.ownership.own-repository-prefixes=rnd-",
     ],
 )
 class BusyServiceApiTest {
@@ -149,10 +152,11 @@ class BusyServiceApiTest {
 
         @Bean
         @Primary
-        fun blockingGenerator(
-            clock: Clock,
-            buildProperties: BuildProperties,
-        ) = BlockingGenerator(EmptyLicenseReportGenerator(clock, buildProperties))
+        fun blockingGenerator(delegate: EvaluatingLicenseReportGenerator) = BlockingGenerator(delegate)
+
+        @Bean
+        @Primary
+        fun emptyInventoryScanner(): LicenseInventoryScanner = FakeInventoryScanner()
 
         @Bean
         @Primary
