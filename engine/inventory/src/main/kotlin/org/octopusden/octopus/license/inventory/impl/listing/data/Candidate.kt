@@ -1,4 +1,4 @@
-package org.octopusden.octopus.license.inventory.impl.listing
+package org.octopusden.octopus.license.inventory.impl.listing.data
 
 import org.octopusden.octopus.license.inventory.impl.port.data.BuildRecord
 import org.octopusden.octopus.license.inventory.impl.port.data.BuiltFile

@@ -1,4 +1,4 @@
-package org.octopusden.octopus.license.inventory.impl.listing
+package org.octopusden.octopus.license.inventory.impl.listing.candidate
 
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.DisplayName
@@ -7,6 +7,9 @@ import org.octopusden.octopus.license.inventory.impl.BUILD_VERSION
 import org.octopusden.octopus.license.inventory.impl.GROUP
 import org.octopusden.octopus.license.inventory.impl.build
 import org.octopusden.octopus.license.inventory.impl.builtFile
+import org.octopusden.octopus.license.inventory.impl.listing.data.ImageCandidate
+import org.octopusden.octopus.license.inventory.impl.listing.data.MavenCandidate
+import org.octopusden.octopus.license.inventory.impl.listing.data.Selection
 import org.octopusden.octopus.license.inventory.impl.target
 import org.octopusden.octopus.license.inventory.model.FileStatus
 import org.octopusden.octopus.license.inventory.model.SelectionReason.DECLARED

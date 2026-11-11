@@ -72,9 +72,10 @@ Package `org.octopusden.octopus.license.inventory`. `impl/` is `internal` except
 LicenseInventoryScanner (interface)            ← server
 └─ impl/JfrogLicenseInventoryScanner           orchestration only: A → B per file → C → assemble
    ├─ impl/listing/     step A: which files    ReleasedFileLister, DeclaredLeftoverLocator   (I/O through ports)
-   │                                           ConventionBuilds, CandidateExtractor,
-   │                                           PublishedFileName, CandidateSelector,
-   │                                           ArtifactPatternMatcher                        (pure)
+   │  │                                        ConventionBuilds                              (pure; both routes)
+   │  ├─ candidate/     route 1's decisions    CandidateExtractor, PublishedFileName,
+   │  │                                        CandidateSelector, ArtifactPatternMatcher     (pure)
+   │  └─ data/                                 Candidate, Selection, ListedFile, Listing
    ├─ impl/reading/     step B: what is inside FileContentReader, SbomReader                 (I/O through ports)
    │                                           FileStatusJudge, BuildDependencyReader,
    │                                           ShippingScopes, CycloneDxParser               (pure)
@@ -95,7 +96,7 @@ Who may import whom (Decision 17, held by `PackageDependencyTest`):
 | `impl/port`, `impl/port/data` | `model` | the four interfaces; in `data`, the types they answer in. `internal`: seen by the whole module, never by the server or evaluation, which is why they are not in `model` |
 | `impl` (shared) | `model`, `port` | `BuildLocator`, `LibraryTable`, `Ownership` |
 | `impl/listing` | `model`, `port`, shared | `Listing` of `ListedFile` |
-| `impl/reading` | `model`, `port`, shared, `listing.ListedFile` | `FileReading`; fills the `LibraryTable` |
+| `impl/reading` | `model`, `port`, shared, `listing.data` (never a listing class) | `FileReading`; fills the `LibraryTable` |
 | `impl/completing` | `model`, `port`, shared | renames and licenses in the `LibraryTable` |
 | `impl/adapter`, by system | `model`, `port`, the clients | `ScanPorts`. Each helper sits with the one system that uses it, so replacing Xray replaces `adapter/xray` |
 | `JfrogLicenseInventoryScanner` | all of the above | `LicenseInventory` |
@@ -390,6 +391,7 @@ Kept because the prototype's results are the baseline; each may be revisited aft
 - Rules that had two homes have one: the Maven repository layout (`ArtifactStore.byCoordinates`), a Maven package's id (`PackageId.maven`), a package's type (`PackageId.type`), and the judged status of a file (`FileReading`, which `FileStatusJudge` returns and `FileContentReader` completes; `FileJudgement` was the same three fields).
 - `PackageDependencyTest` reads the sources' imports and fails on a crossing; only `impl/adapter` may import the clients.
 - The ports are one file per interface with their data in `port/data`; the adapters are grouped by system, not by "implementation" and "helper", because each helper serves exactly one system.
+- Listing follows the same pattern: the step's owner, its second route and `ConventionBuilds` on top, route 1's pure decisions in `listing/candidate`, the step's data in `listing/data`. Reading may import `listing.data` only.
 - Rejected: a Gradle module per step. The steps share the ports and one table; three more build files would buy what one test already holds.
 - Rejected: an architecture-test library for five rules.
 

@@ -100,6 +100,7 @@
 - [x] 8a.4 Structure: `BuildLocator` and `LibraryTable` move to `impl` beside `Ownership`; `impl/naming` is `impl/completing`; `ArtifactStore.byCoordinates`, `PackageId.maven`; `FileJudgement` folded into `FileReading`.
 - [x] 8a.5 `PackageDependencyTest`: five rules over the sources' imports.
 - [x] 8a.5.1 Ports are one file per interface, their data in `impl/port/data`; adapters are grouped by system in `impl/adapter/artifactory` and `impl/adapter/xray`, with `JfrogCalls` and `JfrogPorts` above both. Files moved only.
+- [x] 8a.5.2 Listing is grouped the same way: `listing/candidate` for route 1's pure decisions, `listing/data` for `Candidate`, `Selection`, `ListedFile`, `Listing`, one file each. `PackageDependencyTest` lets reading import `listing.data` only. Files moved only.
 - [x] 8a.6 Confirm: `:license-inventory:test` 191 green; `./gradlew build qualityCheck` green.
 
 ## 9. Finalization

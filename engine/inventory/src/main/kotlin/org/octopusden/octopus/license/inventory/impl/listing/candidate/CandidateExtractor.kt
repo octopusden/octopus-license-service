@@ -1,5 +1,8 @@
-package org.octopusden.octopus.license.inventory.impl.listing
+package org.octopusden.octopus.license.inventory.impl.listing.candidate
 
+import org.octopusden.octopus.license.inventory.impl.listing.data.Candidate
+import org.octopusden.octopus.license.inventory.impl.listing.data.ImageCandidate
+import org.octopusden.octopus.license.inventory.impl.listing.data.MavenCandidate
 import org.octopusden.octopus.license.inventory.impl.port.data.BuildRecord
 
 /** Every file a convention build published, as a candidate entry, in build-info order (D5). */

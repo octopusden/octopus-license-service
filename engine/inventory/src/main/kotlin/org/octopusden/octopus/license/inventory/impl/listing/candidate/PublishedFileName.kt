@@ -1,4 +1,4 @@
-package org.octopusden.octopus.license.inventory.impl.listing
+package org.octopusden.octopus.license.inventory.impl.listing.candidate
 
 /** A published file's name read as `artifactId-version[-classifier].extension`. */
 internal data class PublishedFileName(

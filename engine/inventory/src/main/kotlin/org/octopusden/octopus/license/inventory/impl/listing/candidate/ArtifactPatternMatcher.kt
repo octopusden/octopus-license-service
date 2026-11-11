@@ -1,4 +1,4 @@
-package org.octopusden.octopus.license.inventory.impl.listing
+package org.octopusden.octopus.license.inventory.impl.listing.candidate
 
 import org.octopusden.octopus.license.target.model.ArtifactPattern
 import java.util.regex.PatternSyntaxException

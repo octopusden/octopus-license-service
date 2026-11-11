@@ -5,8 +5,8 @@ import org.octopusden.octopus.license.inventory.impl.adapter.JfrogPorts
 import org.octopusden.octopus.license.inventory.impl.completing.ChecksumNamer
 import org.octopusden.octopus.license.inventory.impl.completing.LicenseFiller
 import org.octopusden.octopus.license.inventory.impl.listing.ConventionBuilds
-import org.octopusden.octopus.license.inventory.impl.listing.ListedFile
 import org.octopusden.octopus.license.inventory.impl.listing.ReleasedFileLister
+import org.octopusden.octopus.license.inventory.impl.listing.data.ListedFile
 import org.octopusden.octopus.license.inventory.impl.port.ScanPorts
 import org.octopusden.octopus.license.inventory.impl.reading.BuildDependencyReader
 import org.octopusden.octopus.license.inventory.impl.reading.FileContentReader

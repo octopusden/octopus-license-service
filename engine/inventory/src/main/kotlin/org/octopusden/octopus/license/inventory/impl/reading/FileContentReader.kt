@@ -2,7 +2,7 @@ package org.octopusden.octopus.license.inventory.impl.reading
 
 import org.octopusden.octopus.license.inventory.impl.BuildLocator
 import org.octopusden.octopus.license.inventory.impl.LibraryTable
-import org.octopusden.octopus.license.inventory.impl.listing.ListedFile
+import org.octopusden.octopus.license.inventory.impl.listing.data.ListedFile
 import org.octopusden.octopus.license.inventory.impl.port.ArtifactStore
 import org.octopusden.octopus.license.inventory.impl.port.BinaryScanner
 import org.octopusden.octopus.license.inventory.impl.port.data.BuildRecord

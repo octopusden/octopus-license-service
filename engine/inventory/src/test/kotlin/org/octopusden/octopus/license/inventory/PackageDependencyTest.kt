@@ -60,12 +60,15 @@ class PackageDependencyTest {
     }
 
     @Test
-    @DisplayName("listing knows no later step; reading takes listing's result and nothing of completing; completing knows neither")
+    @DisplayName("listing knows no later step; reading takes listing's data and nothing of completing; completing knows neither")
     fun stepsPointOneWay() {
+        val listingButItsData =
+            steps("listing.candidate", "listing.ReleasedFileLister", "listing.DeclaredLeftoverLocator", "listing.ConventionBuilds")
+
         assertEquals(
             emptyList<String>(),
             forbiddenImports(sources("impl/listing"), steps("reading", "completing", "adapter") + clients) +
-                forbiddenImports(sources("impl/reading"), steps("completing", "adapter") + clients) +
+                forbiddenImports(sources("impl/reading"), steps("completing", "adapter") + listingButItsData + clients) +
                 forbiddenImports(sources("impl/completing"), steps("listing", "reading", "adapter") + clients),
         )
     }

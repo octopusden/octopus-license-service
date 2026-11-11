@@ -16,7 +16,7 @@ import org.octopusden.octopus.license.inventory.impl.Ownership
 import org.octopusden.octopus.license.inventory.impl.build
 import org.octopusden.octopus.license.inventory.impl.builtFile
 import org.octopusden.octopus.license.inventory.impl.dependency
-import org.octopusden.octopus.license.inventory.impl.listing.ListedFile
+import org.octopusden.octopus.license.inventory.impl.listing.data.ListedFile
 import org.octopusden.octopus.license.inventory.impl.module
 import org.octopusden.octopus.license.inventory.impl.port.data.BuildDependency
 import org.octopusden.octopus.license.inventory.impl.port.data.BuildRecord
