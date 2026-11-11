@@ -10,6 +10,8 @@ import org.octopusden.octopus.license.inventory.model.PackageId
 
 class OwnershipTest {
     private val ownership = Ownership(OWNERSHIP)
+    private val sha256 = "cd".repeat(32)
+    private val asked = mutableListOf<String>()
 
     @Test
     @DisplayName("a group or dependency id starting with an internal group is ours")
@@ -34,9 +36,6 @@ class OwnershipTest {
         assertFalse(ownership.isOwnRepository("rnd-maven-virtual"))
         assertFalse(ownership.isOwnRepository("maven-central-local"))
     }
-
-    private val sha256 = "cd".repeat(32)
-    private val asked = mutableListOf<String>()
 
     private fun isOurs(
         id: String,

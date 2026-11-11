@@ -73,9 +73,10 @@
 
 ## 6. Parity, end to end (Decision 11)
 
-- [ ] 6.1 `:license-inventory`: `java-test-fixtures`; move `ParityView` and `ParityDiff` into `testFixtures`, unchanged; its `test` and `parityTest` still compile and pass.
-- [ ] 6.2 Failing tests for the evaluation parity view and diff (unit, no systems): prototype `REVIEW_HASH_ONLY` reads as `UNIDENTIFIED`; `LICENCE_NOT_ALLOWED` derived from `UNKNOWN` and `NOT_ALLOWED`; a verdict difference with equal found licenses and override is filed under "policy rules"; skipped totals and per-artifact `os_skipped` compared.
-- [ ] 6.3 `:license-evaluation` `parityTest` source set and task, outside `check`, Kover disabled for it; `PrototypeParityTest` with the environment of Decision 11.
+- [x] 6.1 `:license-inventory`: `java-test-fixtures`; move `ParityView` and `ParityDiff` into `testFixtures`, unchanged; its `test` and `parityTest` still compile and pass. The fixtures take the Artifactory client for Jackson, as `parityTest` does. `:license-inventory:test` 201 green.
+  - [x] 6.1.1 (added on review) detekt's `ClassOrdering` on `OwnershipTest` from section 1, which ran tests but not detekt: the two properties moved above the tests.
+- [x] 6.2 Failing tests for the evaluation parity view and diff (unit, no systems): prototype `REVIEW_HASH_ONLY` reads as `UNIDENTIFIED`; `LICENCE_NOT_ALLOWED` derived from `UNKNOWN` and `NOT_ALLOWED`; a verdict difference with equal found licenses and override is filed under "policy rules"; skipped totals and per-artifact `os_skipped` compared. Also: a library on one side only is left to the inventory's diff, which already reports it; a `LICENCE_NOT_ALLOWED` subject is compared only where both sides agree on the verdict, so a verdict difference is reported once. `EvaluationParityTest` 7 green; `:license-evaluation:test` 33.
+- [x] 6.3 `:license-evaluation` `parityTest` source set and task, outside `check`, Kover disabled for it; `PrototypeParityTest` with the environment of Decision 11. The report has a policy-rules column per component; only differences outside it fail the run. Compiles; not run here (6.4).
 - [ ] 6.4 Run: a fresh local prototype run over the components of run 14, then `./gradlew :license-evaluation:parityTest`. Record the result here: components compared, differences outside "policy rules" (expected 0), the "policy rules" list.
 
 ## 7. Docs
