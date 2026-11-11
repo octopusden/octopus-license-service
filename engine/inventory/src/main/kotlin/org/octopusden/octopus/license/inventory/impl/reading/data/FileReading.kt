@@ -1,4 +1,4 @@
-package org.octopusden.octopus.license.inventory.impl.reading
+package org.octopusden.octopus.license.inventory.impl.reading.data
 
 import org.octopusden.octopus.license.inventory.model.Evidence
 import org.octopusden.octopus.license.inventory.model.FileStatus

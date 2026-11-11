@@ -1,4 +1,4 @@
-package org.octopusden.octopus.license.inventory.impl.reading
+package org.octopusden.octopus.license.inventory.impl.reading.source
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper

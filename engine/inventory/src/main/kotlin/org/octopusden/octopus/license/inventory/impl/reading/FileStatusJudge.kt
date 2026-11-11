@@ -1,5 +1,6 @@
 package org.octopusden.octopus.license.inventory.impl.reading
 
+import org.octopusden.octopus.license.inventory.impl.reading.data.FileReading
 import org.octopusden.octopus.license.inventory.model.Evidence
 import org.octopusden.octopus.license.inventory.model.FileKind
 import org.octopusden.octopus.license.inventory.model.FileStatus

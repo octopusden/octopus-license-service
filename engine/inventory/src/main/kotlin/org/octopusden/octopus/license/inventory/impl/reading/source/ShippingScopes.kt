@@ -1,4 +1,4 @@
-package org.octopusden.octopus.license.inventory.impl.reading
+package org.octopusden.octopus.license.inventory.impl.reading.source
 
 /**
  * Which build-info scopes put a library into what ships. Android has one runtime classpath per

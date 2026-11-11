@@ -7,6 +7,10 @@ import org.octopusden.octopus.license.inventory.impl.port.ArtifactStore
 import org.octopusden.octopus.license.inventory.impl.port.BinaryScanner
 import org.octopusden.octopus.license.inventory.impl.port.data.BuildRecord
 import org.octopusden.octopus.license.inventory.impl.port.data.StoredFile
+import org.octopusden.octopus.license.inventory.impl.reading.data.FileReading
+import org.octopusden.octopus.license.inventory.impl.reading.data.NestedArchive
+import org.octopusden.octopus.license.inventory.impl.reading.source.BuildDependencyReader
+import org.octopusden.octopus.license.inventory.impl.reading.source.SbomReader
 import org.octopusden.octopus.license.inventory.model.Evidence
 import org.octopusden.octopus.license.inventory.model.FileStatus
 import org.octopusden.octopus.license.inventory.model.Finding

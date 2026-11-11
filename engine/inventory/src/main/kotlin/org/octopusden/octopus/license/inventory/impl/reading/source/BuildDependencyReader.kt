@@ -1,31 +1,14 @@
-package org.octopusden.octopus.license.inventory.impl.reading
+package org.octopusden.octopus.license.inventory.impl.reading.source
 
 import org.octopusden.octopus.license.inventory.impl.Ownership
 import org.octopusden.octopus.license.inventory.impl.port.data.BuildDependency
 import org.octopusden.octopus.license.inventory.impl.port.data.BuildRecord
 import org.octopusden.octopus.license.inventory.impl.port.data.StoredFile
+import org.octopusden.octopus.license.inventory.impl.reading.data.DependencyReading
+import org.octopusden.octopus.license.inventory.impl.reading.data.NestedArchive
 import org.octopusden.octopus.license.inventory.model.Finding
 import org.octopusden.octopus.license.inventory.model.FindingCode
 import org.octopusden.octopus.license.inventory.model.PackageId
-
-/** One of our own archives a file depends on, to follow into its own build rather than list (D7). */
-internal data class NestedArchive(
-    val dependencyId: String,
-    val group: String,
-    val artifactId: String,
-    val version: String,
-    val type: String,
-    val sha1: String?,
-) {
-    val id get() = PackageId.maven(group, artifactId, version)
-}
-
-/** What a build recorded for one file: [packages] carry no license, the build names none. */
-internal data class DependencyReading(
-    val packages: List<PackageId>,
-    val nested: List<NestedArchive>,
-    val findings: List<Finding>,
-)
 
 /**
  * Reads what a build recorded about one of its files (D6, D7): the production dependencies of its

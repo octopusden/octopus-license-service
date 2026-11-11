@@ -8,9 +8,9 @@ import org.octopusden.octopus.license.inventory.impl.listing.ConventionBuilds
 import org.octopusden.octopus.license.inventory.impl.listing.ReleasedFileLister
 import org.octopusden.octopus.license.inventory.impl.listing.data.ListedFile
 import org.octopusden.octopus.license.inventory.impl.port.ScanPorts
-import org.octopusden.octopus.license.inventory.impl.reading.BuildDependencyReader
 import org.octopusden.octopus.license.inventory.impl.reading.FileContentReader
-import org.octopusden.octopus.license.inventory.impl.reading.SbomReader
+import org.octopusden.octopus.license.inventory.impl.reading.source.BuildDependencyReader
+import org.octopusden.octopus.license.inventory.impl.reading.source.SbomReader
 import org.octopusden.octopus.license.inventory.model.Evidence
 import org.octopusden.octopus.license.inventory.model.FileStatus
 import org.octopusden.octopus.license.inventory.model.Finding

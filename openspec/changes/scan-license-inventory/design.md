@@ -76,9 +76,11 @@ LicenseInventoryScanner (interface)            ← server
    │  ├─ candidate/     route 1's decisions    CandidateExtractor, PublishedFileName,
    │  │                                        CandidateSelector, ArtifactPatternMatcher     (pure)
    │  └─ data/                                 Candidate, Selection, ListedFile, Listing
-   ├─ impl/reading/     step B: what is inside FileContentReader, SbomReader                 (I/O through ports)
-   │                                           FileStatusJudge, BuildDependencyReader,
-   │                                           ShippingScopes, CycloneDxParser               (pure)
+   ├─ impl/reading/     step B: what is inside FileContentReader                             (I/O through ports)
+   │  │                                        FileStatusJudge                               (pure)
+   │  ├─ source/        what a build adds      SbomReader (I/O) with CycloneDxParser,
+   │  │                                        BuildDependencyReader with ShippingScopes     (pure)
+   │  └─ data/                                 FileReading, NestedArchive, DependencyReading
    ├─ impl/completing/  step C: names, licenses ChecksumNamer, LicenseFiller                 (I/O through ports)
    ├─ impl/             shared by the steps    BuildLocator (I/O), LibraryTable, Ownership   (pure)
    ├─ impl/port/        BuildRecords, ArtifactStore, BinaryScanner, LicenseDatabase, ScanPorts (one file each)
@@ -393,6 +395,8 @@ Kept because the prototype's results are the baseline; each may be revisited aft
 - `PackageDependencyTest` reads the sources' imports and fails on a crossing; only `impl/adapter` may import the clients.
 - The ports are one file per interface with their data in `port/data`; the adapters are grouped by system, not by "implementation" and "helper", because each helper serves exactly one system.
 - Listing follows the same pattern: the step's owner, its second route and `ConventionBuilds` on top, route 1's pure decisions in `listing/candidate`, the step's data in `listing/data`. Reading may import `listing.data` only.
+- Reading too: `FileContentReader` and its first decision `FileStatusJudge` on top, the two build sources each with its helper in `reading/source`, the step's data in `reading/data`.
+- Rejected: one interface for `FileContentReader`, `SbomReader` and `BuildDependencyReader`. They share the name `read` and nothing else: different inputs, different results, and no caller can swap one for another (Decision 2).
 - Rejected: a Gradle module per step. The steps share the ports and one table; three more build files would buy what one test already holds.
 - Rejected: an architecture-test library for five rules.
 

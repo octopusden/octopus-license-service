@@ -1,4 +1,4 @@
-package org.octopusden.octopus.license.inventory.impl.reading
+package org.octopusden.octopus.license.inventory.impl.reading.source
 
 import org.octopusden.octopus.license.inventory.impl.port.ArtifactStore
 import org.octopusden.octopus.license.inventory.impl.port.data.BuildRecord

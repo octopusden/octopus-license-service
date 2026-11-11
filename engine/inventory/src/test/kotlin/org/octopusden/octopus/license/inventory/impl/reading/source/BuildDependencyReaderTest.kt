@@ -1,4 +1,4 @@
-package org.octopusden.octopus.license.inventory.impl.reading
+package org.octopusden.octopus.license.inventory.impl.reading.source
 
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.DisplayName
@@ -13,6 +13,7 @@ import org.octopusden.octopus.license.inventory.impl.builtFile
 import org.octopusden.octopus.license.inventory.impl.dependency
 import org.octopusden.octopus.license.inventory.impl.module
 import org.octopusden.octopus.license.inventory.impl.port.data.BuildDependency
+import org.octopusden.octopus.license.inventory.impl.reading.data.NestedArchive
 import org.octopusden.octopus.license.inventory.impl.stored
 import org.octopusden.octopus.license.inventory.model.Finding
 import org.octopusden.octopus.license.inventory.model.FindingCode.LOCAL_FILE_DEPENDENCY
