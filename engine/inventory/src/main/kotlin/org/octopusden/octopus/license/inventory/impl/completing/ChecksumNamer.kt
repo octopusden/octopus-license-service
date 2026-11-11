@@ -7,8 +7,8 @@ import org.octopusden.octopus.license.inventory.model.PackageId
 
 /**
  * Names the files Xray knew only by checksum (D8). A renamed copy of a Maven Central jar still sits
- * in a remote cache under its coordinates; that copy names it. Our own files are left as they are:
- * evaluation calls them internal.
+ * in a remote cache under its coordinates; that copy names it. Our own files are left as they are,
+ * and a copy in one of our repositories is recorded, so the table marks the file ours.
  */
 internal class ChecksumNamer(
     private val store: ArtifactStore,
@@ -18,7 +18,10 @@ internal class ChecksumNamer(
         table.ids.filterIsInstance<PackageId.ChecksumOnly>().forEach { unnamed ->
             if (ownership.isInternalFileName(unnamed.fileName)) return@forEach
             val copies = store.bySha256(unnamed.sha256)
-            if (copies.any { ownership.isOwnRepository(it.repo) }) return@forEach
+            if (copies.any { ownership.isOwnRepository(it.repo) }) {
+                table.recordCopyInOwnRepository(unnamed.sha256)
+                return@forEach
+            }
             copies
                 .firstNotNullOfOrNull { copy ->
                     val parts = copy.path.split('/')

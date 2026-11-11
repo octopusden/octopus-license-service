@@ -41,7 +41,7 @@ class FileContentReaderTest {
     private val records = FakeBuildRecords()
     private val store = FakeArtifactStore()
     private val scanner = FakeBinaryScanner()
-    private val table = LibraryTable()
+    private val table = LibraryTable(Ownership(OWNERSHIP))
     private val reader =
         FileContentReader(scanner, store, BuildLocator(records), BuildDependencyReader(Ownership(OWNERSHIP)), SbomReader(store))
 
@@ -84,7 +84,8 @@ class FileContentReaderTest {
         id: String,
         licenses: Set<String> = emptySet(),
         vararg evidence: org.octopusden.octopus.license.inventory.model.Evidence,
-    ) = FoundLibrary(PackageId.parse(id), licenses, evidence.toSet(), setOf(entry))
+        ours: Boolean = false,
+    ) = FoundLibrary(PackageId.parse(id), licenses, evidence.toSet(), setOf(entry), ours)
 
     /** Our own archive `name`, stored at its Maven path, built by its own build that depends on [dependencies]. */
     private fun ownArchive(
@@ -216,7 +217,7 @@ class FileContentReaderTest {
         assertEquals(
             listOf(
                 pkg("pkg:maven/org.apache.commons/commons-text@1.11.0", setOf("Apache-2.0"), BINARY_SCAN, BUILD_RECORD),
-                pkg("pkg:maven/$GROUP/portal-plugins@$BUILD_VERSION", setOf("Unknown"), BINARY_SCAN),
+                pkg("pkg:maven/$GROUP/portal-plugins@$BUILD_VERSION", setOf("Unknown"), BINARY_SCAN, ours = true),
             ),
             table.libraries(),
         )

@@ -1,21 +1,21 @@
 ## 1. The inventory records what is ours (Decision 2)
 
-- [ ] 1.1 Failing tests for `Ownership.isOurs(id, copyInOwnRepository)`, one per scenario of "Each library records whether it is ours":
-  - [ ] 1.1.1 Maven id of an internal group; of another group; group equal to an internal group.
-  - [ ] 1.1.2 Checksum-only file named `{internal group}.…`: ours, `copyInOwnRepository` not called.
-  - [ ] 1.1.3 Checksum-only file with a copy in an own repository (prefix and `local` ending); with a copy only in `…-cache`; with a copy in `rnd-releases` (no `local` ending).
-  - [ ] 1.1.4 `npm`, `pypi`, `Unrecognized`: never ours, `copyInOwnRepository` not called.
-- [ ] 1.2 Failing tests for `ChecksumNamer` and `LibraryTable`:
-  - [ ] 1.2.1 A checksum-only file with a copy in our repository stays unnamed and its row is ours.
-  - [ ] 1.2.2 A checksum-only file renamed to Maven coordinates of a third-party group is not ours; of an internal group, ours.
-  - [ ] 1.2.3 `libraries()` gives `ours` for Maven rows by group, without asking the store.
-  - [ ] 1.2.4 The scanner over in-memory fakes: the worked example's ours and not-ours rows.
-- [ ] 1.3 Implement:
-  - [ ] 1.3.1 `model/FoundLibrary.kt` — `ours: Boolean`.
-  - [ ] 1.3.2 `impl/shared/Ownership.kt` — `isOurs(id, copyInOwnRepository)`; the three existing checks stay its building blocks.
-  - [ ] 1.3.3 `impl/completing/ChecksumNamer.kt` — records the own-repository answer in the table instead of discarding it.
-  - [ ] 1.3.4 `impl/shared/LibraryTable.kt` — keeps the recorded answer per row; `libraries(ownership)` fills `ours`.
-- [ ] 1.4 Confirm: `:license-inventory:test` green, `PackageDependencyTest` unchanged and green; the inventory's parity view ignores `ours` (the prototype has no such column before stage 11).
+- [x] 1.1 Failing tests for `Ownership.isOurs(id, copyInOwnRepository)`, one per scenario of "Each library records whether it is ours":
+  - [x] 1.1.1 Maven id of an internal group; of another group; group equal to an internal group.
+  - [x] 1.1.2 Checksum-only file named `{internal group}.…`: ours, `copyInOwnRepository` not called.
+  - [x] 1.1.3 Checksum-only file with a copy in an own repository (prefix and `local` ending); with a copy only in `…-cache`; with a copy in `rnd-releases` (no `local` ending).
+  - [x] 1.1.4 `npm`, `pypi`, `Unrecognized`: never ours, `copyInOwnRepository` not called.
+- [x] 1.2 Failing tests for `ChecksumNamer` and `LibraryTable`:
+  - [x] 1.2.1 A checksum-only file with a copy in our repository stays unnamed and its row is ours.
+  - [x] 1.2.2 A checksum-only file renamed to Maven coordinates of a third-party group is not ours; of an internal group, ours.
+  - [x] 1.2.3 `libraries()` gives `ours` for Maven rows by group, without asking the store.
+  - [x] 1.2.4 The scanner over in-memory fakes: the worked example's ours and not-ours rows (`portal-plugins` ours, the rest not).
+- [x] 1.3 Implement:
+  - [x] 1.3.1 `model/FoundLibrary.kt` — `ours: Boolean`.
+  - [x] 1.3.2 `impl/shared/Ownership.kt` — `isOurs(id, copyInOwnRepository)`; the three existing checks stay its building blocks.
+  - [x] 1.3.3 `impl/completing/ChecksumNamer.kt` — records the own-repository answer in the table instead of discarding it.
+  - [x] 1.3.4 `impl/shared/LibraryTable.kt` — keeps the recorded checksums; `libraries()` fills `ours` through `Ownership.isOurs`. The table takes `Ownership` in its constructor rather than as a `libraries` argument: eight constructions against 24 calls.
+- [x] 1.4 Confirm: `:license-inventory:test` green, `PackageDependencyTest` unchanged and green; the inventory's parity view ignores `ours` (the prototype has no such column before stage 11). `:license-inventory:test` 201 green (8 new).
 
 ## 2. The `license-evaluation` module and its model (Decisions 1, 12)
 
