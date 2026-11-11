@@ -19,35 +19,35 @@
 
 ## 2. The `license-evaluation` module and its model (Decisions 1, 12)
 
-- [ ] 2.1 `settings.gradle.kts`: `:license-evaluation` at `engine/evaluation`; build file with `:license-inventory`, `:license-policy-registry`, JUnit. Confirm with `dependencies`: no Spring, no `:core`, no client on the compile classpath.
-- [ ] 2.2 Model: `LicenseAssessment`, `AssessedLibrary`, `LibraryVerdict`, `SkippedPackages`; `LicenseEvaluator` signature.
-- [ ] 2.3 `PackageDependencyTest`: `model` imports nothing of `impl`; no import of a client, Spring or `core`.
+- [x] 2.1 `settings.gradle.kts`: `:license-evaluation` at `engine/evaluation`; build file with `:license-inventory`, `:license-policy-registry`, JUnit. Confirm with `dependencies`: no Spring, no `:core`, no client on the compile classpath. Confirmed: `:license-inventory`, `:license-target-registry`, `:license-policy-registry` and the Kotlin stdlib only.
+- [x] 2.2 Model: `LicenseAssessment`, `AssessedLibrary`, `LibraryVerdict`, `SkippedPackages`; `LicenseEvaluator` signature.
+- [x] 2.3 `PackageDependencyTest`: `model` imports nothing of `impl`; no import of a client, Spring, `core`, `java.io`/`java.net`, or the inventory's and the policy's `impl`.
 
 ## 3. Pure decisions (Decisions 3, 4)
 
-- [ ] 3.1 Failing tests for `PackageScope`, one per scenario:
-  - [ ] 3.1.1 `docker` dropped.
-  - [ ] 3.1.2 `rpm`, `deb`, `alpine` skipped as OS packages.
-  - [ ] 3.1.3 `pypi` only in images skipped; in an image and a zip counted; only in a zip counted.
-  - [ ] 3.1.4 `maven`, `npm`, `generic`, `golang`, `pub`: counted.
-- [ ] 3.2 Failing tests for `LibraryJudge`, one per scenario:
-  - [ ] 3.2.1 Ours: `INTERNAL`, even when checksum-only; overridden still reported.
-  - [ ] 3.2.2 `ChecksumOnly` not ours, with and without licenses: `UNIDENTIFIED`.
-  - [ ] 3.2.3 `Unrecognized` `generic://…` not ours: `UNIDENTIFIED`; `pkg:generic/…`: judged.
-  - [ ] 3.2.4 Synonym, override (Maven only), no license, not allowed: the policy's verdict, canonical names, overridden.
-  - [ ] 3.2.5 Non-Maven id: judged without coordinates.
-- [ ] 3.3 Implement `impl/PackageScope.kt` and `impl/LibraryJudge.kt`.
-- [ ] 3.4 Confirm tests green.
+- [x] 3.1 Failing tests for `PackageScope`, one per scenario:
+  - [x] 3.1.1 `docker` dropped.
+  - [x] 3.1.2 `rpm`, `deb`, `alpine` skipped as OS packages.
+  - [x] 3.1.3 `pypi` only in images skipped; in an image and a zip counted; only in a zip counted.
+  - [x] 3.1.4 `maven`, `npm`, `generic`, `golang`, `pub`: counted.
+- [x] 3.2 Failing tests for `LibraryJudge`, one per scenario:
+  - [x] 3.2.1 Ours: `INTERNAL`, even when checksum-only; overridden still reported.
+  - [x] 3.2.2 `ChecksumOnly` not ours, with and without licenses: `UNIDENTIFIED`.
+  - [x] 3.2.3 `Unrecognized` `generic://…` not ours: `UNIDENTIFIED`; `pkg:generic/…`: judged.
+  - [x] 3.2.4 Synonym, override (Maven only), no license, not allowed: the policy's verdict, canonical names, overridden.
+  - [x] 3.2.5 Non-Maven id: judged without coordinates.
+- [x] 3.3 Implement `impl/PackageScope.kt` and `impl/LibraryJudge.kt`.
+- [x] 3.4 Confirm tests green. Tests build the policy with the real `LicenseRegistryParser`, so the judge is checked against the policy's own rules, not a stub.
 
 ## 4. `LicenseEvaluator` (Decisions 5, 8)
 
-- [ ] 4.1 Failing tests:
-  - [ ] 4.1.1 The worked example, whole: verdicts, licenses, overridden, totals, per-file counts.
-  - [ ] 4.1.2 Order kept; inventory kept unchanged.
-  - [ ] 4.1.3 OS package in two files: total 1, each file 1.
-  - [ ] 4.1.4 No library: empty assessment, zero totals, no per-file entry.
-- [ ] 4.2 Implement `LicenseEvaluator.kt`.
-- [ ] 4.3 Confirm `:license-evaluation:test` green.
+- [x] 4.1 Failing tests:
+  - [x] 4.1.1 The worked example, whole: verdicts, licenses, overridden, totals, per-file counts.
+  - [x] 4.1.2 Order kept; inventory kept unchanged.
+  - [x] 4.1.3 OS package in two files: total 1, each file 1.
+  - [x] 4.1.4 No library: empty assessment, zero totals, no per-file entry.
+- [x] 4.2 Implement `LicenseEvaluator.kt`.
+- [x] 4.3 Confirm `:license-evaluation:test` green: 22; `ktlintCheck` and `detekt` clean.
 
 ## 5. The server (Decisions 9, 10)
 
