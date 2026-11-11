@@ -60,20 +60,20 @@ class PackageDependencyTest {
     @Test
     @DisplayName("listing knows no later step; reading takes listing's data and nothing of completing; completing knows neither")
     fun stepsPointOneWay() {
-        val listingButItsData =
-            steps("listing.candidate", "listing.ReleasedFileLister", "listing.DeclaredLeftoverLocator", "listing.ConventionBuilds")
+        val readingTakesOfListing = "$base.impl.listing.data."
 
         assertEquals(
             emptyList<String>(),
             forbiddenImports(sources("impl/listing"), steps("reading", "completing", "adapter") + clients) +
-                forbiddenImports(sources("impl/reading"), steps("completing", "adapter") + listingButItsData + clients) +
+                forbiddenImports(sources("impl/reading"), steps("listing", "completing", "adapter") + clients)
+                    .filterNot { readingTakesOfListing in it } +
                 forbiddenImports(sources("impl/completing"), steps("listing", "reading", "adapter") + clients),
         )
     }
 
     @Test
-    @DisplayName("the adapters know the ports and the model, never a step")
+    @DisplayName("the adapters know the ports and the model, never a step or what the steps share")
     fun adapters() {
-        assertEquals(emptyList<String>(), forbiddenImports(sources("impl/adapter"), steps("listing", "reading", "completing")))
+        assertEquals(emptyList<String>(), forbiddenImports(sources("impl/adapter"), steps("shared", "listing", "reading", "completing")))
     }
 }

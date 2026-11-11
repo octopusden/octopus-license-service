@@ -13,8 +13,9 @@ internal data class ScanPorts(
 ) {
     /**
      * The same ports, each answer kept for the rest of one scan: the same build, file and Xray scan
-     * are asked for many times within a report, and never across reports. Not thread-safe; one scan
-     * runs on one thread.
+     * are asked for many times within a report, and never across reports. An answer of nothing
+     * found is kept as well: asked again, Xray could have finished a scan the file was already judged
+     * without. Not thread-safe; one scan runs on one thread.
      */
     fun memoized() =
         ScanPorts(
@@ -26,9 +27,9 @@ internal data class ScanPorts(
                     override fun find(
                         name: String,
                         number: String,
-                    ) = builds.getOrPut(name to number) { records.find(name, number) }
+                    ) = builds.once(name to number) { records.find(name, number) }
 
-                    override fun findByPublishedSha1(sha1: String) = bySha1.getOrPut(sha1) { records.findByPublishedSha1(sha1) }
+                    override fun findByPublishedSha1(sha1: String) = bySha1.once(sha1) { records.findByPublishedSha1(sha1) }
                 },
             store =
                 object : ArtifactStore {
@@ -36,14 +37,14 @@ internal data class ScanPorts(
                     private val byPath = HashMap<Pair<String, String>, StoredFile?>()
                     private val bySha256 = HashMap<String, List<StoredFile>>()
 
-                    override fun bySha1(sha1: String) = bySha1.getOrPut(sha1) { store.bySha1(sha1) }
+                    override fun bySha1(sha1: String) = bySha1.once(sha1) { store.bySha1(sha1) }
 
                     override fun byPath(
                         path: String,
                         name: String,
-                    ) = byPath.getOrPut(path to name) { store.byPath(path, name) }
+                    ) = byPath.once(path to name) { store.byPath(path, name) }
 
-                    override fun bySha256(sha256: String) = bySha256.getOrPut(sha256) { store.bySha256(sha256) }
+                    override fun bySha256(sha256: String) = bySha256.once(sha256) { store.bySha256(sha256) }
 
                     override fun read(file: StoredFile) = store.read(file)
                 },
@@ -51,8 +52,17 @@ internal data class ScanPorts(
                 object : BinaryScanner {
                     private val scans = HashMap<String, Map<PackageId, Set<String>>?>()
 
-                    override fun scan(file: StoredFile) = scans.getOrPut(file.fullPath) { scanner.scan(file) }
+                    override fun scan(file: StoredFile) = scans.once(file.fullPath) { scanner.scan(file) }
                 },
             database = database,
         )
+}
+
+private fun <K, V> MutableMap<K, V>.once(
+    key: K,
+    ask: () -> V,
+): V {
+    if (!containsKey(key)) put(key, ask())
+    @Suppress("UNCHECKED_CAST")
+    return get(key) as V
 }

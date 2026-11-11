@@ -12,10 +12,12 @@ import org.octopusden.octopus.license.inventory.impl.VERSION
 import org.octopusden.octopus.license.inventory.impl.build
 import org.octopusden.octopus.license.inventory.impl.builtFile
 import org.octopusden.octopus.license.inventory.impl.module
+import org.octopusden.octopus.license.inventory.impl.port.data.BuildRecord
 import org.octopusden.octopus.license.inventory.impl.shared.BuildLocator
 import org.octopusden.octopus.license.inventory.impl.stored
 import org.octopusden.octopus.license.inventory.impl.target
 import org.octopusden.octopus.license.inventory.model.BuildLookup
+import org.octopusden.octopus.license.inventory.model.BuildRef
 import org.octopusden.octopus.license.inventory.model.FileKind
 import org.octopusden.octopus.license.inventory.model.FileStatus
 import org.octopusden.octopus.license.inventory.model.Finding
@@ -191,12 +193,14 @@ class ReleasedFileListerTest {
         store.add(tar)
         records.add(build(name = "shared-native-build", number = "7.1.3"))
 
-        val file = lister.list(target(listOf(MavenArtifact("org.example.lib", "native-lib", "tar.gz")))).files.single()
+        val listing = lister.list(target(listOf(MavenArtifact("org.example.lib", "native-lib", "tar.gz"))))
+        val file = listing.files.single()
 
+        assertEquals(emptyList<BuildRecord>(), listing.builds)
         assertEquals("org.example.lib:native-lib:tar.gz", file.entry)
         assertEquals(setOf(DECLARED), file.selectedBy)
         assertEquals(tar, file.stored)
-        assertEquals("shared-native-build", file.build?.ref?.name)
+        assertEquals(BuildRef("shared-native-build", "7.1.3"), file.build?.ref)
         assertEquals(BuildLookup.PROPERTIES, file.buildFoundBy)
         assertEquals(PackageId.parse("pkg:maven/org.example.lib/native-lib@$VERSION"), file.ownId)
         assertEquals(

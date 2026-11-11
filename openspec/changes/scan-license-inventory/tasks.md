@@ -27,7 +27,7 @@
   - [x] 3.2.1 `pkg:maven/g/a@v`, `pkg:npm/@scope/name@1.0`, `pkg:golang/golang.org/x/net@0.20.0` round-trip.
   - [x] 3.2.2 `generic://sha256:<64 hex>/name.jar` is `ChecksumOnly`.
   - [x] 3.2.3 A string that would not render back the same, and an unknown scheme, are `Unrecognized`, verbatim. `PackageIdTest` 14 green.
-- [x] 3.3 Model: `LicenseInventory`, `ReleasedFile`, `FileKind`, `FileStatus`, `SelectionReason`, `BuildRef`, `BuildLookup`, `FoundPackage`, `PackageId`, `Evidence`, `Finding`, `FindingCode`, `OwnershipRules`; `LicenseInventoryScanner`; `InventorySourceUnavailableException`.
+- [x] 3.3 Model: `LicenseInventory`, `ReleasedFile`, `FileKind`, `FileStatus`, `SelectionReason`, `BuildRef`, `BuildLookup`, `FoundLibrary`, `PackageId`, `MavenCoordinates`, `Evidence`, `Finding`, `FindingCode`, `OwnershipRules`; `LicenseInventoryScanner`; `InventorySourceUnavailableException`.
 
 ## 4. Pure decisions
 
@@ -54,7 +54,7 @@
 - [x] 5.1 Ports `BuildRecords`, `ArtifactStore`, `BinaryScanner`, `LicenseDatabase` and their data (`BuildRecord`, `BuildModule`, `BuiltFile`, `BuildDependency`, `StoredFile`); in-memory fakes in the test source set.
 - [x] 5.2 Failing tests with fakes, one per spec scenario of the listing requirements, then `ReleasedFileLister` and `BuildLocator`.
 - [x] 5.3 Failing tests with fakes, one per spec scenario of "A read file's packages…", "Only shipped dependencies…" and "Our own archives…", then `FileContentReader` and `SbomReader`.
-- [x] 5.4 Failing tests with fakes for checksum naming and license fill (batches of 100, a failed batch), then `ChecksumNamer` and `LicenseFiller`.
+- [x] 5.4 Failing tests with fakes for checksum naming and license fill (id order, nothing to ask), then `ChecksumNamer` and `LicenseFiller`.
 - [x] 5.5 `JfrogLicenseInventoryScanner`: the worked example of the design end to end with fakes; `NO_DISTRIBUTION`; findings distinct; memoized ports ask each build, file and scan once per report.
 - [x] 5.6 (added on review) Finding subjects and details: one test per row of the table in Decision 3; listing order of Decision 5; the four extra odd rules of Decision 10 (8–11).
 - [x] 5.7 (added on review) The declared-leftover route is its own class, `DeclaredLeftoverLocator`: kept inside `ReleasedFileLister` it took the lister past detekt's function limit, and it is a second route with its own rules.
@@ -67,12 +67,12 @@
 
 ## 6. Adapters (Decisions 12, 13)
 
-- [x] 6.1 Failing tests against a stub HTTP server, with the fixtures of 1.1:
+- [x] 6.1 Failing tests against a stub HTTP server, its answers written in the tests after the fixtures of 1.1:
   - [x] 6.1.1 `ArtifactoryBuildRecords`: found; missing and `500` are no build; builds by sha1.
   - [x] 6.1.2 `ArtifactoryArtifactStore`: by sha1, path and sha256; preferred copy; `503` is `InventorySourceUnavailableException`.
-  - [x] 6.1.3 `XrayBinaryScanner`: pending then done; not supported and not scanned are not waited for; still pending after the budget reads the summary anyway, and the budget is shared by the scan's files; an error for the path is not indexed; reads `details.sca`, not `overall`; a package listed under no license is not found (D10.10).
+  - [x] 6.1.3 `XrayBinaryScanner`: pending then done; not supported and not scanned are not waited for; still pending after the budget reads the summary anyway, and the budget is shared by the scan's files; an error for the path is not indexed; reads `details.sca`, and `overall` only without it; a package listed under no license is not found (D10.10).
   - [x] 6.1.4 `XrayLicenseDatabase`: batches; scheme-less ids in the answer; a failed batch.
-- [x] 6.2 Implement the four adapters and the public `JfrogLicenseInventoryScanner(url, token, ownership, xrayWait)` constructor.
+- [x] 6.2 Implement the four adapters and the public `JfrogLicenseInventoryScanner(url, token, ownership, xrayWait, xrayPoll)` constructor.
 - [x] 6.3 (added on review) The status only decides whether to wait; the summary is always read, as the prototype reads it. A status other than `DONE` alone no longer means "not indexed", which could have lost a list the prototype read (Decision 12, spec updated).
 - [x] 6.4 (added on review) `JfrogCalls` retries three times, 1 s then 2 s apart, as the prototype did; the Artifactory client reports every error but `404` as a server error, so a client error is retried too (Decision 13).
 - [x] 6.5 (added on review) Ports are built per scan (`JfrogPorts.create`), so the Xray wait budget is one report's.
@@ -105,9 +105,18 @@
 - [x] 8a.5.4 `BuildLocator`, `LibraryTable` and `Ownership` sit in `impl/shared`; `impl` holds the scanner alone. `PackageDependencyTest` checks the folder. Files moved only.
 - [x] 8a.6 Confirm: `:license-inventory:test` 191 green; `./gradlew build qualityCheck` green.
 
+## 8b. Second review against the prototype and the docs
+
+- [x] 8b.1 `ScanPorts.memoized()` keeps an answer of nothing found, as the prototype's cache does: a missing build, a file not found and a file Xray has not indexed are asked once per scan. Before, a not indexed file was asked twice, and Xray finishing in between gave it packages after it was judged `NOT_IN_XRAY`. `ScanPortsTest`.
+- [x] 8b.2 Tests for what the spec says and nothing tested: `NOT_SCANNED` is not waited for; a leftover with no convention build lists no build and keeps its build's number.
+- [x] 8b.3 `PackageDependencyTest`: reading may import `listing.data` and nothing else under `listing`, by folder rather than by class name; the adapters import nothing of `shared`.
+- [x] 8b.4 Docs brought in line with the code: proposal (images, depth, the wait), spec (manifest names, `BUILD_NAME_DIFFERS`, licenses of two sources), design (worked example count, skeleton, Decisions 10 to 14, parity view, risks), `README.md`, `docs/architecture.md`.
+- [x] 8b.5 Recorded, not changed: four more odd rules (Decision 10.13 to 10.16), four more differences (Decision 11), and the clients' default call timeout as a risk.
+- [x] 8b.6 Confirm: `:license-inventory:test` 193 green; `./gradlew build qualityCheck` green.
+
 ## 9. Finalization
 
 - [x] 9.1 `./gradlew build` and `qualityCheck` green.
   - [x] 9.1.1 (added on review) Kover ran every `Test` task for its report, `parityTest` included, which fails without the real systems; `disabledForTestTasks` takes it out.
 - [x] 9.2 Out of scope holds: grep shows no `LicensePolicy`, verdict or trust code in `:license-inventory`; `server` is unchanged. Checked: no match in `engine/inventory/src/main`; `git diff` against `license-registry-verdicts` shows no change under `server`, `runner`, `client` or `core` main sources.
-- [x] 9.3 Every risk in the design still stands or says why not; deferred work has a `TD-NNN`: TD-002, revisiting the rules of Decision 10 after parity. The clients' release is task 1.4, still open.
+- [x] 9.3 Every risk in the design still stands or says why not; deferred work has a `TD-NNN`: TD-002, revisiting the rules of Decision 10 after parity. The clients' release is task 1.4, done.

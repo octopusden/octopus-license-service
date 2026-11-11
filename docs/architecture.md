@@ -122,7 +122,7 @@ What each part does on a request:
 
 - **`engine/` has its own model.** It never uses the `core` DTOs. Otherwise every wire change would ripple into the algorithm, and the algorithm would see only what callers are allowed to see.
 - **`engine/` reads the external systems; the server maps.** The server passes the license target into the scan, and maps the scan's result into `core` types and the zip.
-- **The `LicenseReportGenerator` implementation is that mapping.** Today it returns an empty `core` summary directly, because no scan exists yet.
+- **The `LicenseReportGenerator` implementation is that mapping.** Today it returns an empty `core` summary directly, because the scan is not called yet.
 
 The service stores nothing but the current license policy. Each result records its inputs (license registry commit, generation time, service version), so a difference between two results for one version can be explained later.
 

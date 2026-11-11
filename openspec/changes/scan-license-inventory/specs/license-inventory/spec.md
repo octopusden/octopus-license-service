@@ -67,9 +67,9 @@ The service SHALL list each non-docker file of a convention build as `group:arti
 - **WHEN** no stored file has the published file's sha1
 - **THEN** the file is `NOT_FOUND` with finding `ARTIFACT_NOT_FOUND`
 
-### Requirement: Every image a docker build published is listed and read
+### Requirement: Every image a convention build published is listed and read
 
-The service SHALL list each `manifest.json`, other than `list.manifest.json`, of a docker module or at a path ending in `manifest.json`, as the image `image:tag` given by its folder, and SHALL select it as `DOCKER_BUILD` whether or not it is declared. It SHALL mark the image declared when the image name equals a declared image's name. Other files of a docker module SHALL NOT be listed.
+The service SHALL list each file whose name ends in `manifest.json`, other than `list.manifest.json`, of a docker module or at a path ending in `manifest.json`, as the image `image:tag` given by its folder, and SHALL select it as `DOCKER_BUILD` whether or not it is declared. It SHALL mark the image declared when the image name equals a declared image's name. Other files of a docker module SHALL NOT be listed.
 
 #### Scenario: Image not in the docker field
 
@@ -88,7 +88,7 @@ The service SHALL list each `manifest.json`, other than `list.manifest.json`, of
 
 ### Requirement: Declared entries no convention build produced are looked up directly
 
-The service SHALL look up each declared Maven artifact and image not matched by a convention file: a Maven artifact at `g/a/v/a-v[-classifier].ext` for each artifact version in order, an image at its tag or, without one, at each artifact version. When several stored copies exist it SHALL take a repository whose name contains `release` and ends with `local` first, then any whose name ends with `local`, then any other, each group by repository name. It SHALL find the file's build from its `build.name` and `build.number` properties, then from a build that published its sha1, and SHALL add finding `BUILD_NAME_DIFFERS` when that build is not a convention build.
+The service SHALL look up each declared Maven artifact and image not matched by a convention file: a Maven artifact at `g/a/v/a-v[-classifier].ext` for each artifact version in order, an image at its tag or, without one, at each artifact version. When several stored copies exist it SHALL take a repository whose name contains `release` and ends with `local` first, then any whose name ends with `local`, then any other, each group by repository name. It SHALL find the file's build from its `build.name` and `build.number` properties, then from a build that published its sha1, and SHALL add finding `BUILD_NAME_DIFFERS` when that build's name is not a convention build name.
 
 #### Scenario: Built by another build
 
@@ -185,7 +185,7 @@ For a `READ` file the service SHALL take, in order: the packages Xray found in i
 #### Scenario: Same library from two sources
 
 - **WHEN** Xray and the build both report `spring-core`
-- **THEN** one package is found with evidence `BINARY_SCAN` and `BUILD_RECORD`, and the licenses of both
+- **THEN** one package is found with evidence `BINARY_SCAN` and `BUILD_RECORD`, and Xray's licenses, since a build record names none
 
 #### Scenario: SBOM that cannot be read
 

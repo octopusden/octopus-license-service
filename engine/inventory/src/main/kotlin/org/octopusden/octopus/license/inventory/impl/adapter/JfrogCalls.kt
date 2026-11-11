@@ -10,7 +10,8 @@ import java.time.Duration
 /**
  * One call to Artifactory or Xray, tried three times with 1 s then 2 s between, as the prototype
  * tried each call, when the system did not answer or answered a server error (D13). Any failure
- * left is [InventorySourceUnavailableException]; a client error is not retried.
+ * left is [InventorySourceUnavailableException]. A client error is not retried, except from
+ * Artifactory, whose client reports every error but 404 as a server error.
  */
 internal class JfrogCalls(
     private val sleep: (Duration) -> Unit = { Thread.sleep(it) },

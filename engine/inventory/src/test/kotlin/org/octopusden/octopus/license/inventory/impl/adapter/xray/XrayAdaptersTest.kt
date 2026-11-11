@@ -95,6 +95,16 @@ class XrayAdaptersTest {
     }
 
     @Test
+    @DisplayName("not scanned: no wait, the summary is read as it is")
+    fun notScanned() {
+        jfrog.answer(STATUS, status("NOT_SCANNED"))
+        jfrog.answer(SUMMARY, summary)
+
+        assertEquals(2, scanner().scan(zip)?.size)
+        assertEquals(emptyList<Duration>(), sleeps)
+    }
+
+    @Test
     @DisplayName("a status Xray answers with a client error does not stop the scan: the summary decides")
     fun statusClientError() {
         jfrog.answer(STATUS, 400 to """{"error":"Resource does not exist in Artifactory"}""")
