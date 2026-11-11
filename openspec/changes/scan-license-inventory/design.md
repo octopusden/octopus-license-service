@@ -82,7 +82,7 @@ LicenseInventoryScanner (interface)            ← server
    │  │                                        BuildDependencyReader with ShippingScopes     (pure)
    │  └─ data/                                 FileReading, NestedArchive, DependencyReading
    ├─ impl/completing/  step C: names, licenses ChecksumNamer, LicenseFiller                 (I/O through ports)
-   ├─ impl/             shared by the steps    BuildLocator (I/O), LibraryTable, Ownership   (pure)
+   ├─ impl/shared/      used by two steps      BuildLocator (I/O), LibraryTable, Ownership   (pure)
    ├─ impl/port/        BuildRecords, ArtifactStore, BinaryScanner, LicenseDatabase, ScanPorts (one file each)
    │  └─ data/          BuildRecord, BuildModule, BuiltFile, BuildDependency, StoredFile     (what the ports answer in)
    └─ impl/adapter/     JfrogCalls, JfrogPorts                                               (used by both systems)
@@ -96,7 +96,7 @@ Who may import whom (Decision 17, held by `PackageDependencyTest`):
 | --- | --- | --- |
 | `model` | nothing of `impl` | the public result |
 | `impl/port`, `impl/port/data` | `model` | the four interfaces; in `data`, the types they answer in. `internal`: seen by the whole module, never by the server or evaluation, which is why they are not in `model` |
-| `impl` (shared) | `model`, `port` | `BuildLocator`, `LibraryTable`, `Ownership` |
+| `impl/shared` | `model`, `port` | `BuildLocator`, `LibraryTable`, `Ownership` |
 | `impl/listing` | `model`, `port`, shared | `Listing` of `ListedFile` |
 | `impl/reading` | `model`, `port`, shared, `listing.data` (never a listing class) | `FileReading`; fills the `LibraryTable` |
 | `impl/completing` | `model`, `port`, shared | renames and licenses in the `LibraryTable` |
@@ -397,6 +397,7 @@ Kept because the prototype's results are the baseline; each may be revisited aft
 - Listing follows the same pattern: the step's owner, its second route and `ConventionBuilds` on top, route 1's pure decisions in `listing/candidate`, the step's data in `listing/data`. Reading may import `listing.data` only.
 - Reading too: `FileContentReader` and its first decision `FileStatusJudge` on top, the two build sources each with its helper in `reading/source`, the step's data in `reading/data`.
 - Rejected: one interface for `FileContentReader`, `SbomReader` and `BuildDependencyReader`. They share the name `read` and nothing else: different inputs, different results, and no caller can swap one for another (Decision 2).
+- What two steps use has its own folder, `impl/shared`, so `impl` holds the scanner alone and the test checks the folder, not three file names. Rejected: `BuildLocator` in `port` (it is logic over a port), `Ownership` in `model` (internal logic over the public rules), `LibraryTable` in `completing` (reading would import a step again).
 - Rejected: a Gradle module per step. The steps share the ports and one table; three more build files would buy what one test already holds.
 - Rejected: an architecture-test library for five rules.
 

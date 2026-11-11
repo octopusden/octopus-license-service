@@ -1,8 +1,13 @@
-package org.octopusden.octopus.license.inventory.impl
+package org.octopusden.octopus.license.inventory.impl.shared
 
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
+import org.octopusden.octopus.license.inventory.impl.FakeBuildRecords
+import org.octopusden.octopus.license.inventory.impl.build
+import org.octopusden.octopus.license.inventory.impl.builtFile
+import org.octopusden.octopus.license.inventory.impl.module
+import org.octopusden.octopus.license.inventory.impl.stored
 import org.octopusden.octopus.license.inventory.model.BuildLookup
 
 class BuildLocatorTest {

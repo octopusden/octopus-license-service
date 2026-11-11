@@ -4,9 +4,9 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.octopusden.octopus.license.inventory.impl.FakeArtifactStore
-import org.octopusden.octopus.license.inventory.impl.LibraryTable
 import org.octopusden.octopus.license.inventory.impl.OWNERSHIP
-import org.octopusden.octopus.license.inventory.impl.Ownership
+import org.octopusden.octopus.license.inventory.impl.shared.LibraryTable
+import org.octopusden.octopus.license.inventory.impl.shared.Ownership
 import org.octopusden.octopus.license.inventory.impl.stored
 import org.octopusden.octopus.license.inventory.model.Evidence.BINARY_SCAN
 import org.octopusden.octopus.license.inventory.model.Evidence.CHECKSUM_MATCH

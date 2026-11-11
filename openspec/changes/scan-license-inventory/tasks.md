@@ -102,6 +102,7 @@
 - [x] 8a.5.1 Ports are one file per interface, their data in `impl/port/data`; adapters are grouped by system in `impl/adapter/artifactory` and `impl/adapter/xray`, with `JfrogCalls` and `JfrogPorts` above both. Files moved only.
 - [x] 8a.5.2 Listing is grouped the same way: `listing/candidate` for route 1's pure decisions, `listing/data` for `Candidate`, `Selection`, `ListedFile`, `Listing`, one file each. `PackageDependencyTest` lets reading import `listing.data` only. Files moved only.
 - [x] 8a.5.3 Reading is grouped the same way: `reading/source` for the SBOM and build-info sources with their helpers, `reading/data` for `FileReading`, `NestedArchive`, `DependencyReading`, one file each. Files moved only.
+- [x] 8a.5.4 `BuildLocator`, `LibraryTable` and `Ownership` sit in `impl/shared`; `impl` holds the scanner alone. `PackageDependencyTest` checks the folder. Files moved only.
 - [x] 8a.6 Confirm: `:license-inventory:test` 191 green; `./gradlew build qualityCheck` green.
 
 ## 9. Finalization

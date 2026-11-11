@@ -1,8 +1,8 @@
 package org.octopusden.octopus.license.inventory.impl.completing
 
-import org.octopusden.octopus.license.inventory.impl.LibraryTable
-import org.octopusden.octopus.license.inventory.impl.Ownership
 import org.octopusden.octopus.license.inventory.impl.port.ArtifactStore
+import org.octopusden.octopus.license.inventory.impl.shared.LibraryTable
+import org.octopusden.octopus.license.inventory.impl.shared.Ownership
 import org.octopusden.octopus.license.inventory.model.PackageId
 
 /**

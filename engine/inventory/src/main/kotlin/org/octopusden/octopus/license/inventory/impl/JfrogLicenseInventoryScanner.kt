@@ -11,6 +11,9 @@ import org.octopusden.octopus.license.inventory.impl.port.ScanPorts
 import org.octopusden.octopus.license.inventory.impl.reading.FileContentReader
 import org.octopusden.octopus.license.inventory.impl.reading.source.BuildDependencyReader
 import org.octopusden.octopus.license.inventory.impl.reading.source.SbomReader
+import org.octopusden.octopus.license.inventory.impl.shared.BuildLocator
+import org.octopusden.octopus.license.inventory.impl.shared.LibraryTable
+import org.octopusden.octopus.license.inventory.impl.shared.Ownership
 import org.octopusden.octopus.license.inventory.model.Evidence
 import org.octopusden.octopus.license.inventory.model.FileStatus
 import org.octopusden.octopus.license.inventory.model.Finding

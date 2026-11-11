@@ -4,7 +4,7 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.octopusden.octopus.license.inventory.impl.FakeLicenseDatabase
-import org.octopusden.octopus.license.inventory.impl.LibraryTable
+import org.octopusden.octopus.license.inventory.impl.shared.LibraryTable
 import org.octopusden.octopus.license.inventory.model.Evidence.BUILD_RECORD
 import org.octopusden.octopus.license.inventory.model.PackageId
 

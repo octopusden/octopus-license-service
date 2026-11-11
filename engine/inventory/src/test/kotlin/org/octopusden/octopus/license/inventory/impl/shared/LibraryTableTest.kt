@@ -1,4 +1,4 @@
-package org.octopusden.octopus.license.inventory.impl
+package org.octopusden.octopus.license.inventory.impl.shared
 
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.DisplayName

@@ -7,13 +7,13 @@ import org.octopusden.octopus.license.inventory.impl.BUILD_VERSION
 import org.octopusden.octopus.license.inventory.impl.COMPONENT
 import org.octopusden.octopus.license.inventory.impl.GROUP
 import org.octopusden.octopus.license.inventory.impl.OWNERSHIP
-import org.octopusden.octopus.license.inventory.impl.Ownership
 import org.octopusden.octopus.license.inventory.impl.build
 import org.octopusden.octopus.license.inventory.impl.builtFile
 import org.octopusden.octopus.license.inventory.impl.dependency
 import org.octopusden.octopus.license.inventory.impl.module
 import org.octopusden.octopus.license.inventory.impl.port.data.BuildDependency
 import org.octopusden.octopus.license.inventory.impl.reading.data.NestedArchive
+import org.octopusden.octopus.license.inventory.impl.shared.Ownership
 import org.octopusden.octopus.license.inventory.impl.stored
 import org.octopusden.octopus.license.inventory.model.Finding
 import org.octopusden.octopus.license.inventory.model.FindingCode.LOCAL_FILE_DEPENDENCY

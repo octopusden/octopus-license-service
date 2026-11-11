@@ -1,9 +1,10 @@
-package org.octopusden.octopus.license.inventory.impl
+package org.octopusden.octopus.license.inventory.impl.shared
 
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
+import org.octopusden.octopus.license.inventory.impl.OWNERSHIP
 
 class OwnershipTest {
     private val ownership = Ownership(OWNERSHIP)

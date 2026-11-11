@@ -1,11 +1,11 @@
 package org.octopusden.octopus.license.inventory.impl.reading.source
 
-import org.octopusden.octopus.license.inventory.impl.Ownership
 import org.octopusden.octopus.license.inventory.impl.port.data.BuildDependency
 import org.octopusden.octopus.license.inventory.impl.port.data.BuildRecord
 import org.octopusden.octopus.license.inventory.impl.port.data.StoredFile
 import org.octopusden.octopus.license.inventory.impl.reading.data.DependencyReading
 import org.octopusden.octopus.license.inventory.impl.reading.data.NestedArchive
+import org.octopusden.octopus.license.inventory.impl.shared.Ownership
 import org.octopusden.octopus.license.inventory.model.Finding
 import org.octopusden.octopus.license.inventory.model.FindingCode
 import org.octopusden.octopus.license.inventory.model.PackageId

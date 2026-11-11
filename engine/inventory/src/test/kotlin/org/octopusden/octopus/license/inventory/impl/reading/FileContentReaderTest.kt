@@ -4,15 +4,12 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.octopusden.octopus.license.inventory.impl.BUILD_VERSION
-import org.octopusden.octopus.license.inventory.impl.BuildLocator
 import org.octopusden.octopus.license.inventory.impl.COMPONENT
 import org.octopusden.octopus.license.inventory.impl.FakeArtifactStore
 import org.octopusden.octopus.license.inventory.impl.FakeBinaryScanner
 import org.octopusden.octopus.license.inventory.impl.FakeBuildRecords
 import org.octopusden.octopus.license.inventory.impl.GROUP
-import org.octopusden.octopus.license.inventory.impl.LibraryTable
 import org.octopusden.octopus.license.inventory.impl.OWNERSHIP
-import org.octopusden.octopus.license.inventory.impl.Ownership
 import org.octopusden.octopus.license.inventory.impl.build
 import org.octopusden.octopus.license.inventory.impl.builtFile
 import org.octopusden.octopus.license.inventory.impl.dependency
@@ -23,6 +20,9 @@ import org.octopusden.octopus.license.inventory.impl.port.data.BuildRecord
 import org.octopusden.octopus.license.inventory.impl.port.data.StoredFile
 import org.octopusden.octopus.license.inventory.impl.reading.source.BuildDependencyReader
 import org.octopusden.octopus.license.inventory.impl.reading.source.SbomReader
+import org.octopusden.octopus.license.inventory.impl.shared.BuildLocator
+import org.octopusden.octopus.license.inventory.impl.shared.LibraryTable
+import org.octopusden.octopus.license.inventory.impl.shared.Ownership
 import org.octopusden.octopus.license.inventory.impl.stored
 import org.octopusden.octopus.license.inventory.model.BuildLookup
 import org.octopusden.octopus.license.inventory.model.Evidence.BINARY_SCAN

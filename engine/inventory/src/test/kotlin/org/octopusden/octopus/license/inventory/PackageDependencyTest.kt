@@ -42,21 +42,19 @@ class PackageDependencyTest {
     @Test
     @DisplayName("the ports know the model only")
     fun ports() {
-        val shared = listOf("$base.impl.Ownership", "$base.impl.BuildLocator", "$base.impl.LibraryTable")
-
         assertEquals(
             emptyList<String>(),
-            forbiddenImports(sources("impl/port"), steps("listing", "reading", "completing", "adapter") + shared + clients),
+            forbiddenImports(sources("impl/port"), steps("shared", "listing", "reading", "completing", "adapter") + clients),
         )
     }
 
     @Test
     @DisplayName("what the steps share knows no step")
     fun shared() {
-        val shared = sequenceOf("Ownership.kt", "BuildLocator.kt", "LibraryTable.kt").map { File(root, "impl/$it") }
-        require(shared.all { it.isFile }) { "a shared class moved" }
-
-        assertEquals(emptyList<String>(), forbiddenImports(shared, steps("listing", "reading", "completing", "adapter") + clients))
+        assertEquals(
+            emptyList<String>(),
+            forbiddenImports(sources("impl/shared"), steps("listing", "reading", "completing", "adapter") + clients),
+        )
     }
 
     @Test

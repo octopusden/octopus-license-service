@@ -1,7 +1,7 @@
 package org.octopusden.octopus.license.inventory.impl.completing
 
-import org.octopusden.octopus.license.inventory.impl.LibraryTable
 import org.octopusden.octopus.license.inventory.impl.port.LicenseDatabase
+import org.octopusden.octopus.license.inventory.impl.shared.LibraryTable
 import org.octopusden.octopus.license.inventory.model.PackageId
 
 /** Gives the Maven and npm packages no source named a license for theirs from the license database (D9). */

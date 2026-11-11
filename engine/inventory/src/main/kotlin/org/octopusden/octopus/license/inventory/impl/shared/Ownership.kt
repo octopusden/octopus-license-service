@@ -1,4 +1,4 @@
-package org.octopusden.octopus.license.inventory.impl
+package org.octopusden.octopus.license.inventory.impl.shared
 
 import org.octopusden.octopus.license.inventory.model.OwnershipRules
 

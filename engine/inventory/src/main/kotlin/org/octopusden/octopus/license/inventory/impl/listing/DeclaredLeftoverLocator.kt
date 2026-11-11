@@ -1,10 +1,10 @@
 package org.octopusden.octopus.license.inventory.impl.listing
 
-import org.octopusden.octopus.license.inventory.impl.BuildLocator
 import org.octopusden.octopus.license.inventory.impl.listing.candidate.entry
 import org.octopusden.octopus.license.inventory.impl.listing.data.ListedFile
 import org.octopusden.octopus.license.inventory.impl.listing.data.notFound
 import org.octopusden.octopus.license.inventory.impl.port.ArtifactStore
+import org.octopusden.octopus.license.inventory.impl.shared.BuildLocator
 import org.octopusden.octopus.license.inventory.model.FileKind
 import org.octopusden.octopus.license.inventory.model.FileStatus
 import org.octopusden.octopus.license.inventory.model.Finding
