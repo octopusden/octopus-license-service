@@ -167,6 +167,7 @@ class BusyServiceApiTest {
                         listOf(version),
                         "GRADLE",
                         emptySet(),
+                        true,
                         DistributionSpec(emptyList(), emptyList()),
                     ),
                 )

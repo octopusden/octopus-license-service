@@ -40,3 +40,6 @@ project(":license-target-registry").projectDir = file("engine/target-registry")
 
 include(":license-policy-registry")
 project(":license-policy-registry").projectDir = file("engine/policy-registry")
+
+include(":license-inventory")
+project(":license-inventory").projectDir = file("engine/inventory")

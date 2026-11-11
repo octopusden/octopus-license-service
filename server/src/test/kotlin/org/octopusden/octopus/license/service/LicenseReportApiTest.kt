@@ -471,6 +471,7 @@ class LicenseReportApiTest {
                 artifactVersions = listOf(VERSION),
                 buildSystem = "GRADLE",
                 labels = emptySet(),
+                explicit = true,
                 distribution = DistributionSpec(declared = emptyList(), patterns = emptyList()),
             )
     }

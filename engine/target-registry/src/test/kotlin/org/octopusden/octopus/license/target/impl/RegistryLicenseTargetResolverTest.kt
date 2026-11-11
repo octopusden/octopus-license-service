@@ -75,6 +75,7 @@ class RegistryLicenseTargetResolverTest {
                     artifactVersions = listOf("1.4.12", "1.4.12-0034"),
                     buildSystem = "GRADLE",
                     labels = emptySet(),
+                    explicit = true,
                     distribution = DistributionSpec(
                         declared = listOf(
                             MavenArtifact("org.example.sample", "sample-app", "zip"),

@@ -85,6 +85,7 @@ class RegistryLicenseTargetResolver(
             version = version,
             archived = archived,
             external = distribution?.external ?: false,
+            explicit = distribution?.explicit ?: false,
             buildSystem = buildSystem.name,
             testComponent = testComponent,
             labels = labels,
