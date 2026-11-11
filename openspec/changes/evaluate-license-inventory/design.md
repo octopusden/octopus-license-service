@@ -205,6 +205,7 @@ data class FoundLibrary(
 - Measured, on review, by replaying all 99,258 library rows of run 14 through `LicenseEvaluator` with the registry at `50085de`: 1 verdict differs and 31 rows (4 libraries) differ in `overridden`, all from override versions. `jtidy:jtidy:r872-jdk5` takes the override for `r872-jdk15` (`NOT_ALLOWED` in the prototype, `ALLOWED` in the service); `xalan:xalan:2.7.3-atlassian-hosted`, `wsdl4j:wsdl4j:1.6.2` and `rhino:js:1.7R2` are overridden in the service only, with the same verdict. No verdict differs from names or the allowed lists.
 - So evaluation calls the policy. A prototype-shaped judge would be a second rule for "is this license allowed", in the service only to reproduce these rows. Whether override versions should match as written instead is the policy's question, for every caller.
 - The parity check lists such a difference under "policy rules" (Decision 10), not as a failure.
+- Seen in the targeted parity run: `xalan--xalan--2.7.3` overrides `xalan:xalan:2.7.3-atlassian-hosted` in the service, as `versions-api` reads it as 2.7.3; the prototype compares the version string. Same verdict, as the override and Xray both name `Apache-2.0`.
 
 ### 7. License names: canonical in the report, compared as found in parity
 
