@@ -323,6 +323,7 @@ Kept because the prototype's results are the baseline; each may be revisited aft
 9. When several declared images share an image name, a convention image matches only the first; the others stay leftovers and are looked up at their own tags.
 10. Xray's artifact summary lists packages only under a license, so a package Xray reports with no license entry at all is not found from the scan.
 11. The `file:`/`http:`/`https:` check applies to `docker` entries too in the prototype; the target parses only `GAV` entries that way, so a `docker` entry written as a URL becomes an image (Decision 11).
+12. A file gets every shipped dependency of its producing module: build-info records dependencies per module, not per file, so two files of one module get the same list. `requestedBy` is not read; it names the dependency path, not the file.
 
 ### 11. Deliberate differences from the prototype
 
