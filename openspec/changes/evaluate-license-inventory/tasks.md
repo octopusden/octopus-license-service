@@ -81,12 +81,12 @@
 
 ## 7. Docs
 
-- [ ] 7.1 `docs/architecture.md`: the evaluation module in the module graph and table; `license-inventory` records ours (Decision 2); the request flow runs the scan and the evaluation; the scan counter under Health and metrics; "Boundaries" no longer says the generator returns an empty summary.
-- [ ] 7.2 `CLAUDE.md` and `README.md`: the new module, the new settings, `:license-evaluation:parityTest`.
-- [ ] 7.3 The component design page: phase 3 specified, 3B reads `ours` from the inventory.
+- [x] 7.1 `docs/architecture.md`: the evaluation module in the module graph and table; `license-inventory` records ours (Decision 2); the request flow runs the scan and the evaluation; the scan counter under Health and metrics; "Boundaries" no longer says the generator returns an empty summary.
+- [x] 7.2 `CLAUDE.md` and `README.md`: the new module, the new settings (README points at `bootstrap-dev.yml` for the dev profile's variables), `:license-evaluation:parityTest`.
+- [ ] 7.3 The component design page: phase 3 specified, 3B reads `ours` from the inventory. Left for the page's owner: it is a published artifact, not a file in this repository.
 
 ## 8. Finalization
 
-- [ ] 8.1 `./gradlew build qualityCheck` green.
-- [ ] 8.2 Out of scope holds, checked by grep: no trust computation (`Trust(` built nowhere but in tests); no license file written (the zip is the empty one); no prototype-shaped judging in `:license-evaluation` (it calls `LicensePolicy.judge` only).
-- [ ] 8.3 Every risk in the design still stands or says why not; anything deferred has a `TD-NNN`.
+- [x] 8.1 `./gradlew build qualityCheck` green: inventory 201, evaluation 33, policy registry 70, target registry 49, server 71, runner 11, client 6.
+- [x] 8.2 Out of scope holds, checked by grep: no trust computation (`Trust(` built nowhere but in tests); no license file written (the zip is the empty one); no prototype-shaped judging in `:license-evaluation` (it calls `LicensePolicy.judge` only). Checked: no `Trust(` and no `putNextEntry` in any main source; `:license-evaluation` main reads no license name, `LibraryJudge` calls `policy.judge` once.
+- [x] 8.3 Every risk in the design still stands or says why not; anything deferred has a `TD-NNN`. All five risks stand as written. Nothing deferred in code; the open items are 6.4 (the parity run, needs credentials) and 7.3 (the design page), both tasks here, not tech debt.

@@ -12,21 +12,25 @@ flowchart TD
     server --> core
     server --> target
     server --> policy
-    server -.-> inventory
+    server --> inventory
+    server --> evaluation
     subgraph engine["engine/"]
         target["license-target-registry"]
         policy["license-policy-registry"]
         inventory["license-inventory"]
+        evaluation["license-evaluation"]
     end
     target --> crs["components registry client (published)"]
     policy --> bitbucket["Bitbucket client (published)"]
     inventory --> target
     inventory --> jfrog["Artifactory and Xray clients (published)"]
+    evaluation --> inventory
+    evaluation --> policy
 ```
 
-An arrow means "depends on". A dashed arrow does not exist yet: the server calls the license scan once evaluation lands.
+An arrow means "depends on"; a dashed arrow does not exist yet.
 
-`engine/` holds the modules that produce a report: what a version releases, the license policy, and the scan that finds each file's licenses. It is a folder, not a module: each part is its own Gradle project, so each reaches only the systems it reads.
+`engine/` holds the modules that produce a report: what a version releases, the license policy, the scan that finds each file's licenses, and the evaluation that judges them. It is a folder, not a module: each part is its own Gradle project, so each reaches only the systems it reads.
 
 | Module | Owns | May depend on | Must never depend on |
 | --- | --- | --- | --- |
@@ -36,7 +40,8 @@ An arrow means "depends on". A dashed arrow does not exist yet: the server calls
 | `server` | The Spring Boot service | `core`, `engine/*` | `client`, `runner` |
 | `engine/target-registry` (`:license-target-registry`) | What a component version releases, or why it is excluded, from the components registry | the components registry client, `versions-api` | `core`, `server`, Spring, any other system |
 | `engine/policy-registry` (`:license-policy-registry`) | The license policy, read from the license registry through Bitbucket (to move to octopus-vcs-facade, [TD-001](tech-debt/001-read-license-registry-through-vcs-facade.md)), and the verdict on one named library | the Bitbucket client, `versions-api` | `core`, `server`, Spring, any other system |
-| `engine/inventory` (`:license-inventory`) | The license scan: every file a version releases and every library in it, with the licenses its sources name; not judged | `license-target-registry` (its model only), the Artifactory and Xray clients | `core`, `server`, Spring, `license-policy-registry` |
+| `engine/inventory` (`:license-inventory`) | The license scan: every file a version releases and every library in it, with the licenses its sources name and whether it is ours; not judged | `license-target-registry` (its model only), the Artifactory and Xray clients | `core`, `server`, Spring, `license-policy-registry` |
+| `engine/evaluation` (`:license-evaluation`) | Which libraries of an inventory count (no image layers, OS packages or base-image Python) and the verdict on each | `license-inventory` and `license-policy-registry` (their models only) | `core`, `server`, Spring, any client, any I/O |
 
 Why each rule:
 
@@ -47,7 +52,8 @@ Why each rule:
 - **Each `engine/` module reads only its own systems.** `license-target-registry` answers "what the registry declares", so it never needs Artifactory or Xray, and the scan builds on its answer instead of asking the registry again.
 - **The scan's logic stays apart from its I/O.** Data goes in and a result comes out, so the algorithm is testable without mocks, the way `component-validation` is in octopus-components-registry-service. `license-target-registry` and `license-policy-registry` have that shape: `impl/describer/` and `impl/parser/` with `LicensePolicy` are pure; `impl/RegistryLicenseTargetResolver` and `impl/BitbucketLicensePolicySource` are the only I/O.
 - **The license scan needs lookups mid-decision** (a nested archive's build, an SBOM's bytes), so it cannot take all its data up front. Its decisions are pure classes; four orchestrators sequence them through four ports (`BuildRecords`, `ArtifactStore`, `BinaryScanner`, `LicenseDatabase`), tested against in-memory fakes; only `impl/adapter/` sees a client type. Xray sits behind two of the ports, so replacing it changes two adapters.
-- **`license-inventory` does not judge.** It names licenses as its sources give them; whether a library is ours, counted or allowed is evaluation's, with the license policy.
+- **`license-inventory` does not judge.** It names licenses as its sources give them. It does record whether a library is ours: for a file known only by its checksum that takes Artifactory (is a copy in one of our repositories?), which only the scan reads, so `Ownership` answers it there, once. Whether a library counts and whether its license is allowed is evaluation's, with the license policy.
+- **`license-evaluation` reads nothing.** Inventory and policy in, assessment out; the judging rule is the policy's (`LicensePolicy.judge`), never a second copy.
 
 Gradle enforces the dependency rules: a module cannot import what its build file does not declare. This page holds the reasons.
 
@@ -63,7 +69,9 @@ TeamCity step (metarunner)
                                                            │    excluded → store: report EXCLUDED, done
                                                            ├─ store: report RUNNING
                                                            └─ generator, on a background thread, with the target and that policy
-                                                                └─ later: the license scan (license-inventory), then evaluation
+                                                                ├─ the license scan (license-inventory)
+                                                                │    Artifactory or Xray unreachable → report FAILED
+                                                                └─ evaluation (license-evaluation), then the summary
   runner ──client── GET …/{id} until DONE, EXCLUDED or FAILED
   runner ──client── GET …/{id}/files ──► zip
   runner writes license-report.json and the zip to --output-dir
@@ -92,7 +100,7 @@ org.octopusden.octopus.license.service
 | --- | --- | --- |
 | `controller` | `service.LicenseReportService`; only `core` types in and out | `state`, `engine/`, the generator |
 | `service`: the report service | `state.report` (add, finish, find), `state.policy` (`current()`, read once per report), `engine/` `LicenseTargetResolver`, the generator | `controller`, `health` |
-| `service`: the generator | only what it is given: the license target and the policy; later the scan | `state`: a reload or an eviction never changes a running generation |
+| `service`: the generator | only what it is given: the license target and the policy; the scanner and the evaluator | `state`: a reload or an eviction never changes a running generation |
 | `state` | `engine/` models; its own `@Scheduled` job | `service`, `controller`, `health`: state never calls back into the use case |
 | `health` | `state`, read-only | anything that writes |
 | `configuration` | everything, to wire it | — |
@@ -111,8 +119,9 @@ What each part does on a request:
 ## Health and metrics
 
 - **Readiness covers only what this pod holds.** A pod that cannot serve until it has loaded something is unready until it has it: the `licenseRegistry` indicator is down until the license policy is in memory, and up from then on, whatever Bitbucket does later. Liveness stays `livenessState` only: a restart fixes nothing outside the pod.
-- **A per-request dependency is never a health indicator.** The components registry, and later Xray and Artifactory, are called per request and shared by every pod. In readiness, an outage would turn every pod unready at once, and block even `GET` of reports already running.
-- **Instead, an outage answers `503` with a message, and is counted.** `license.target.resolutions{outcome}` (`license_target_resolutions_total` in Prometheus) counts each resolution as `resolved`, `excluded`, `not_found` or `unavailable`; an alert watches `unavailable`. A later dependency gets its own counter the same way.
+- **A per-request dependency is never a health indicator.** The components registry, Xray and Artifactory are called per request and shared by every pod. In readiness, an outage would turn every pod unready at once, and block even `GET` of reports already running.
+- **Instead, an outage answers `503` with a message, and is counted.** `license.target.resolutions{outcome}` (`license_target_resolutions_total` in Prometheus) counts each resolution as `resolved`, `excluded`, `not_found` or `unavailable`; an alert watches `unavailable`.
+- **The scan is counted the same way.** It runs after the report started, so an Artifactory or Xray outage ends the report `FAILED` instead of a `503`. `license.inventory.scans{outcome}` (`license_inventory_scans_total`) counts each scan as `scanned`, `unavailable` or `failed`; an alert watches `unavailable`.
 - **A background dependency is counted the same way.** The license policy is refreshed from Bitbucket in the background; once a policy is loaded readiness stays up, so a failing refresh shows only as a metric. `license.policy.refreshes{outcome}` (`license_policy_refreshes_total`) counts each refresh that asks Bitbucket as `loaded`, `unchanged`, `unavailable` or `invalid`; an alert watches `unavailable` and `invalid`.
 - **Metrics live in `server`.** `engine/` modules know nothing of Micrometer; the server counts what they answer or throw.
 
@@ -122,7 +131,7 @@ What each part does on a request:
 
 - **`engine/` has its own model.** It never uses the `core` DTOs. Otherwise every wire change would ripple into the algorithm, and the algorithm would see only what callers are allowed to see.
 - **`engine/` reads the external systems; the server maps.** The server passes the license target into the scan, and maps the scan's result into `core` types and the zip.
-- **The `LicenseReportGenerator` implementation is that mapping.** Today it returns an empty `core` summary directly, because the scan is not called yet.
+- **The `LicenseReportGenerator` implementation is that mapping.** `EvaluatingLicenseReportGenerator` scans, evaluates, and `SummaryMapper` narrows the assessment to third-party counts and violations. Trust and the license files are not computed yet: `trust` is null and the zip is empty.
 
 The service stores nothing but the current license policy. Each result records its inputs (license registry commit, generation time, service version), so a difference between two results for one version can be explained later.
 
