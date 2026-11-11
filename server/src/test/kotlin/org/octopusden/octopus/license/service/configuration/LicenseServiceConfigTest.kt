@@ -40,8 +40,9 @@ class LicenseServiceConfigTest {
     )
     @DisplayName("without a required setting the service does not start, and says which property is missing")
     fun settingIsRequired(setting: String) {
+        // Blank, not left out: an environment variable such as ARTIFACTORY_URL on a build agent would fill a missing one.
         contextRunner
-            .withPropertyValues(*REQUIRED.filterNot { it.startsWith("$setting=") }.toTypedArray())
+            .withPropertyValues(*REQUIRED.map { if (it.startsWith("$setting=")) "$setting=" else it }.toTypedArray())
             .run { context ->
                 val failure = requireNotNull(context.startupFailure) { "the context should fail to start" }
                 val messages = generateSequence(failure as Throwable) { it.cause }.mapNotNull { it.message }.toList()
