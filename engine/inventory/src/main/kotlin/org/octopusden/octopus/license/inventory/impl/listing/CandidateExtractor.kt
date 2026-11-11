@@ -1,6 +1,6 @@
 package org.octopusden.octopus.license.inventory.impl.listing
 
-import org.octopusden.octopus.license.inventory.impl.port.BuildRecord
+import org.octopusden.octopus.license.inventory.impl.port.data.BuildRecord
 
 /** Every file a convention build published, as a candidate entry, in build-info order (D5). */
 internal object CandidateExtractor {

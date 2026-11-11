@@ -1,4 +1,4 @@
-package org.octopusden.octopus.license.inventory.impl.adapter
+package org.octopusden.octopus.license.inventory.impl.adapter.xray
 
 import org.octopusden.octopus.license.inventory.model.PackageId
 

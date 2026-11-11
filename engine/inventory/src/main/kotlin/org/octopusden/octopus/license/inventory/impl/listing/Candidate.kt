@@ -1,7 +1,7 @@
 package org.octopusden.octopus.license.inventory.impl.listing
 
-import org.octopusden.octopus.license.inventory.impl.port.BuildRecord
-import org.octopusden.octopus.license.inventory.impl.port.BuiltFile
+import org.octopusden.octopus.license.inventory.impl.port.data.BuildRecord
+import org.octopusden.octopus.license.inventory.impl.port.data.BuiltFile
 
 /** A file a convention build published, before anyone decides whether it is released. */
 internal sealed interface Candidate {

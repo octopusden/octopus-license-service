@@ -99,6 +99,7 @@
 - [x] 8a.3 Noted for the parity run (8.3): the client's build-info DTO requires a module `id`, a file `name` and a dependency `id`; build-info lacking one cannot be read and counts as no build, where the prototype reads it with an empty value.
 - [x] 8a.4 Structure: `BuildLocator` and `LibraryTable` move to `impl` beside `Ownership`; `impl/naming` is `impl/completing`; `ArtifactStore.byCoordinates`, `PackageId.maven`; `FileJudgement` folded into `FileReading`.
 - [x] 8a.5 `PackageDependencyTest`: five rules over the sources' imports.
+- [x] 8a.5.1 Ports are one file per interface, their data in `impl/port/data`; adapters are grouped by system in `impl/adapter/artifactory` and `impl/adapter/xray`, with `JfrogCalls` and `JfrogPorts` above both. Files moved only.
 - [x] 8a.6 Confirm: `:license-inventory:test` 191 green; `./gradlew build qualityCheck` green.
 
 ## 9. Finalization

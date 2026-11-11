@@ -1,10 +1,11 @@
-package org.octopusden.octopus.license.inventory.impl.adapter
+package org.octopusden.octopus.license.inventory.impl.adapter.artifactory
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import org.octopusden.octopus.infrastructure.artifactory.client.ArtifactoryClient
 import org.octopusden.octopus.infrastructure.artifactory.client.downloadArtifactTo
+import org.octopusden.octopus.license.inventory.impl.adapter.JfrogCalls
 import org.octopusden.octopus.license.inventory.impl.port.ArtifactStore
-import org.octopusden.octopus.license.inventory.impl.port.StoredFile
+import org.octopusden.octopus.license.inventory.impl.port.data.StoredFile
 import java.io.ByteArrayOutputStream
 
 /** Stored files, found by AQL; [RepositoryPreference] picks among copies. */

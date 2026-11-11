@@ -1,4 +1,4 @@
-package org.octopusden.octopus.license.inventory.impl.adapter
+package org.octopusden.octopus.license.inventory.impl.adapter.artifactory
 
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertArrayEquals
@@ -7,12 +7,14 @@ import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.octopusden.octopus.license.inventory.exception.InventorySourceUnavailableException
+import org.octopusden.octopus.license.inventory.impl.adapter.StubJfrog
 import org.octopusden.octopus.license.inventory.impl.adapter.StubJfrog.Companion.AQL
-import org.octopusden.octopus.license.inventory.impl.port.BuildDependency
-import org.octopusden.octopus.license.inventory.impl.port.BuildModule
-import org.octopusden.octopus.license.inventory.impl.port.BuildRecord
-import org.octopusden.octopus.license.inventory.impl.port.BuiltFile
-import org.octopusden.octopus.license.inventory.impl.port.StoredFile
+import org.octopusden.octopus.license.inventory.impl.adapter.noWaitCalls
+import org.octopusden.octopus.license.inventory.impl.port.data.BuildDependency
+import org.octopusden.octopus.license.inventory.impl.port.data.BuildModule
+import org.octopusden.octopus.license.inventory.impl.port.data.BuildRecord
+import org.octopusden.octopus.license.inventory.impl.port.data.BuiltFile
+import org.octopusden.octopus.license.inventory.impl.port.data.StoredFile
 import org.octopusden.octopus.license.inventory.model.BuildRef
 import java.time.Duration
 

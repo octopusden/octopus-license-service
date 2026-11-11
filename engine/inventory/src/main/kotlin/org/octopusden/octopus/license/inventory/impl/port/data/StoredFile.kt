@@ -1,4 +1,4 @@
-package org.octopusden.octopus.license.inventory.impl.port
+package org.octopusden.octopus.license.inventory.impl.port.data
 
 /** A file stored in Artifactory: [path] is its folder in [repo]. */
 internal data class StoredFile(

@@ -1,13 +1,14 @@
-package org.octopusden.octopus.license.inventory.impl.adapter
+package org.octopusden.octopus.license.inventory.impl.adapter.artifactory
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import org.octopusden.octopus.infrastructure.artifactory.client.ArtifactoryClient
 import org.octopusden.octopus.infrastructure.artifactory.client.dto.BuildInfo
-import org.octopusden.octopus.license.inventory.impl.port.BuildDependency
-import org.octopusden.octopus.license.inventory.impl.port.BuildModule
-import org.octopusden.octopus.license.inventory.impl.port.BuildRecord
+import org.octopusden.octopus.license.inventory.impl.adapter.JfrogCalls
 import org.octopusden.octopus.license.inventory.impl.port.BuildRecords
-import org.octopusden.octopus.license.inventory.impl.port.BuiltFile
+import org.octopusden.octopus.license.inventory.impl.port.data.BuildDependency
+import org.octopusden.octopus.license.inventory.impl.port.data.BuildModule
+import org.octopusden.octopus.license.inventory.impl.port.data.BuildRecord
+import org.octopusden.octopus.license.inventory.impl.port.data.BuiltFile
 import org.octopusden.octopus.license.inventory.model.BuildRef
 
 /** Build-info from Artifactory's build-info repository, in this module's terms. */

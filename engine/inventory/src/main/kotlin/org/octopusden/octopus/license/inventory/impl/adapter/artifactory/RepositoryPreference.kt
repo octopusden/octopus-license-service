@@ -1,6 +1,6 @@
-package org.octopusden.octopus.license.inventory.impl.adapter
+package org.octopusden.octopus.license.inventory.impl.adapter.artifactory
 
-import org.octopusden.octopus.license.inventory.impl.port.StoredFile
+import org.octopusden.octopus.license.inventory.impl.port.data.StoredFile
 
 /** Which stored copy of a file is read when Artifactory holds several: a released copy over a cached one. */
 internal object RepositoryPreference {

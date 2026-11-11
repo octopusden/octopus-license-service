@@ -1,7 +1,7 @@
 package org.octopusden.octopus.license.inventory.impl.listing
 
-import org.octopusden.octopus.license.inventory.impl.port.BuildRecord
-import org.octopusden.octopus.license.inventory.impl.port.StoredFile
+import org.octopusden.octopus.license.inventory.impl.port.data.BuildRecord
+import org.octopusden.octopus.license.inventory.impl.port.data.StoredFile
 import org.octopusden.octopus.license.inventory.model.BuildLookup
 import org.octopusden.octopus.license.inventory.model.FileKind
 import org.octopusden.octopus.license.inventory.model.FileStatus

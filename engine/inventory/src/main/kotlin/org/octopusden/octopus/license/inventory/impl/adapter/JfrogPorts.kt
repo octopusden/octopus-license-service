@@ -4,6 +4,10 @@ import org.octopusden.octopus.infrastructure.artifactory.client.ArtifactoryClass
 import org.octopusden.octopus.infrastructure.client.commons.ClientParametersProvider
 import org.octopusden.octopus.infrastructure.client.commons.StandardBearerTokenCredentialProvider
 import org.octopusden.octopus.infrastructure.xray.client.XrayClassicClient
+import org.octopusden.octopus.license.inventory.impl.adapter.artifactory.ArtifactoryArtifactStore
+import org.octopusden.octopus.license.inventory.impl.adapter.artifactory.ArtifactoryBuildRecords
+import org.octopusden.octopus.license.inventory.impl.adapter.xray.XrayBinaryScanner
+import org.octopusden.octopus.license.inventory.impl.adapter.xray.XrayLicenseDatabase
 import org.octopusden.octopus.license.inventory.impl.port.ScanPorts
 import java.time.Duration
 

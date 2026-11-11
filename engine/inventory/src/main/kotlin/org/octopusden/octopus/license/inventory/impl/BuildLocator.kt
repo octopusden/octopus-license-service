@@ -1,8 +1,8 @@
 package org.octopusden.octopus.license.inventory.impl
 
-import org.octopusden.octopus.license.inventory.impl.port.BuildRecord
 import org.octopusden.octopus.license.inventory.impl.port.BuildRecords
-import org.octopusden.octopus.license.inventory.impl.port.StoredFile
+import org.octopusden.octopus.license.inventory.impl.port.data.BuildRecord
+import org.octopusden.octopus.license.inventory.impl.port.data.StoredFile
 import org.octopusden.octopus.license.inventory.model.BuildLookup
 
 /**

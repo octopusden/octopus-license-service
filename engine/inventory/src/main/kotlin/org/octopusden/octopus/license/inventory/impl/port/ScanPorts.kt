@@ -1,5 +1,7 @@
 package org.octopusden.octopus.license.inventory.impl.port
 
+import org.octopusden.octopus.license.inventory.impl.port.data.BuildRecord
+import org.octopusden.octopus.license.inventory.impl.port.data.StoredFile
 import org.octopusden.octopus.license.inventory.model.BuildRef
 import org.octopusden.octopus.license.inventory.model.PackageId
 

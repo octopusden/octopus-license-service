@@ -1,4 +1,4 @@
-package org.octopusden.octopus.license.inventory.impl.adapter
+package org.octopusden.octopus.license.inventory.impl.adapter.xray
 
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -6,10 +6,12 @@ import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.octopusden.octopus.license.inventory.exception.InventorySourceUnavailableException
+import org.octopusden.octopus.license.inventory.impl.adapter.StubJfrog
 import org.octopusden.octopus.license.inventory.impl.adapter.StubJfrog.Companion.COMPONENTS
 import org.octopusden.octopus.license.inventory.impl.adapter.StubJfrog.Companion.STATUS
 import org.octopusden.octopus.license.inventory.impl.adapter.StubJfrog.Companion.SUMMARY
-import org.octopusden.octopus.license.inventory.impl.port.StoredFile
+import org.octopusden.octopus.license.inventory.impl.adapter.noWaitCalls
+import org.octopusden.octopus.license.inventory.impl.port.data.StoredFile
 import org.octopusden.octopus.license.inventory.model.PackageId
 import java.time.Duration
 

@@ -1,9 +1,10 @@
-package org.octopusden.octopus.license.inventory.impl.adapter
+package org.octopusden.octopus.license.inventory.impl.adapter.xray
 
 import org.octopusden.octopus.infrastructure.xray.client.XrayClient
 import org.octopusden.octopus.infrastructure.xray.client.dto.ComponentDetail
 import org.octopusden.octopus.infrastructure.xray.client.dto.ComponentSummaryRequest
 import org.octopusden.octopus.license.inventory.exception.InventorySourceUnavailableException
+import org.octopusden.octopus.license.inventory.impl.adapter.JfrogCalls
 import org.octopusden.octopus.license.inventory.impl.port.LicenseDatabase
 import org.octopusden.octopus.license.inventory.model.PackageId
 

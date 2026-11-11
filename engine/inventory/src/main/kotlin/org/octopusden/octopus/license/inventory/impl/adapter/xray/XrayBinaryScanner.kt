@@ -1,4 +1,4 @@
-package org.octopusden.octopus.license.inventory.impl.adapter
+package org.octopusden.octopus.license.inventory.impl.adapter.xray
 
 import org.octopusden.octopus.infrastructure.xray.client.XrayClient
 import org.octopusden.octopus.infrastructure.xray.client.dto.ArtifactStatusRequest
@@ -6,8 +6,9 @@ import org.octopusden.octopus.infrastructure.xray.client.dto.ArtifactSummaryRequ
 import org.octopusden.octopus.infrastructure.xray.client.dto.ScanState
 import org.octopusden.octopus.infrastructure.xray.client.exception.XrayClientException
 import org.octopusden.octopus.license.inventory.exception.InventorySourceUnavailableException
+import org.octopusden.octopus.license.inventory.impl.adapter.JfrogCalls
 import org.octopusden.octopus.license.inventory.impl.port.BinaryScanner
-import org.octopusden.octopus.license.inventory.impl.port.StoredFile
+import org.octopusden.octopus.license.inventory.impl.port.data.StoredFile
 import org.octopusden.octopus.license.inventory.model.PackageId
 import java.time.Duration
 

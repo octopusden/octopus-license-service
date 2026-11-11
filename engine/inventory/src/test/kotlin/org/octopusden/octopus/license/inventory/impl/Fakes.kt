@@ -1,12 +1,12 @@
 package org.octopusden.octopus.license.inventory.impl
 
-import org.octopusden.octopus.license.inventory.impl.adapter.XrayComponentIds
+import org.octopusden.octopus.license.inventory.impl.adapter.xray.XrayComponentIds
 import org.octopusden.octopus.license.inventory.impl.port.ArtifactStore
 import org.octopusden.octopus.license.inventory.impl.port.BinaryScanner
-import org.octopusden.octopus.license.inventory.impl.port.BuildRecord
 import org.octopusden.octopus.license.inventory.impl.port.BuildRecords
 import org.octopusden.octopus.license.inventory.impl.port.LicenseDatabase
-import org.octopusden.octopus.license.inventory.impl.port.StoredFile
+import org.octopusden.octopus.license.inventory.impl.port.data.BuildRecord
+import org.octopusden.octopus.license.inventory.impl.port.data.StoredFile
 import org.octopusden.octopus.license.inventory.model.BuildRef
 import org.octopusden.octopus.license.inventory.model.PackageId
 

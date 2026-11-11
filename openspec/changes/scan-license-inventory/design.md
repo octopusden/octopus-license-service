@@ -80,9 +80,11 @@ LicenseInventoryScanner (interface)            ← server
    │                                           ShippingScopes, CycloneDxParser               (pure)
    ├─ impl/completing/  step C: names, licenses ChecksumNamer, LicenseFiller                 (I/O through ports)
    ├─ impl/             shared by the steps    BuildLocator (I/O), LibraryTable, Ownership   (pure)
-   ├─ impl/port/        BuildRecords, ArtifactStore, BinaryScanner, LicenseDatabase          (interfaces + their data)
-   └─ impl/adapter/     ArtifactoryBuildRecords, ArtifactoryArtifactStore, XrayBinaryScanner,
-                        XrayLicenseDatabase, XrayComponentIds, RepositoryPreference, JfrogCalls, JfrogPorts
+   ├─ impl/port/        BuildRecords, ArtifactStore, BinaryScanner, LicenseDatabase, ScanPorts (one file each)
+   │  └─ data/          BuildRecord, BuildModule, BuiltFile, BuildDependency, StoredFile     (what the ports answer in)
+   └─ impl/adapter/     JfrogCalls, JfrogPorts                                               (used by both systems)
+      ├─ artifactory/   ArtifactoryBuildRecords, ArtifactoryArtifactStore, RepositoryPreference
+      └─ xray/          XrayBinaryScanner, XrayLicenseDatabase, XrayComponentIds
 ```
 
 Who may import whom (Decision 17, held by `PackageDependencyTest`):
@@ -90,12 +92,12 @@ Who may import whom (Decision 17, held by `PackageDependencyTest`):
 | Package | May import | Hands over |
 | --- | --- | --- |
 | `model` | nothing of `impl` | the public result |
-| `impl/port` | `model` | the four interfaces and `StoredFile`, `BuildRecord` |
+| `impl/port`, `impl/port/data` | `model` | the four interfaces; in `data`, the types they answer in. `internal`: seen by the whole module, never by the server or evaluation, which is why they are not in `model` |
 | `impl` (shared) | `model`, `port` | `BuildLocator`, `LibraryTable`, `Ownership` |
 | `impl/listing` | `model`, `port`, shared | `Listing` of `ListedFile` |
 | `impl/reading` | `model`, `port`, shared, `listing.ListedFile` | `FileReading`; fills the `LibraryTable` |
 | `impl/completing` | `model`, `port`, shared | renames and licenses in the `LibraryTable` |
-| `impl/adapter` | `model`, `port`, the clients | `ScanPorts` |
+| `impl/adapter`, by system | `model`, `port`, the clients | `ScanPorts`. Each helper sits with the one system that uses it, so replacing Xray replaces `adapter/xray` |
 | `JfrogLicenseInventoryScanner` | all of the above | `LicenseInventory` |
 
 | Class | Kind | One responsibility | Prototype |
@@ -387,6 +389,7 @@ Kept because the prototype's results are the baseline; each may be revisited aft
 - The only step-to-step import left is reading taking `ListedFile`, listing's result. Completing knows neither other step.
 - Rules that had two homes have one: the Maven repository layout (`ArtifactStore.byCoordinates`), a Maven package's id (`PackageId.maven`), a package's type (`PackageId.type`), and the judged status of a file (`FileReading`, which `FileStatusJudge` returns and `FileContentReader` completes; `FileJudgement` was the same three fields).
 - `PackageDependencyTest` reads the sources' imports and fails on a crossing; only `impl/adapter` may import the clients.
+- The ports are one file per interface with their data in `port/data`; the adapters are grouped by system, not by "implementation" and "helper", because each helper serves exactly one system.
 - Rejected: a Gradle module per step. The steps share the ports and one table; three more build files would buy what one test already holds.
 - Rejected: an architecture-test library for five rules.
 

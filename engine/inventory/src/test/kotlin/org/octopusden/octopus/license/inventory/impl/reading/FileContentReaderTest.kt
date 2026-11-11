@@ -18,9 +18,9 @@ import org.octopusden.octopus.license.inventory.impl.builtFile
 import org.octopusden.octopus.license.inventory.impl.dependency
 import org.octopusden.octopus.license.inventory.impl.listing.ListedFile
 import org.octopusden.octopus.license.inventory.impl.module
-import org.octopusden.octopus.license.inventory.impl.port.BuildDependency
-import org.octopusden.octopus.license.inventory.impl.port.BuildRecord
-import org.octopusden.octopus.license.inventory.impl.port.StoredFile
+import org.octopusden.octopus.license.inventory.impl.port.data.BuildDependency
+import org.octopusden.octopus.license.inventory.impl.port.data.BuildRecord
+import org.octopusden.octopus.license.inventory.impl.port.data.StoredFile
 import org.octopusden.octopus.license.inventory.impl.stored
 import org.octopusden.octopus.license.inventory.model.BuildLookup
 import org.octopusden.octopus.license.inventory.model.Evidence.BINARY_SCAN
