@@ -29,7 +29,7 @@ This change ports that step, wires the scan and the evaluation into the server, 
 - `EvaluatingLicenseReportGenerator` replaces `EmptyLicenseReportGenerator`: scan, evaluate, map into the `core` summary.
 - The summary counts third-party libraries per verdict and lists every third-party library that is not `ALLOWED`, with its licenses and the released files it ships in. Trust stays `null` until grading.
 - Artifactory or Xray unreachable fails the report (`FAILED`), as the prototype's component ended in `ERROR`. Each scan is counted in `license.inventory.scans{outcome}`.
-- New settings: the JFrog URL and token (Vault), the internal groups and our repository prefixes (Spring Cloud Config), the Xray wait and poll interval (defaults 5 min and 10 s).
+- Settings follow the other services: the systems under their shared keys (`components-registry-service.url`, `bitbucket.host` and `bitbucket.token`, `artifactory.url` and `artifactory.token`), only the service's own values under `license-service` (the license registry's project and repository, exclusions, ownership, the Xray wait). This moves the settings the earlier changes put under `license-service`.
 
 **Part D: parity, end to end**
 
@@ -53,7 +53,7 @@ This change ports that step, wires the scan and the evaluation into the server, 
   - A report can now end `FAILED` because Artifactory or Xray is unreachable.
   - A report takes as long as the scan: seconds to minutes, up to 5 minutes more while Xray finishes scanning.
   - The runner and the TeamCity step stay report-only, so no build fails on a verdict.
-- **Rollout:** the service needs the new JFrog and ownership settings in Spring Cloud Config and Vault before it starts; without them it does not start.
+- **Rollout:** before it starts, the service needs `bitbucket.token` and `artifactory.token` in Vault, and a `license-service.yml` in Spring Cloud Config with the license registry's project and repository and the ownership rules; the URLs come from the shared `application.yml`.
 
 ## Out of scope
 

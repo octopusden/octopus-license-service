@@ -73,14 +73,19 @@ The service SHALL count each scan in `license.inventory.scans`, tagged `outcome`
 - **WHEN** a scan fails because Artifactory cannot be asked
 - **THEN** `license.inventory.scans{outcome="unavailable"}` increases by one
 
-### Requirement: The JFrog and ownership settings are required
+### Requirement: The systems read are configured under the keys every service shares
 
-The service SHALL NOT start without the JFrog platform URL and token, or without at least one internal group and one own repository prefix; the startup error SHALL name the missing setting.
+The service SHALL read the components registry from `components-registry-service.url`, Bitbucket from `bitbucket.host` and `bitbucket.token`, and Artifactory and Xray from `artifactory.url` and `artifactory.token`. It SHALL NOT start without any of them, or without at least one internal group and one own repository prefix; the startup error SHALL name the missing setting.
 
 #### Scenario: Missing token
 
-- **WHEN** `license-service.jfrog.token` is not set
-- **THEN** the service does not start and the error names `license-service.jfrog.token`
+- **WHEN** `artifactory.token` is not set
+- **THEN** the service does not start and the error names `artifactory.token`
+
+#### Scenario: Shared URL
+
+- **WHEN** Spring Cloud Config's `application.yml` sets `artifactory.url` for every service
+- **THEN** the license service scans through that URL, with nothing set under `license-service`
 
 #### Scenario: Missing internal groups
 

@@ -66,13 +66,13 @@ import java.util.zip.ZipInputStream
 @SpringBootTest(
     webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
     properties = [
-        "license-service.components-registry-url=http://localhost:1",
-        "license-service.license-registry.bitbucket-url=http://localhost:1",
-        "license-service.license-registry.token=token",
+        "components-registry-service.url=http://localhost:1",
+        "bitbucket.host=http://localhost:1",
+        "bitbucket.token=token",
+        "artifactory.url=http://localhost:1",
+        "artifactory.token=token",
         "license-service.license-registry.project=SAMPLE",
         "license-service.license-registry.repository=sample-license-registry",
-        "license-service.jfrog.url=http://localhost:1",
-        "license-service.jfrog.token=token",
         "license-service.ownership.internal-groups=org.example",
         "license-service.ownership.own-repository-prefixes=rnd-",
     ],

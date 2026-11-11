@@ -3,16 +3,21 @@ spring:
     config:
       enabled: false
 
+components-registry-service:
+  url: ${COMPONENTS_REGISTRY_URL}
+
+bitbucket:
+  host: ${BITBUCKET_URL}
+  token: ${BITBUCKET_TOKEN}
+
+artifactory:
+  url: ${JFROG_URL}
+  token: ${JFROG_TOKEN}
+
 license-service:
-  components-registry-url: ${COMPONENTS_REGISTRY_URL}
   license-registry:
-    bitbucket-url: ${BITBUCKET_URL}
-    token: ${BITBUCKET_TOKEN}
     project: ${LICENSE_REGISTRY_PROJECT}
     repository: ${LICENSE_REGISTRY_REPOSITORY}
-  jfrog:
-    url: ${JFROG_URL}
-    token: ${JFROG_TOKEN}
   ownership:
     internal-groups: ${INTERNAL_GROUPS}
     own-repository-prefixes: ${OWN_REPOSITORY_PREFIXES}

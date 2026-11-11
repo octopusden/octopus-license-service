@@ -22,6 +22,9 @@ import java.time.Clock
 @EnableScheduling
 class LicenseServiceConfig(
     private val properties: LicenseServiceProperties,
+    private val componentsRegistryService: ComponentsRegistryServiceProperties,
+    private val bitbucket: BitbucketProperties,
+    private val artifactory: ArtifactoryProperties,
 ) {
     @Bean
     fun clock(): Clock = Clock.systemUTC()
@@ -32,9 +35,7 @@ class LicenseServiceConfig(
     @Bean
     fun licenseTargetResolver(): LicenseTargetResolver =
         RegistryLicenseTargetResolver(
-            requireNotNull(properties.componentsRegistryUrl?.takeIf { it.isNotBlank() }) {
-                "license-service.components-registry-url is not set"
-            },
+            requiredSetting(componentsRegistryService.url, "components-registry-service.url"),
             properties.exclusions,
         )
 
@@ -42,10 +43,10 @@ class LicenseServiceConfig(
     fun licensePolicySource(): LicensePolicySource =
         with(properties.licenseRegistry) {
             BitbucketLicensePolicySource(
-                requiredSetting(bitbucketUrl, "license-registry.bitbucket-url"),
-                requiredSetting(token, "license-registry.token"),
-                requiredSetting(project, "license-registry.project"),
-                requiredSetting(repository, "license-registry.repository"),
+                requiredSetting(bitbucket.host, "bitbucket.host"),
+                requiredSetting(bitbucket.token, "bitbucket.token"),
+                requiredSetting(project, "license-service.license-registry.project"),
+                requiredSetting(repository, "license-service.license-registry.repository"),
             )
         }
 
@@ -64,14 +65,14 @@ class LicenseServiceConfig(
     @Bean
     fun licenseInventoryScanner(): LicenseInventoryScanner =
         JfrogLicenseInventoryScanner(
-            requiredSetting(properties.jfrog.url, "jfrog.url"),
-            requiredSetting(properties.jfrog.token, "jfrog.token"),
+            requiredSetting(artifactory.url, "artifactory.url"),
+            requiredSetting(artifactory.token, "artifactory.token"),
             OwnershipRules(
-                requiredList(properties.ownership.internalGroups, "ownership.internal-groups"),
-                requiredList(properties.ownership.ownRepositoryPrefixes, "ownership.own-repository-prefixes"),
+                requiredList(properties.ownership.internalGroups, "license-service.ownership.internal-groups"),
+                requiredList(properties.ownership.ownRepositoryPrefixes, "license-service.ownership.own-repository-prefixes"),
             ),
-            properties.jfrog.xrayScanTimeout,
-            properties.jfrog.xrayScanPollInterval,
+            properties.xray.scanTimeout,
+            properties.xray.scanPollInterval,
         )
 
     @Bean
@@ -89,10 +90,10 @@ class LicenseServiceConfig(
     private fun requiredSetting(
         value: String?,
         setting: String,
-    ) = requireNotNull(value?.takeIf { it.isNotBlank() }) { "license-service.$setting is not set" }
+    ) = requireNotNull(value?.takeIf { it.isNotBlank() }) { "$setting is not set" }
 
     private fun requiredList(
         values: List<String>,
         setting: String,
-    ) = values.map { it.trim() }.filter { it.isNotEmpty() }.also { require(it.isNotEmpty()) { "license-service.$setting is not set" } }
+    ) = values.map { it.trim() }.filter { it.isNotEmpty() }.also { require(it.isNotEmpty()) { "$setting is not set" } }
 }

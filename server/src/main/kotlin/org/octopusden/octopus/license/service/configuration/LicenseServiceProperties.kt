@@ -13,10 +13,9 @@ import java.time.Duration
  * as busy.
  * @param maxStoredBytes how much license files the finished reports hold in memory; past it, the
  * oldest finished reports go before their TTL ends.
- * @param componentsRegistryUrl required; nullable only so its absence is reported by name at startup.
  * @param exclusions components out of scope that no registry fact identifies, grouped by reason.
  * @param licenseRegistry where the license policy is read from (D9).
- * @param jfrog where the license scan reads Artifactory and Xray.
+ * @param xray how long a scan waits for Xray to finish scanning.
  * @param ownership what is ours, so the scan follows our archives and evaluation calls them internal.
  */
 @ConfigurationProperties("license-service")
@@ -25,24 +24,21 @@ data class LicenseServiceProperties(
     val generationThreads: Int = 4,
     val maxQueuedReports: Int = 50,
     val maxStoredBytes: DataSize = DataSize.ofMegabytes(512),
-    val componentsRegistryUrl: String? = null,
     val exclusions: List<ConfiguredExclusion> = emptyList(),
     val licenseRegistry: LicenseRegistryProperties = LicenseRegistryProperties(),
-    val jfrog: JfrogProperties = JfrogProperties(),
+    val xray: XrayProperties = XrayProperties(),
     val ownership: OwnershipProperties = OwnershipProperties(),
 )
 
 /**
- * The license registry on Bitbucket. The four locations are required; nullable only so their
- * absence is reported by name at startup. Project and repository come from Spring Cloud Config,
- * never from this repository.
+ * Where the license registry sits on Bitbucket; Bitbucket itself is [BitbucketProperties]. Both are
+ * required; nullable only so their absence is reported by name at startup. They come from Spring
+ * Cloud Config, never from this repository.
  *
  * @param refreshInterval how often the head commit is checked once a policy is loaded.
  * @param retryInterval how often a load is tried until the first one succeeds.
  */
 data class LicenseRegistryProperties(
-    val bitbucketUrl: String? = null,
-    val token: String? = null,
     val project: String? = null,
     val repository: String? = null,
     val refreshInterval: Duration = Duration.ofMinutes(15),
@@ -50,17 +46,15 @@ data class LicenseRegistryProperties(
 )
 
 /**
- * The JFrog platform, under which both Artifactory and Xray are served. URL and token are required;
- * nullable only so their absence is reported by name at startup. The token comes from Vault.
+ * Xray is reached at [ArtifactoryProperties.url], the JFrog platform's; only the wait is this
+ * service's own.
  *
- * @param xrayScanTimeout how long one scan waits, in all, for Xray to finish scanning its files.
- * @param xrayScanPollInterval how often a pending Xray scan is asked about again.
+ * @param scanTimeout how long one scan waits, in all, for Xray to finish scanning its files.
+ * @param scanPollInterval how often a pending Xray scan is asked about again.
  */
-data class JfrogProperties(
-    val url: String? = null,
-    val token: String? = null,
-    val xrayScanTimeout: Duration = Duration.ofMinutes(5),
-    val xrayScanPollInterval: Duration = Duration.ofSeconds(10),
+data class XrayProperties(
+    val scanTimeout: Duration = Duration.ofMinutes(5),
+    val scanPollInterval: Duration = Duration.ofSeconds(10),
 )
 
 /**

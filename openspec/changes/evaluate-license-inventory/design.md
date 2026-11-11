@@ -96,7 +96,7 @@ In `server`:
 ```
 service/impl/EvaluatingLicenseReportGenerator   scan → evaluate → map; counts the scan's outcome
 service/impl/SummaryMapper                      pure · LicenseAssessment + policy commit + inputs → core LicenseReportSummary
-configuration/                                  JfrogProperties, OwnershipProperties; scanner and evaluator beans
+configuration/                                  ArtifactoryProperties, XrayProperties, OwnershipProperties; scanner and evaluator beans
 ```
 
 | Class | Kind | One responsibility | Prototype |
@@ -233,11 +233,17 @@ data class FoundLibrary(
 
 ### 10. Configuration
 
-- Under `license-service`:
-  - `jfrog.url`, `jfrog.token`: required; the token from Vault. `jfrog.xray-scan-timeout` (default `PT5M`), `jfrog.xray-scan-poll-interval` (default `PT10S`).
-  - `ownership.internal-groups`, `ownership.own-repository-prefixes`: required, non-empty, from Spring Cloud Config: company names stay out of this public repository.
-- Missing or blank: the service does not start, and the message names the property, as for `components-registry-url`.
-- `application.yaml` holds the defaults and a comment saying where the rest comes from; `bootstrap-dev.yml` reads the new required values from `JFROG_URL`, `JFROG_TOKEN`, `INTERNAL_GROUPS`, `OWN_REPOSITORY_PREFIXES`, the names the inventory's parity check already uses.
+- A system the service reads is configured under the key every service shares, as dms-service and release-management-service do, not under `license-service`:
+  - `components-registry-service.url`, `bitbucket.host`, `artifactory.url`: set once in Spring Cloud Config's `application.yml`; `artifactory.url` is the JFrog platform's, so it serves Xray too;
+  - `bitbucket.token`, `artifactory.token`: from Vault.
+  - One `@ConfigurationProperties` class per system (`ComponentsRegistryServiceProperties`, `BitbucketProperties`, `ArtifactoryProperties`).
+- Only what is this service's own stays under `license-service`, in a `license-service.yml` of Spring Cloud Config:
+  - `license-registry.project`, `license-registry.repository`, `exclusions`;
+  - `ownership.internal-groups`, `ownership.own-repository-prefixes`: required, non-empty: company names stay out of this public repository;
+  - `xray.scan-timeout` (default `PT5M`), `xray.scan-poll-interval` (default `PT10S`).
+- Found on review: the earlier changes put every system under `license-service` (`components-registry-url`, `license-registry.bitbucket-url` and `token`), unlike every other service. Moved here, before anything was configured for the service in Spring Cloud Config.
+- Missing or blank: the service does not start, and the message names the property.
+- `application.yaml` holds the defaults and a comment saying where the rest comes from; `bootstrap-dev.yml` reads every required value from an environment variable, with the names the parity checks already use (`COMPONENTS_REGISTRY_URL`, `BITBUCKET_URL`, `BITBUCKET_TOKEN`, `JFROG_URL`, `JFROG_TOKEN`, …).
 
 ### 11. Parity, end to end
 

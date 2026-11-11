@@ -71,6 +71,12 @@
   - [x] 5.6.1 (added on review) detekt: `LicenseServiceConfig` past `TooManyFunctions` with a third `required…` helper; the license registry settings now use the same `requiredSetting` as the new ones. The generator counts the scan's outcome with `runCatching`, not a `catch (RuntimeException)` detekt rejects as too generic.
   - [x] 5.6.2 (added on review) The JFrog clients reach the server's runtime classpath through `:license-inventory`: the scanner bean, which builds them, starts in every server context test.
 
+## 5a. Settings under the keys every service shares (Decision 10, added on review)
+
+- [x] 5a.1 Failing tests in `LicenseServiceConfigTest`: each of the nine required settings, missing, stops the service and is named; the systems bind from `components-registry-service`, `bitbucket` and `artifactory`; Xray's wait defaults.
+- [x] 5a.2 `ComponentsRegistryServiceProperties`, `BitbucketProperties`, `ArtifactoryProperties`; `LicenseServiceProperties` keeps only the service's own values (`xray` replaces `jfrog`); `application.yaml`, `bootstrap-dev.yml`, the API tests' properties, TD-001.
+- [x] 5a.3 Confirm `:license-service:test` green: 72; `ktlintCheck` and `detekt` clean.
+
 ## 6. Parity, end to end (Decision 11)
 
 - [x] 6.1 `:license-inventory`: `java-test-fixtures`; move `ParityView` and `ParityDiff` into `testFixtures`, unchanged; its `test` and `parityTest` still compile and pass. The fixtures take the Artifactory client for Jackson, as `parityTest` does. `:license-inventory:test` 201 green.

@@ -46,5 +46,5 @@ In order, each its own pull request:
 - [ ] vcs-facade lists files and reads a file at a commit, for Bitbucket and Gitea, released.
 - [ ] `engine/policy-registry` reads the license registry only through vcs-facade; no Bitbucket client on its classpath.
 - [ ] Every file of a load is read at the one commit the load resolved; the head re-check loop is gone.
-- [ ] The license service needs no VCS token; the `license-registry.token` setting is removed from configuration and Vault.
+- [ ] The license service needs no VCS token; the `bitbucket.token` setting is removed from configuration and Vault.
 - [ ] `docs/architecture.md` and the `license-policy-registry` row name vcs-facade, not Bitbucket.

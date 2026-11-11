@@ -24,16 +24,15 @@ license-service:
   generation-threads: 4
   max-queued-reports: 50
   max-stored-bytes: 512MB
-  # components-registry-url and exclusions come from Spring Cloud Config, where the component
-  # names stay. Without components-registry-url the service does not start.
-  # license-registry: bitbucket-url, token, project and repository come from Spring Cloud Config
-  # and Vault; without any of them the service does not start.
+  # The systems read are configured under the keys every service shares: components-registry-service.url,
+  # bitbucket.host and artifactory.url in Spring Cloud Config's application.yml, bitbucket.token and
+  # artifactory.token from Vault. Without any of them the service does not start.
+  # From license-service.yml in Spring Cloud Config, where company names stay: exclusions,
+  # license-registry project and repository, ownership internal-groups and own-repository-prefixes.
+  # Without license-registry or ownership the service does not start.
   license-registry:
     refresh-interval: PT15M
     retry-interval: PT1M
-  # jfrog: url and token come from Spring Cloud Config and Vault; ownership: internal-groups and
-  # own-repository-prefixes from Spring Cloud Config, where company names stay. Without any of them
-  # the service does not start.
-  jfrog:
-    xray-scan-timeout: PT5M
-    xray-scan-poll-interval: PT10S
+  xray:
+    scan-timeout: PT5M
+    scan-poll-interval: PT10S
