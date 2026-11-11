@@ -89,6 +89,18 @@
 - [ ] 8.3 Run the prototype locally with `--only` for two components of run 14, one with nested archives and npm modules, one with docker images, and then the parity check; record the differences here, each fixed or explained by Decision 11.
 - [ ] 8.4 Same for all components of run 14's scope; record the result here.
 
+## 8a. Review against the prototype (Decision 17)
+
+- [x] 8a.1 Read `analyse()`, `scan()`, `collect()` and their helpers line by line against the module. Rules, order and texts agree; three small gaps closed, each test first:
+  - [x] 8a.1.1 An SBOM component with an empty `purl` is skipped, as the prototype skips a falsy purl.
+  - [x] 8a.1.2 `PackageId.type` reads an unparsed `pkg:` id as the prototype's `purl_type` does (the type after `pkg:`), so a docker layer whose id does not parse is still a docker layer for the inner-archive rule.
+  - [x] 8a.1.3 The parity view takes the type from the same `PackageId.type`, not from a copy of the rule.
+- [x] 8a.2 Left as they are, on purpose: licenses are asked in id order, not row order (same answers, steadier batches); the build agent's name falls back to `buildAgent` when `agent` has no name (the prototype only when `agent` is absent; no build-info has an unnamed agent).
+- [x] 8a.3 Noted for the parity run (8.3): the client's build-info DTO requires a module `id`, a file `name` and a dependency `id`; build-info lacking one cannot be read and counts as no build, where the prototype reads it with an empty value.
+- [x] 8a.4 Structure: `BuildLocator` and `LibraryTable` move to `impl` beside `Ownership`; `impl/naming` is `impl/completing`; `ArtifactStore.byCoordinates`, `PackageId.maven`; `FileJudgement` folded into `FileReading`.
+- [x] 8a.5 `PackageDependencyTest`: five rules over the sources' imports.
+- [x] 8a.6 Confirm: `:license-inventory:test` 191 green; `./gradlew build qualityCheck` green.
+
 ## 9. Finalization
 
 - [x] 9.1 `./gradlew build` and `qualityCheck` green.

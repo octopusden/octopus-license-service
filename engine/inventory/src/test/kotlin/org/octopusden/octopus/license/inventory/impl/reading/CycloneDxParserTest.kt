@@ -16,7 +16,8 @@ class CycloneDxParserTest {
               {"name":"leaflet","purl":"pkg:npm/leaflet@1.9.4","licenses":[{"license":{"name":"BSD-2-Clause License"}}]},
               {"name":"dual","purl":"pkg:npm/dual@1.0.0","licenses":[{"expression":"MIT OR Apache-2.0"}]},
               {"name":"none","purl":"pkg:npm/none@1.0.0"},
-              {"name":"no purl"}
+              {"name":"no purl"},
+              {"name":"empty purl","purl":""}
             ]}
             """.trimIndent()
 

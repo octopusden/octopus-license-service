@@ -2,13 +2,11 @@ package org.octopusden.octopus.license.inventory.impl
 
 import org.octopusden.octopus.license.inventory.LicenseInventoryScanner
 import org.octopusden.octopus.license.inventory.impl.adapter.JfrogPorts
-import org.octopusden.octopus.license.inventory.impl.listing.BuildLocator
+import org.octopusden.octopus.license.inventory.impl.completing.ChecksumNamer
+import org.octopusden.octopus.license.inventory.impl.completing.LicenseFiller
 import org.octopusden.octopus.license.inventory.impl.listing.ConventionBuilds
 import org.octopusden.octopus.license.inventory.impl.listing.ListedFile
 import org.octopusden.octopus.license.inventory.impl.listing.ReleasedFileLister
-import org.octopusden.octopus.license.inventory.impl.naming.ChecksumNamer
-import org.octopusden.octopus.license.inventory.impl.naming.LibraryTable
-import org.octopusden.octopus.license.inventory.impl.naming.LicenseFiller
 import org.octopusden.octopus.license.inventory.impl.port.ScanPorts
 import org.octopusden.octopus.license.inventory.impl.reading.BuildDependencyReader
 import org.octopusden.octopus.license.inventory.impl.reading.FileContentReader

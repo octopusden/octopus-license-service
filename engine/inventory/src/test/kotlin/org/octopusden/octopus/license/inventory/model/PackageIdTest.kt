@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.CsvSource
 import org.junit.jupiter.params.provider.ValueSource
 
 class PackageIdTest {
@@ -83,5 +84,28 @@ class PackageIdTest {
                 ?.let { Triple(it.groupId, it.artifactId, it.version) },
         )
         assertEquals(null, PackageId.Purl("npm", "react", "18.2.0").mavenCoordinates())
+    }
+
+    @Test
+    @DisplayName("a Maven package from its coordinates renders as the prototype's purl")
+    fun mavenFromCoordinates() {
+        assertEquals("pkg:maven/com.google.guava/guava@32.1.2-jre", PackageId.maven("com.google.guava", "guava", "32.1.2-jre").toString())
+    }
+
+    @ParameterizedTest(name = "{0} is {1}")
+    @CsvSource(
+        "pkg:maven/com.google.guava/guava@32.1.2-jre, maven",
+        "pkg:docker/sha256__abc@latest, docker",
+        "generic://sha256:0000000000000000000000000000000000000000000000000000000000000000/a.jar, generic",
+        "conan://zlib:1.3, conan",
+        "pkg:maven/no-version, maven",
+        "no-scheme, no-scheme",
+    )
+    @DisplayName("the package type, read as the prototype reads it from any id")
+    fun type(
+        raw: String,
+        type: String,
+    ) {
+        assertEquals(type, PackageId.parse(raw).type)
     }
 }

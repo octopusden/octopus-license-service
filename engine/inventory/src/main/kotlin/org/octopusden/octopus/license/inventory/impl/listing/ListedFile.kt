@@ -43,9 +43,3 @@ internal data class Listing(
 
 internal fun ListedFile.notFound(detail: String) =
     copy(skip = FileStatus.NOT_FOUND, findings = findings + Finding(FindingCode.ARTIFACT_NOT_FOUND, entry, detail))
-
-internal fun mavenId(
-    group: String,
-    artifactId: String,
-    version: String,
-) = PackageId.Purl(PackageId.MAVEN, "$group/$artifactId", version)

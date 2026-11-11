@@ -66,51 +66,66 @@ flowchart TD
 
 ## Classes and their responsibilities
 
-Package `org.octopusden.octopus.license.inventory`. `impl/` is `internal` except the scanner's public constructor. Four layers, dependencies pointing down only:
+Package `org.octopusden.octopus.license.inventory`. `impl/` is `internal` except the scanner's public constructor. Read it top down: the contract, its one implementation, the three steps that implementation runs, what the steps share, then the ports and their adapters.
 
 ```
 LicenseInventoryScanner (interface)            ← server
-└─ impl/JfrogLicenseInventoryScanner           orchestration only: A → B → C → assemble
-   ├─ impl/listing/   step A: which files      ReleasedFileLister, BuildLocator          (I/O through ports)
+└─ impl/JfrogLicenseInventoryScanner           orchestration only: A → B per file → C → assemble
+   ├─ impl/listing/     step A: which files    ReleasedFileLister, DeclaredLeftoverLocator   (I/O through ports)
    │                                           ConventionBuilds, CandidateExtractor,
    │                                           PublishedFileName, CandidateSelector,
-   │                                           ArtifactPatternMatcher                    (pure)
-   ├─ impl/reading/   step B: what is inside   FileContentReader, SbomReader             (I/O through ports)
+   │                                           ArtifactPatternMatcher                        (pure)
+   ├─ impl/reading/     step B: what is inside FileContentReader, SbomReader                 (I/O through ports)
    │                                           FileStatusJudge, BuildDependencyReader,
-   │                                           ShippingScopes, CycloneDxParser           (pure)
-   ├─ impl/naming/    step C: names, licenses  ChecksumNamer, LicenseFiller              (I/O through ports)
-   │                                           LibraryTable                              (pure)
-   ├─ impl/Ownership                           which groups, file names and repositories are ours (pure)
-   ├─ impl/port/      BuildRecords, ArtifactStore, BinaryScanner, LicenseDatabase       (interfaces + their data)
-   └─ impl/adapter/   ArtifactoryBuildRecords, ArtifactoryArtifactStore, XrayBinaryScanner,
-                      XrayLicenseDatabase, XrayComponentIds, RepositoryPreference, Memoized ports
+   │                                           ShippingScopes, CycloneDxParser               (pure)
+   ├─ impl/completing/  step C: names, licenses ChecksumNamer, LicenseFiller                 (I/O through ports)
+   ├─ impl/             shared by the steps    BuildLocator (I/O), LibraryTable, Ownership   (pure)
+   ├─ impl/port/        BuildRecords, ArtifactStore, BinaryScanner, LicenseDatabase          (interfaces + their data)
+   └─ impl/adapter/     ArtifactoryBuildRecords, ArtifactoryArtifactStore, XrayBinaryScanner,
+                        XrayLicenseDatabase, XrayComponentIds, RepositoryPreference, JfrogCalls, JfrogPorts
 ```
+
+Who may import whom (Decision 17, held by `PackageDependencyTest`):
+
+| Package | May import | Hands over |
+| --- | --- | --- |
+| `model` | nothing of `impl` | the public result |
+| `impl/port` | `model` | the four interfaces and `StoredFile`, `BuildRecord` |
+| `impl` (shared) | `model`, `port` | `BuildLocator`, `LibraryTable`, `Ownership` |
+| `impl/listing` | `model`, `port`, shared | `Listing` of `ListedFile` |
+| `impl/reading` | `model`, `port`, shared, `listing.ListedFile` | `FileReading`; fills the `LibraryTable` |
+| `impl/completing` | `model`, `port`, shared | renames and licenses in the `LibraryTable` |
+| `impl/adapter` | `model`, `port`, the clients | `ScanPorts` |
+| `JfrogLicenseInventoryScanner` | all of the above | `LicenseInventory` |
 
 | Class | Kind | One responsibility | Prototype |
 | --- | --- | --- | --- |
 | `LicenseInventoryScanner` | interface | The contract: a target in, its inventory out | `analyse()` up to stage 10 |
 | `JfrogLicenseInventoryScanner` | orchestrator | Builds one scan's memoized ports, runs A, B per file, C, assembles the inventory. Decides nothing itself | `analyse()` body |
 | `ConventionBuilds` | pure | The convention build names of a target | `convention` |
-| `ReleasedFileLister` | I/O | Step A: the convention route and the declared-leftover route, giving every listed file with its stored file and build | `analyse()` §1–2 |
+| `ReleasedFileLister` | I/O | Step A: the convention route (candidates of the convention builds, selected, located by sha1), then the declared-leftover route, giving every listed file with its stored file and build | `analyse()` §1 |
+| `DeclaredLeftoverLocator` | I/O | The second route: a declared entry no convention build produced, located by coordinates or image path, its build by `BuildLocator` | `analyse()` §2, `resolve_gav`, `resolve_docker` |
 | `CandidateExtractor` | pure | A build record's published files as candidates: docker images from `manifest.json`, Maven entries from module id and file name | loop over `module.artifacts` |
 | `PublishedFileName` | pure | `artifactId-version[-classifier].ext` split into artifact id, classifier, extension | `split_artifact_name` |
 | `CandidateSelector` | pure | Why a candidate is read (`DECLARED`, `PATTERN`, `DOCKER_BUILD`), or why not (`NOT_SELECTED`, `METADATA`) | `selected_by`, metadata skip |
 | `ArtifactPatternMatcher` | pure | Full match of group and artifact against the target's patterns | `matches_patterns` |
-| `BuildLocator` | I/O | The build of a stored file: properties, then checksum. Shared by the declared-leftover route and nested archives | `find_build` |
+| `BuildLocator` | I/O, shared | The build of a stored file: properties, then checksum. Shared by the declared-leftover route (listing) and nested archives (reading) | `find_build` |
 | `FileContentReader` | I/O | Step B for one located file: status, then every source, then nested archives, recursively | `scan()` + `collect()` |
-| `FileStatusJudge` | pure | The status of a located file from "Xray indexed it", "build known", kind and extension | status logic in `scan()` |
+| `FileStatusJudge` | pure | The status of a located file from "Xray indexed it", "build known", kind and extension, as a `FileReading` the reader then adds findings to | status logic in `scan()` |
 | `BuildDependencyReader` | pure | From a build record and the file: npm production packages, the producing module's shipped packages, our nested archives, findings | `npm_dependencies`, dependency loop |
 | `ShippingScopes` | pure | Whether a build-info scope ships: runtime scopes, Android release/embed, never test or debug | `is_runtime_scope`, `NOT_SHIPPED_SCOPE` |
 | `SbomReader` / `CycloneDxParser` | I/O / pure | SBOM files of a build: find, download, parse purls and licenses | `sbom_components` |
-| `LibraryTable` | pure | The merged rows: one per library id, licenses, evidence and files joined; renaming a row | `rows` |
+| `LibraryTable` | pure, shared | The merged rows: one per library id, licenses, evidence and files joined; renaming a row. Filled by reading, finished by completing | `rows` |
 | `ChecksumNamer` | I/O | Renames checksum-only packages that are not ours to the Maven coordinates their checksum is stored under | `maven_purl_by_checksum` loop |
 | `LicenseFiller` | I/O | Fills licenses of packages that have none, from the license database | `xray_component_licences` loop |
-| `Ownership` | pure | Is a Maven group ours, a file name ours, a repository ours | `INTERNAL_GROUPS`, `is_internal` prefix, `rnd-*local` |
+| `Ownership` | pure, shared | Is a Maven group ours, a file name ours, a repository ours | `INTERNAL_GROUPS`, `is_internal` prefix, `rnd-*local` |
 | `BuildRecords` | port | Build-info by name and number; builds by a published file's sha1 | `build_info`, AQL `builds.find` |
-| `ArtifactStore` | port | Stored files by sha1, by path, by sha256; a file's bytes | `file_by_sha1`, `resolve_gav`, `files_by_sha256`, GET |
+| `ArtifactStore` | port | Stored files by sha1, by path, by Maven coordinates (the repository layout, derived from by-path), by sha256; a file's bytes | `file_by_sha1`, `resolve_gav`, `files_by_sha256`, GET |
 | `BinaryScanner` | port | What a binary scanner recognises in a stored file, or "not indexed" | `xray_scan` |
 | `LicenseDatabase` | port | Licenses of packages by coordinates | `xray_component_licences` |
 | `XrayComponentIds` | pure | Xray component id ↔ `PackageId`, both directions | `normalise`, `xray_component_id` |
+| `JfrogCalls` | adapter | One call, retried as the prototype retried it; any failure left is `InventorySourceUnavailableException` | `http()` |
+| `JfrogPorts` | adapter | The clients, built once; the four ports, built per scan | - |
 | `RepositoryPreference` | pure | Which stored copy wins: a repository named `…release…local`, then any `…local`, then any other, then by name | `pick` |
 
 Shared rules, one owner each (the reason these are extracted):
@@ -119,6 +134,8 @@ Shared rules, one owner each (the reason these are extracted):
 - **Which copy of a file**: `RepositoryPreference`, inside `ArtifactStore`, for sha1 and path lookups.
 - **What is ours**: `Ownership`, used by `BuildDependencyReader` (which archives to follow) and `ChecksumNamer` (which files not to rename). The next change's evaluation uses the same class.
 - **Xray ids**: `XrayComponentIds` holds both directions, so a package found by the scanner is asked about by the same id.
+- **Where a Maven file is stored**: `ArtifactStore.byCoordinates`, used by declared leftovers and nested archives, as the prototype's one `resolve_gav` serves both.
+- **A Maven package's id and any id's type**: `PackageId.maven(g, a, v)` and `PackageId.type`, in the model, so every source writes a Maven id the same way and evaluation reads types (docker layers, OS packages) the way the scan does.
 
 ### Skeletons
 
@@ -160,9 +177,11 @@ data class FoundLibrary(
 )
 
 sealed interface PackageId {
+    val type: String                                                                          // maven, npm, docker, rpm, generic…, as the prototype's purl_type
     data class Purl(val type: String, val name: String, val version: String) : PackageId   // pkg:type/name@version
     data class ChecksumOnly(val sha256: String, val fileName: String) : PackageId           // generic://sha256:…/name
     data class Unrecognized(val raw: String) : PackageId                                     // kept verbatim
+    companion object { fun maven(groupId, artifactId, version): Purl; fun parse(raw): PackageId }
 }
 
 data class Finding(val code: FindingCode, val subject: String, val detail: String)
@@ -183,6 +202,7 @@ internal interface BuildRecords {
 internal interface ArtifactStore {
     fun bySha1(sha1: String): StoredFile?                           // preferred copy
     fun byPath(path: String, name: String): StoredFile?             // preferred copy
+    fun byCoordinates(groupId, artifactId, version, extension, classifier = null): StoredFile?   // default body over byPath
     fun bySha256(sha256: String): List<StoredFile>                  // every copy
     fun read(file: StoredFile): ByteArray
 }
@@ -360,6 +380,15 @@ Kept because the prototype's results are the baseline; each may be revisited aft
   - packages: id, licenses (`xray_licences`), sources, files;
   - findings: code, subject, detail.
 - Output: `build/parity/report.md` with a line per component (`same` or the count of differences) and every difference listed. Done means no difference other than those in Decision 11.
+
+### 17. Packages depend one way, and a test holds it
+
+- Found on review against the prototype: `BuildLocator` sat in `listing` and `LibraryTable` in `naming`, though reading uses both, so step B imported from steps A and C. Both now sit beside `Ownership` in `impl`, as what the steps share; `naming` is `completing`, since filling licenses names nothing.
+- The only step-to-step import left is reading taking `ListedFile`, listing's result. Completing knows neither other step.
+- Rules that had two homes have one: the Maven repository layout (`ArtifactStore.byCoordinates`), a Maven package's id (`PackageId.maven`), a package's type (`PackageId.type`), and the judged status of a file (`FileReading`, which `FileStatusJudge` returns and `FileContentReader` completes; `FileJudgement` was the same three fields).
+- `PackageDependencyTest` reads the sources' imports and fails on a crossing; only `impl/adapter` may import the clients.
+- Rejected: a Gradle module per step. The steps share the ports and one table; three more build files would buy what one test already holds.
+- Rejected: an architecture-test library for five rules.
 
 ## Risks / Trade-offs
 

@@ -26,7 +26,7 @@ class FileStatusJudgeTest {
     @DisplayName("a plain text Maven file Xray did not index is PLAIN_FILE, and its build is not read either")
     fun plainFile() {
         assertEquals(
-            FileJudgement(
+            FileReading(
                 FileStatus.PLAIN_FILE,
                 emptySet(),
                 listOf(Finding(NOT_SCANNABLE, entry, "plain file, Xray does not index this type")),
@@ -39,7 +39,7 @@ class FileStatusJudgeTest {
     @DisplayName("an unindexed jar with a build is READ from the build only, with NOT_IN_XRAY")
     fun buildOnly() {
         assertEquals(
-            FileJudgement(FileStatus.READ, setOf(BUILD_RECORD), listOf(Finding(NOT_IN_XRAY, entry, "Xray has not indexed this file"))),
+            FileReading(FileStatus.READ, setOf(BUILD_RECORD), listOf(Finding(NOT_IN_XRAY, entry, "Xray has not indexed this file"))),
             judge(indexed = false),
         )
     }
@@ -48,7 +48,7 @@ class FileStatusJudgeTest {
     @DisplayName("an indexed file without a build is READ from Xray only, with NO_BUILD_INFO naming the convention")
     fun scanOnly() {
         assertEquals(
-            FileJudgement(
+            FileReading(
                 FileStatus.READ,
                 setOf(BINARY_SCAN),
                 listOf(Finding(NO_BUILD_INFO, entry, "no build by properties, checksum or sample-portal_ee")),
@@ -67,7 +67,7 @@ class FileStatusJudgeTest {
     @Test
     @DisplayName("both: READ with both evidences and no finding")
     fun both() {
-        assertEquals(FileJudgement(FileStatus.READ, setOf(BINARY_SCAN, BUILD_RECORD), emptyList()), judge())
+        assertEquals(FileReading(FileStatus.READ, setOf(BINARY_SCAN, BUILD_RECORD), emptyList()), judge())
     }
 
     @Test

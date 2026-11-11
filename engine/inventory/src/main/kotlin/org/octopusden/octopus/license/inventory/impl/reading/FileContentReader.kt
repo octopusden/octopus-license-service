@@ -1,8 +1,8 @@
 package org.octopusden.octopus.license.inventory.impl.reading
 
-import org.octopusden.octopus.license.inventory.impl.listing.BuildLocator
+import org.octopusden.octopus.license.inventory.impl.BuildLocator
+import org.octopusden.octopus.license.inventory.impl.LibraryTable
 import org.octopusden.octopus.license.inventory.impl.listing.ListedFile
-import org.octopusden.octopus.license.inventory.impl.naming.LibraryTable
 import org.octopusden.octopus.license.inventory.impl.port.ArtifactStore
 import org.octopusden.octopus.license.inventory.impl.port.BinaryScanner
 import org.octopusden.octopus.license.inventory.impl.port.BuildRecord
@@ -12,13 +12,6 @@ import org.octopusden.octopus.license.inventory.model.FileStatus
 import org.octopusden.octopus.license.inventory.model.Finding
 import org.octopusden.octopus.license.inventory.model.FindingCode
 import org.octopusden.octopus.license.inventory.model.PackageId
-
-/** How much of a released file was read, and what that noticed. */
-internal data class FileReading(
-    val status: FileStatus,
-    val evidence: Set<Evidence>,
-    val findings: List<Finding>,
-)
 
 /**
  * Step B (D6, D7) for one located file: whether it is read, then every source it has, in the
@@ -39,12 +32,12 @@ internal class FileContentReader(
         table: LibraryTable,
     ): FileReading {
         val stored = requireNotNull(file.stored) { "${file.entry} was not located" }
-        val judgement =
+        val judged =
             FileStatusJudge.judge(file.entry, file.kind, stored.name, scanner.scan(stored) != null, file.build != null, conventionBuild)
-        if (judgement.status != FileStatus.READ) return FileReading(judgement.status, judgement.evidence, judgement.findings)
-        val findings = judgement.findings.toMutableList()
+        if (judged.status != FileStatus.READ) return judged
+        val findings = judged.findings.toMutableList()
         Visit(file.entry, table, findings).collect(stored, file.build, file.ownId, depth = 0)
-        return FileReading(judgement.status, judgement.evidence, findings.distinct())
+        return judged.copy(findings = findings.distinct())
     }
 
     /** One released file's walk: where its packages go, and which nested builds it has followed. */
@@ -65,7 +58,7 @@ internal class FileContentReader(
             scanned.forEach { (id, licenses) -> table.add(id, licenses, Evidence.BINARY_SCAN, foundIn) }
             if (build == null) return
             // An inner archive with no library is data (a model zip): its build recorded the tools that made it, not what it holds.
-            if (depth > 0 && scanned.keys.none { it != ownId && type(it) != DOCKER }) {
+            if (depth > 0 && scanned.keys.none { it != ownId && it.type != DOCKER }) {
                 findings += Finding(FindingCode.NO_LIBRARIES_IN_FILE, file.name, "inner archive without libraries, build-info ignored")
                 return
             }
@@ -82,7 +75,7 @@ internal class FileContentReader(
         ) {
             // By coordinates first: a dependency resolved by several configurations can carry its sources' checksum.
             val inner =
-                store.byPath("${archive.group.replace('.', '/')}/${archive.artifactId}/${archive.version}", archive.fileName())
+                store.byCoordinates(archive.group, archive.artifactId, archive.version, archive.type)
                     ?: archive.sha1?.takeIf { it.isNotEmpty() }?.let(store::bySha1)
             val build = inner?.let(locator::locate)?.first
             if (inner == null || build == null) {
@@ -92,23 +85,13 @@ internal class FileContentReader(
             val key = Triple(build.ref.name, build.ref.number, archive.dependencyId)
             if (key in visited || depth > MAX_FOLLOWING_DEPTH) return
             visited += key
-            collect(inner, build, PackageId.Purl(PackageId.MAVEN, "${archive.group}/${archive.artifactId}", archive.version), depth + 1)
+            collect(inner, build, archive.id, depth + 1)
         }
     }
-
-    private fun NestedArchive.fileName() = "$artifactId-$version.$type"
-
-    private fun type(id: PackageId) =
-        when (id) {
-            is PackageId.Purl -> id.type
-            is PackageId.ChecksumOnly -> GENERIC
-            is PackageId.Unrecognized -> id.raw.substringBefore("://")
-        }
 
     private companion object {
         /** Archives are followed from files at this depth or less, so the deepest one read is one deeper (D7). */
         const val MAX_FOLLOWING_DEPTH = 10
         const val DOCKER = "docker"
-        const val GENERIC = "generic"
     }
 }

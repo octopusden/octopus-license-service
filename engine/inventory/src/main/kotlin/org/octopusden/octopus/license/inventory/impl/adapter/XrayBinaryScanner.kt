@@ -5,6 +5,7 @@ import org.octopusden.octopus.infrastructure.xray.client.dto.ArtifactStatusReque
 import org.octopusden.octopus.infrastructure.xray.client.dto.ArtifactSummaryRequest
 import org.octopusden.octopus.infrastructure.xray.client.dto.ScanState
 import org.octopusden.octopus.infrastructure.xray.client.exception.XrayClientException
+import org.octopusden.octopus.license.inventory.exception.InventorySourceUnavailableException
 import org.octopusden.octopus.license.inventory.impl.port.BinaryScanner
 import org.octopusden.octopus.license.inventory.impl.port.StoredFile
 import org.octopusden.octopus.license.inventory.model.PackageId
@@ -57,7 +58,7 @@ internal class XrayBinaryScanner(
                 .call(JfrogCalls.XRAY, "scan status of ${file.fullPath}") {
                     client.getArtifactStatus(ArtifactStatusRequest(file.repo, "${file.path}/${file.name}"))
                 }.let { it.details?.sca?.status ?: it.overall?.status }
-        } catch (e: org.octopusden.octopus.license.inventory.exception.InventorySourceUnavailableException) {
+        } catch (e: InventorySourceUnavailableException) {
             if ((e.cause as? XrayClientException)?.status in CLIENT_ERRORS) null else throw e
         }
 

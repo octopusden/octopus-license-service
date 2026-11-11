@@ -1,5 +1,6 @@
-package org.octopusden.octopus.license.inventory.impl.naming
+package org.octopusden.octopus.license.inventory.impl.completing
 
+import org.octopusden.octopus.license.inventory.impl.LibraryTable
 import org.octopusden.octopus.license.inventory.impl.port.LicenseDatabase
 import org.octopusden.octopus.license.inventory.model.PackageId
 

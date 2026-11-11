@@ -1,9 +1,10 @@
-package org.octopusden.octopus.license.inventory.impl.naming
+package org.octopusden.octopus.license.inventory.impl.completing
 
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.octopusden.octopus.license.inventory.impl.FakeArtifactStore
+import org.octopusden.octopus.license.inventory.impl.LibraryTable
 import org.octopusden.octopus.license.inventory.impl.OWNERSHIP
 import org.octopusden.octopus.license.inventory.impl.Ownership
 import org.octopusden.octopus.license.inventory.impl.stored

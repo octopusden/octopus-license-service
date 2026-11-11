@@ -1,4 +1,4 @@
-package org.octopusden.octopus.license.inventory.impl.naming
+package org.octopusden.octopus.license.inventory.impl
 
 import org.octopusden.octopus.license.inventory.model.Evidence
 import org.octopusden.octopus.license.inventory.model.FoundLibrary

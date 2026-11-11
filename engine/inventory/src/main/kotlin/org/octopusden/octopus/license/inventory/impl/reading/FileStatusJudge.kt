@@ -6,12 +6,6 @@ import org.octopusden.octopus.license.inventory.model.FileStatus
 import org.octopusden.octopus.license.inventory.model.Finding
 import org.octopusden.octopus.license.inventory.model.FindingCode
 
-internal data class FileJudgement(
-    val status: FileStatus,
-    val evidence: Set<Evidence>,
-    val findings: List<Finding>,
-)
-
 /** Whether a located file is read at all, and from which sources (D6). Decides; reads nothing. */
 internal object FileStatusJudge {
     private val PLAIN_EXTENSIONS =
@@ -25,9 +19,9 @@ internal object FileStatusJudge {
         indexed: Boolean,
         hasBuild: Boolean,
         conventionBuild: String,
-    ): FileJudgement {
+    ): FileReading {
         if (!indexed && kind == FileKind.MAVEN && fileName.substringAfterLast('.').lowercase() in PLAIN_EXTENSIONS) {
-            return FileJudgement(
+            return FileReading(
                 FileStatus.PLAIN_FILE,
                 emptySet(),
                 listOf(Finding(FindingCode.NOT_SCANNABLE, entry, "plain file, Xray does not index this type")),
@@ -38,9 +32,9 @@ internal object FileStatusJudge {
                 Finding(FindingCode.NOT_IN_XRAY, entry, "Xray has not indexed this file").takeUnless { indexed },
                 Finding(FindingCode.NO_BUILD_INFO, entry, "no build by properties, checksum or $conventionBuild").takeUnless { hasBuild },
             )
-        if (!indexed && !hasBuild) return FileJudgement(FileStatus.NOT_READABLE, emptySet(), findings)
+        if (!indexed && !hasBuild) return FileReading(FileStatus.NOT_READABLE, emptySet(), findings)
         val evidence =
             setOfNotNull(Evidence.BINARY_SCAN.takeIf { indexed }, Evidence.BUILD_RECORD.takeIf { hasBuild })
-        return FileJudgement(FileStatus.READ, evidence, findings)
+        return FileReading(FileStatus.READ, evidence, findings)
     }
 }

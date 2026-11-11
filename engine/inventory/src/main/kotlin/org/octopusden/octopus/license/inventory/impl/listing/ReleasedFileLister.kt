@@ -1,5 +1,6 @@
 package org.octopusden.octopus.license.inventory.impl.listing
 
+import org.octopusden.octopus.license.inventory.impl.BuildLocator
 import org.octopusden.octopus.license.inventory.impl.port.ArtifactStore
 import org.octopusden.octopus.license.inventory.impl.port.BuildRecord
 import org.octopusden.octopus.license.inventory.impl.port.BuildRecords
@@ -7,6 +8,7 @@ import org.octopusden.octopus.license.inventory.model.BuildLookup
 import org.octopusden.octopus.license.inventory.model.FileKind
 import org.octopusden.octopus.license.inventory.model.Finding
 import org.octopusden.octopus.license.inventory.model.FindingCode
+import org.octopusden.octopus.license.inventory.model.PackageId
 import org.octopusden.octopus.license.target.model.DeclaredArtifact
 import org.octopusden.octopus.license.target.model.LicenseTarget
 
@@ -58,7 +60,7 @@ internal class ReleasedFileLister(
             ?.takeIf { it.isNotEmpty() }
             ?.let(store::bySha1)
             ?: return listed.notFound("listed in ${build.ref} but not in Artifactory")
-        return listed.copy(stored = stored, ownId = mavenId(candidate.group, candidate.artifactId, candidate.version))
+        return listed.copy(stored = stored, ownId = PackageId.maven(candidate.group, candidate.artifactId, candidate.version))
     }
 
     private fun image(

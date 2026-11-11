@@ -1,10 +1,12 @@
 package org.octopusden.octopus.license.inventory.impl.listing
 
+import org.octopusden.octopus.license.inventory.impl.BuildLocator
 import org.octopusden.octopus.license.inventory.impl.port.ArtifactStore
 import org.octopusden.octopus.license.inventory.model.FileKind
 import org.octopusden.octopus.license.inventory.model.FileStatus
 import org.octopusden.octopus.license.inventory.model.Finding
 import org.octopusden.octopus.license.inventory.model.FindingCode
+import org.octopusden.octopus.license.inventory.model.PackageId
 import org.octopusden.octopus.license.inventory.model.SelectionReason
 import org.octopusden.octopus.license.target.model.DeclaredArtifact
 import org.octopusden.octopus.license.target.model.DeclaredArtifact.DockerImage
@@ -37,11 +39,11 @@ internal class DeclaredLeftoverLocator(
         val listed = ListedFile(declared.entry(), FileKind.MAVEN, selectedBy = setOf(SelectionReason.DECLARED))
         return target.artifactVersions
             .firstNotNullOfOrNull { version ->
-                val folder = "${declared.groupId.replace('.', '/')}/${declared.artifactId}/$version"
-                val name = "${declared.artifactId}-$version" + declared.classifier?.let { "-$it" }.orEmpty() + ".${declared.extension}"
-                store.byPath(folder, name)?.let { version to it }
+                store
+                    .byCoordinates(declared.groupId, declared.artifactId, version, declared.extension, declared.classifier)
+                    ?.let { version to it }
             }?.let { (version, stored) ->
-                withBuild(listed.copy(stored = stored, ownId = mavenId(declared.groupId, declared.artifactId, version)), target)
+                withBuild(listed.copy(stored = stored, ownId = PackageId.maven(declared.groupId, declared.artifactId, version)), target)
             }
             ?: listed.notFound(triedVersions(target))
     }

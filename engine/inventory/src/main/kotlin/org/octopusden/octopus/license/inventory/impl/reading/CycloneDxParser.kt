@@ -16,7 +16,7 @@ internal object CycloneDxParser {
         mapper
             .readTree(sbom)
             .path("components")
-            .filter { it.path("purl").isTextual }
+            .filter { it.path("purl").isTextual && it.path("purl").asText().isNotEmpty() }
             .associate { component ->
                 PackageId.parse(component.path("purl").asText().substringBefore('?')) to licenses(component)
             }

@@ -6,7 +6,6 @@ import org.octopusden.octopus.license.inventory.model.FileKind
 import org.octopusden.octopus.license.inventory.model.FileStatus
 import org.octopusden.octopus.license.inventory.model.FindingCode
 import org.octopusden.octopus.license.inventory.model.LicenseInventory
-import org.octopusden.octopus.license.inventory.model.PackageId
 import org.octopusden.octopus.license.inventory.model.SelectionReason
 
 /**
@@ -77,7 +76,7 @@ data class ParityView(
                     inventory.libraries
                         .filter {
                             listed(
-                                type(it.id),
+                                it.id.type,
                                 it.foundIn
                                     .mapNotNull(kinds::get)
                                     .map(::kind)
@@ -134,13 +133,6 @@ data class ParityView(
             type: String,
             kinds: Set<String>,
         ) = type != "docker" && type !in OS_PACKAGE_TYPES && !(type == "pypi" && kinds == setOf("docker"))
-
-        private fun type(id: PackageId) =
-            when (id) {
-                is PackageId.Purl -> id.type
-                is PackageId.ChecksumOnly -> "generic"
-                is PackageId.Unrecognized -> id.raw.substringBefore("://")
-            }
 
         private fun status(
             status: FileStatus,

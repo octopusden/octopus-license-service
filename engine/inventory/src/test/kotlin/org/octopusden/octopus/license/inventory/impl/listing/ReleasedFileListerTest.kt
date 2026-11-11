@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.octopusden.octopus.license.inventory.impl.BUILD_VERSION
+import org.octopusden.octopus.license.inventory.impl.BuildLocator
 import org.octopusden.octopus.license.inventory.impl.COMPONENT
 import org.octopusden.octopus.license.inventory.impl.FakeArtifactStore
 import org.octopusden.octopus.license.inventory.impl.FakeBuildRecords

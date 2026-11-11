@@ -26,6 +26,19 @@ internal interface ArtifactStore {
         name: String,
     ): StoredFile?
 
+    /** The preferred copy of a Maven file, at the repository layout `g/a/v/a-v[-classifier].extension`. */
+    fun byCoordinates(
+        groupId: String,
+        artifactId: String,
+        version: String,
+        extension: String,
+        classifier: String? = null,
+    ): StoredFile? =
+        byPath(
+            "${groupId.replace('.', '/')}/$artifactId/$version",
+            "$artifactId-$version" + classifier?.let { "-$it" }.orEmpty() + ".$extension",
+        )
+
     /** Every copy, in the order Artifactory answers. */
     fun bySha256(sha256: String): List<StoredFile>
 

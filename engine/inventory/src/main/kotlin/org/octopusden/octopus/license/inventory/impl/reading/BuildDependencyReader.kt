@@ -16,7 +16,9 @@ internal data class NestedArchive(
     val version: String,
     val type: String,
     val sha1: String?,
-)
+) {
+    val id get() = PackageId.maven(group, artifactId, version)
+}
 
 /** What a build recorded for one file: [packages] carry no license, the build names none. */
 internal data class DependencyReading(
@@ -58,7 +60,7 @@ internal class BuildDependencyReader(
                     coordinates == null -> findings += Finding(FindingCode.LOCAL_FILE_DEPENDENCY, dependency.id, LOCAL_FILE_DETAIL)
                     isOwnArchive(dependency) ->
                         nested += coordinates.let { (g, a, v) -> NestedArchive(dependency.id, g, a, v, dependency.type!!, dependency.sha1) }
-                    else -> packages += coordinates.let { (g, a, v) -> PackageId.Purl(PackageId.MAVEN, "$g/$a", v) }
+                    else -> packages += coordinates.let { (g, a, v) -> PackageId.maven(g, a, v) }
                 }
             }
         return DependencyReading(packages, nested, findings)
@@ -82,7 +84,7 @@ internal class BuildDependencyReader(
     ): Boolean {
         if (!isOwnArchive(dependency) || dependency.scopes.any(ShippingScopes::isTestOrDebug)) return false
         val (g, a, v) = coordinates(dependency.id) ?: return false
-        return PackageId.Purl(PackageId.MAVEN, "$g/$a", v) in scanned
+        return PackageId.maven(g, a, v) in scanned
     }
 
     private fun isOwnArchive(dependency: BuildDependency) =

@@ -1,5 +1,6 @@
-package org.octopusden.octopus.license.inventory.impl.naming
+package org.octopusden.octopus.license.inventory.impl.completing
 
+import org.octopusden.octopus.license.inventory.impl.LibraryTable
 import org.octopusden.octopus.license.inventory.impl.Ownership
 import org.octopusden.octopus.license.inventory.impl.port.ArtifactStore
 import org.octopusden.octopus.license.inventory.model.PackageId
@@ -22,7 +23,7 @@ internal class ChecksumNamer(
                 .firstNotNullOfOrNull { copy ->
                     val parts = copy.path.split('/')
                     if (parts.size >= 3 && copy.name.startsWith("${parts[parts.size - 2]}-${parts.last()}")) {
-                        PackageId.Purl(PackageId.MAVEN, "${parts.dropLast(2).joinToString(".")}/${parts[parts.size - 2]}", parts.last())
+                        PackageId.maven(parts.dropLast(2).joinToString("."), parts[parts.size - 2], parts.last())
                     } else {
                         null
                     }
