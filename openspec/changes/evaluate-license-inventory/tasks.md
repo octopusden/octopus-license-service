@@ -51,23 +51,25 @@
 
 ## 5. The server (Decisions 9, 10)
 
-- [ ] 5.1 Failing tests for `SummaryMapper`, one per scenario of `license-report-summary`:
-  - [ ] 5.1.1 Counts per verdict, zeros included; internal and skipped not counted.
-  - [ ] 5.1.2 Violations: not allowed, unknown, unidentified listed in order with files sorted; internal and allowed not listed.
-  - [ ] 5.1.3 Trust null; inputs carried.
-- [ ] 5.2 Failing tests for `EvaluatingLicenseReportGenerator` with a fake scanner and the real evaluator:
-  - [ ] 5.2.1 Scanned: summary from the assessment, `scanned` counted.
-  - [ ] 5.2.2 `InventorySourceUnavailableException`: rethrown, `unavailable` counted.
-  - [ ] 5.2.3 Any other exception: rethrown, `failed` counted.
-- [ ] 5.3 Failing tests for configuration: the service does not start without `jfrog.url`, `jfrog.token`, `ownership.internal-groups`, `ownership.own-repository-prefixes`; each message names the property.
-- [ ] 5.4 Failing test, end to end through the controller with a fake scanner: a report ends `DONE` with counts; an unavailable scan ends `FAILED` with the message.
-- [ ] 5.5 Implement:
-  - [ ] 5.5.1 `configuration/LicenseServiceProperties.kt` — `jfrog`, `ownership`.
-  - [ ] 5.5.2 `configuration/LicenseServiceConfig.kt` — `JfrogLicenseInventoryScanner` and `LicenseEvaluator` beans, required settings checked by name.
-  - [ ] 5.5.3 `service/impl/SummaryMapper.kt`, `service/impl/EvaluatingLicenseReportGenerator.kt`; delete `EmptyLicenseReportGenerator.kt`.
-  - [ ] 5.5.4 `server/build.gradle.kts` — `:license-inventory`, `:license-evaluation`.
-  - [ ] 5.5.5 `application.yaml` defaults and comments; `bootstrap-dev.yml` placeholders.
-- [ ] 5.6 Confirm `:license-service:test` green.
+- [x] 5.1 Failing tests for `SummaryMapper`, one per scenario of `license-report-summary`:
+  - [x] 5.1.1 Counts per verdict, zeros included; internal and skipped not counted.
+  - [x] 5.1.2 Violations: not allowed, unknown, unidentified listed in order with files sorted; internal and allowed not listed.
+  - [x] 5.1.3 Trust null; inputs carried.
+- [x] 5.2 Failing tests for `EvaluatingLicenseReportGenerator` with a fake scanner and the real evaluator:
+  - [x] 5.2.1 Scanned: summary from the assessment, `scanned` counted.
+  - [x] 5.2.2 `InventorySourceUnavailableException`: rethrown, `unavailable` counted.
+  - [x] 5.2.3 Any other exception: rethrown, `failed` counted.
+- [x] 5.3 Failing tests for configuration: the service does not start without `jfrog.url`, `jfrog.token`, `ownership.internal-groups`, `ownership.own-repository-prefixes`; each message names the property.
+- [x] 5.4 Failing test, end to end through the controller with a fake scanner: a report ends `DONE` with counts; an unavailable scan ends `FAILED` with the message. `FakeInventoryScanner` replaces the scanner bean in the three API tests; the generator under test is the real one.
+- [x] 5.5 Implement:
+  - [x] 5.5.1 `configuration/LicenseServiceProperties.kt` — `jfrog`, `ownership`.
+  - [x] 5.5.2 `configuration/LicenseServiceConfig.kt` — `JfrogLicenseInventoryScanner` and `LicenseEvaluator` beans, required settings checked by name.
+  - [x] 5.5.3 `service/impl/SummaryMapper.kt`, `service/impl/EvaluatingLicenseReportGenerator.kt`; delete `EmptyLicenseReportGenerator.kt`.
+  - [x] 5.5.4 `server/build.gradle.kts` — `:license-inventory`, `:license-evaluation`.
+  - [x] 5.5.5 `application.yaml` defaults and comments; `bootstrap-dev.yml` placeholders.
+- [x] 5.6 Confirm `:license-service:test` green: 71; `ktlintCheck` and `detekt` clean.
+  - [x] 5.6.1 (added on review) detekt: `LicenseServiceConfig` past `TooManyFunctions` with a third `required…` helper; the license registry settings now use the same `requiredSetting` as the new ones. The generator counts the scan's outcome with `runCatching`, not a `catch (RuntimeException)` detekt rejects as too generic.
+  - [x] 5.6.2 (added on review) The JFrog clients reach the server's runtime classpath through `:license-inventory`: the scanner bean, which builds them, starts in every server context test.
 
 ## 6. Parity, end to end (Decision 11)
 

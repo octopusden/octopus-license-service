@@ -10,3 +10,9 @@ license-service:
     token: ${BITBUCKET_TOKEN}
     project: ${LICENSE_REGISTRY_PROJECT}
     repository: ${LICENSE_REGISTRY_REPOSITORY}
+  jfrog:
+    url: ${JFROG_URL}
+    token: ${JFROG_TOKEN}
+  ownership:
+    internal-groups: ${INTERNAL_GROUPS}
+    own-repository-prefixes: ${OWN_REPOSITORY_PREFIXES}

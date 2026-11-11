@@ -31,3 +31,9 @@ license-service:
   license-registry:
     refresh-interval: PT15M
     retry-interval: PT1M
+  # jfrog: url and token come from Spring Cloud Config and Vault; ownership: internal-groups and
+  # own-repository-prefixes from Spring Cloud Config, where company names stay. Without any of them
+  # the service does not start.
+  jfrog:
+    xray-scan-timeout: PT5M
+    xray-scan-poll-interval: PT10S

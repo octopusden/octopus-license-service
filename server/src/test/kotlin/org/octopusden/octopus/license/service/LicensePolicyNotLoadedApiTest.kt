@@ -35,6 +35,10 @@ import java.net.http.HttpResponse
         "license-service.license-registry.token=token",
         "license-service.license-registry.project=SAMPLE",
         "license-service.license-registry.repository=sample-license-registry",
+        "license-service.jfrog.url=http://localhost:1",
+        "license-service.jfrog.token=token",
+        "license-service.ownership.internal-groups=org.example",
+        "license-service.ownership.own-repository-prefixes=rnd-",
     ],
 )
 class LicensePolicyNotLoadedApiTest {

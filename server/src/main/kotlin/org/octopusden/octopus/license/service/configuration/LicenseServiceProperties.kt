@@ -16,6 +16,8 @@ import java.time.Duration
  * @param componentsRegistryUrl required; nullable only so its absence is reported by name at startup.
  * @param exclusions components out of scope that no registry fact identifies, grouped by reason.
  * @param licenseRegistry where the license policy is read from (D9).
+ * @param jfrog where the license scan reads Artifactory and Xray.
+ * @param ownership what is ours, so the scan follows our archives and evaluation calls them internal.
  */
 @ConfigurationProperties("license-service")
 data class LicenseServiceProperties(
@@ -26,6 +28,8 @@ data class LicenseServiceProperties(
     val componentsRegistryUrl: String? = null,
     val exclusions: List<ConfiguredExclusion> = emptyList(),
     val licenseRegistry: LicenseRegistryProperties = LicenseRegistryProperties(),
+    val jfrog: JfrogProperties = JfrogProperties(),
+    val ownership: OwnershipProperties = OwnershipProperties(),
 )
 
 /**
@@ -43,4 +47,30 @@ data class LicenseRegistryProperties(
     val repository: String? = null,
     val refreshInterval: Duration = Duration.ofMinutes(15),
     val retryInterval: Duration = Duration.ofMinutes(1),
+)
+
+/**
+ * The JFrog platform, under which both Artifactory and Xray are served. URL and token are required;
+ * nullable only so their absence is reported by name at startup. The token comes from Vault.
+ *
+ * @param xrayScanTimeout how long one scan waits, in all, for Xray to finish scanning its files.
+ * @param xrayScanPollInterval how often a pending Xray scan is asked about again.
+ */
+data class JfrogProperties(
+    val url: String? = null,
+    val token: String? = null,
+    val xrayScanTimeout: Duration = Duration.ofMinutes(5),
+    val xrayScanPollInterval: Duration = Duration.ofSeconds(10),
+)
+
+/**
+ * What is ours, from Spring Cloud Config: company names stay out of this public repository. Both
+ * are required and must not be empty.
+ *
+ * @param internalGroups Maven group prefixes.
+ * @param ownRepositoryPrefixes repository name prefixes; a repository is ours when its name also ends with `local`.
+ */
+data class OwnershipProperties(
+    val internalGroups: List<String> = emptyList(),
+    val ownRepositoryPrefixes: List<String> = emptyList(),
 )
