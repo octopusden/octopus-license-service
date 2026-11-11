@@ -1,8 +1,3 @@
-repositories {
-    // The two JFrog clients are published to the local repository until their release (tasks.md 1.4).
-    mavenLocal()
-}
-
 dependencies {
     api(project(":license-target-registry"))
     implementation(

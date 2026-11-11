@@ -12,7 +12,7 @@
   - [x] 1.3.2 `XrayClient`, `XrayClassicClient` on `ClientParametersProvider`, DTOs, error decoder, as `artifactory-client` is built.
   - [x] 1.3.3 `settings.gradle.kts` and both publication allowlists. No README line: the README covers only the TeamCity test data. `:xray-client:test` 9 green; `qualityStatic` green.
   - [x] 1.3.4 (added on review) A status the client does not know reads as `UNKNOWN` (`@JsonEnumDefaultValue`), so a new Xray status cannot fail a scan.
-- [ ] 1.4 Release both (branch `add-xray-client` in octopus-external-systems-client, two commits; published locally as `2.0.0-xray-SNAPSHOT` meanwhile); pin `artifactory-client.version` and `xray-client.version` in the service's `gradle.properties`.
+- [x] 1.4 Release both; pin `artifactory-client.version` and `xray-client.version` in the service's `gradle.properties`: released as `2.0.114` (octopusden/octopus-external-systems-client#170); the module's `mavenLocal()` is gone.
 
 ## 2. `explicit` on the license target (Decision 4)
 
