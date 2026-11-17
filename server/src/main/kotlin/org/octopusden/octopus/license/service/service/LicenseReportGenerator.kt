@@ -1,5 +1,6 @@
 package org.octopusden.octopus.license.service.service
 
+import org.octopusden.octopus.license.core.dto.LicenseReportMode
 import org.octopusden.octopus.license.core.dto.LicenseReportSummary
 
 /**
@@ -10,6 +11,7 @@ interface LicenseReportGenerator {
     fun generate(
         component: String,
         version: String,
+        mode: LicenseReportMode,
     ): GeneratedReport
 }
 

@@ -35,8 +35,10 @@ class LicenseReportServiceImpl(
             component = request.component,
             version = request.version,
             status = LicenseReportStatus.RUNNING,
+            mode = request.mode,
         )
-        licenseReportStore.add(report)
+        val current = licenseReportStore.addUnlessRunning(report)
+        if (current.id != report.id) return current
         try {
             licenseReportExecutor.execute { generate(report) }
         } catch (_: TaskRejectedException) {
@@ -67,7 +69,7 @@ class LicenseReportServiceImpl(
 
     private fun generate(report: LicenseReport) {
         val startedAt = clock.instant()
-        val finished = runCatching { licenseReportGenerator.generate(report.component, report.version) }.fold(
+        val finished = runCatching { licenseReportGenerator.generate(report.component, report.version, report.mode) }.fold(
             onSuccess = { generated ->
                 report.copy(status = LicenseReportStatus.DONE, summary = generated.summary).also {
                     licenseReportStore.finish(it, generated.files)
@@ -75,9 +77,14 @@ class LicenseReportServiceImpl(
             },
             onFailure = { e ->
                 log.error("License report {} for {}:{} failed", report.id, report.component, report.version, e)
-                report.copy(status = LicenseReportStatus.FAILED, error = e.message ?: e.javaClass.name).also {
-                    licenseReportStore.finish(it, null)
-                }
+                // The exception text can carry upstream URLs and repository paths; it stays in the log.
+                report
+                    .copy(
+                        status = LicenseReportStatus.FAILED,
+                        error = "Generation failed; the service log has the details of report ${report.id}",
+                    ).also {
+                        licenseReportStore.finish(it, null)
+                    }
             },
         )
         log.info(

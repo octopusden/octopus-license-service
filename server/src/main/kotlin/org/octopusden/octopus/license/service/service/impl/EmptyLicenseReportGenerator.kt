@@ -1,6 +1,7 @@
 package org.octopusden.octopus.license.service.service.impl
 
 import org.octopusden.octopus.license.core.dto.GenerationInputs
+import org.octopusden.octopus.license.core.dto.LicenseReportMode
 import org.octopusden.octopus.license.core.dto.LicenseReportSummary
 import org.octopusden.octopus.license.service.service.GeneratedReport
 import org.octopusden.octopus.license.service.service.LicenseReportGenerator
@@ -19,6 +20,7 @@ class EmptyLicenseReportGenerator(
     override fun generate(
         component: String,
         version: String,
+        mode: LicenseReportMode,
     ) = GeneratedReport(
         LicenseReportSummary(
             inputs = GenerationInputs(

@@ -33,30 +33,39 @@ class ExceptionInfoHandler {
 
     /**
      * Spring's own exceptions (unknown path, wrong method, unsupported media type) implement
-     * [ErrorResponse] and carry their status; only the rest is a server error.
+     * [ErrorResponse] and carry their status and headers, such as `Allow` on a 405; only the rest is
+     * a server error.
      */
     @ExceptionHandler(Exception::class)
     fun handleUnexpected(e: Exception): ResponseEntity<ApiErrorResponse> {
         if (e is ErrorResponse) {
-            return errorResponse(HttpStatus.valueOf(e.statusCode.value()), e)
+            return errorResponse(HttpStatus.valueOf(e.statusCode.value()), e) { headers(e.headers) }
         }
         log.error(e.message, e)
-        return errorResponse(HttpStatus.INTERNAL_SERVER_ERROR, e)
+        // The exception text can carry an upstream system's URL and response body; it stays in the log.
+        return errorResponse(HttpStatus.INTERNAL_SERVER_ERROR, INTERNAL_ERROR_MESSAGE)
     }
 
     private fun errorResponse(
         status: HttpStatus,
         e: Exception,
         headers: ResponseEntity.BodyBuilder.() -> Unit = {},
+    ) = errorResponse(status, e.message ?: status.reasonPhrase, headers)
+
+    private fun errorResponse(
+        status: HttpStatus,
+        message: String,
+        headers: ResponseEntity.BodyBuilder.() -> Unit = {},
     ): ResponseEntity<ApiErrorResponse> =
         ResponseEntity
             .status(status)
             .apply(headers)
             .contentType(MediaType.APPLICATION_JSON)
-            .body(ApiErrorResponse(ApiError(status.value(), e.message ?: status.reasonPhrase)))
+            .body(ApiErrorResponse(ApiError(status.value(), message)))
 
     private companion object {
         const val RETRY_AFTER_SECONDS = 60
+        const val INTERNAL_ERROR_MESSAGE = "Internal server error; the service log has the details"
         val log = LoggerFactory.getLogger(ExceptionInfoHandler::class.java)
     }
 }

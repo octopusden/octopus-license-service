@@ -2,6 +2,7 @@ package org.octopusden.octopus.license.service
 
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -14,6 +15,7 @@ import org.octopusden.octopus.license.client.LicenseServiceClient
 import org.octopusden.octopus.license.client.impl.ClassicLicenseServiceClient
 import org.octopusden.octopus.license.client.impl.LicenseServiceClientParametersProvider
 import org.octopusden.octopus.license.core.dto.LicenseReport
+import org.octopusden.octopus.license.core.dto.LicenseReportMode
 import org.octopusden.octopus.license.core.dto.LicenseReportRequest
 import org.octopusden.octopus.license.core.dto.LicenseReportStatus
 import org.octopusden.octopus.license.core.exception.InvalidRequestException
@@ -37,8 +39,10 @@ import java.net.http.HttpResponse
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicInteger
 import java.util.zip.ZipInputStream
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
@@ -119,6 +123,7 @@ class LicenseReportApiTest {
         assertTrue(unknownPath.body().startsWith("""{"error":{"code":404,"""), unknownPath.body())
         assertEquals(HTTP_METHOD_NOT_ALLOWED, wrongMethod.statusCode())
         assertTrue(wrongMethod.body().startsWith("""{"error":{"code":405,"""), wrongMethod.body())
+        assertTrue(wrongMethod.headers().firstValue("Allow").isPresent, "a 405 says which methods are allowed")
     }
 
     @Test
@@ -205,6 +210,29 @@ class LicenseReportApiTest {
     }
 
     @Test
+    @DisplayName("a second start for a component version still running joins that report: it is generated once")
+    fun runningComponentVersionIsJoined() {
+        val first = client.startReport(LicenseReportRequest(SLOW_COMPONENT, JOINED_VERSION))
+        val second = client.startReport(LicenseReportRequest(SLOW_COMPONENT, JOINED_VERSION))
+        generator.release()
+
+        awaitFinished(first.id)
+
+        assertEquals(first.id, second.id)
+        assertEquals(1, generator.generations("$SLOW_COMPONENT:$JOINED_VERSION"))
+    }
+
+    @Test
+    @DisplayName("a report records the mode it was asked for: a quick check, or by default a full report")
+    fun reportRecordsMode() {
+        val check = client.startReport(LicenseReportRequest(COMPONENT, CHECK_VERSION, LicenseReportMode.CHECK))
+        val full = client.startReport(LicenseReportRequest(COMPONENT, VERSION))
+
+        assertEquals(LicenseReportMode.CHECK, awaitFinished(check.id).mode)
+        assertEquals(LicenseReportMode.FULL, awaitFinished(full.id).mode)
+    }
+
+    @Test
     @DisplayName("files of a RUNNING report are not available yet")
     fun filesOfRunningReportNotAvailable() {
         val started = client.startReport(LicenseReportRequest(SLOW_COMPONENT, VERSION))
@@ -221,7 +249,9 @@ class LicenseReportApiTest {
         val failed = awaitFinished(started.id)
 
         assertEquals(LicenseReportStatus.FAILED, failed.status)
-        assertNotNull(failed.error)
+        val error = requireNotNull(failed.error) { "a FAILED report says it failed" }
+        assertFalse(error.contains("Xray is unreachable"), "the exception text stays in the service log: $error")
+        assertTrue(error.contains(started.id), "the error names the report, to find it in the log: $error")
         assertNull(failed.summary)
         assertThrows<LicenseFilesNotAvailableException> { client.downloadFiles(started.id) }
     }
@@ -248,19 +278,38 @@ class LicenseReportApiTest {
         @Volatile
         private var slowGate = CountDownLatch(1)
 
+        private val generationCounts = ConcurrentHashMap<String, AtomicInteger>()
+
         fun release() {
             slowGate.countDown()
             slowGate = CountDownLatch(1)
         }
 
+        fun generations(componentVersion: String) = generationCounts[componentVersion]?.get() ?: 0
+
         override fun generate(
             component: String,
             version: String,
+            mode: LicenseReportMode,
+        ): GeneratedReport {
+            generationCounts.computeIfAbsent("$component:$version") { AtomicInteger() }.incrementAndGet()
+            return generateFor(component, version, mode)
+        }
+
+        private fun generateFor(
+            component: String,
+            version: String,
+            mode: LicenseReportMode,
         ): GeneratedReport =
             when (component) {
-                SLOW_COMPONENT -> slowGate.await(AWAIT_TIMEOUT.seconds, TimeUnit.SECONDS).let { delegate.generate(component, version) }
+                SLOW_COMPONENT ->
+                    slowGate
+                        .await(
+                            AWAIT_TIMEOUT.seconds,
+                            TimeUnit.SECONDS,
+                        ).let { delegate.generate(component, version, mode) }
                 BROKEN_COMPONENT -> error("Xray is unreachable")
-                else -> delegate.generate(component, version)
+                else -> delegate.generate(component, version, mode)
             }
     }
 
@@ -279,6 +328,8 @@ class LicenseReportApiTest {
         const val SLOW_COMPONENT = "slow-component"
         const val BROKEN_COMPONENT = "broken-component"
         const val VERSION = "1.2.3"
+        const val JOINED_VERSION = "2.0.0-joined"
+        const val CHECK_VERSION = "3.0.0-check"
         const val UNKNOWN_ID = "00000000-0000-0000-0000-000000000000"
         const val HTTP_OK = 200
         const val HTTP_ACCEPTED = 202
