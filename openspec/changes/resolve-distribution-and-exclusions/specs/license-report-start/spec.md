@@ -27,6 +27,15 @@ The service SHALL answer `503` with the error envelope, creating no report, when
 - **WHEN** a client starts a report while the registry is unreachable
 - **THEN** the answer is `503` and the client raises the service-unavailable exception
 
+### Requirement: An unexpected registry answer fails the start without its details
+
+The service SHALL answer `500` with the error envelope, creating no report, when the components registry answers with a client error other than not-found or with a body that cannot be read. The answer SHALL name neither the registry's URL nor its response body; the service log keeps them.
+
+#### Scenario: Registry answers 403
+
+- **WHEN** a client starts a report and the registry answers `403` with an HTML body
+- **THEN** the answer is `500`, and its message holds neither the registry's URL nor the HTML
+
 ### Requirement: An excluded component gets an EXCLUDED report at once
 
 The service SHALL create the report of an excluded component already `EXCLUDED`, with the exclusion reason and no license files, and SHALL NOT run a generation for it.
@@ -47,7 +56,7 @@ The service SHALL fail to start when the components registry URL is not configur
 
 ### Requirement: Every resolution is counted by its outcome
 
-The service SHALL count each license target resolution in the metric `license.target.resolutions`, tagged `outcome` with `resolved`, `excluded`, `not_found` or `unavailable`. The registry's reachability SHALL NOT be a health indicator.
+The service SHALL count each license target resolution in the metric `license.target.resolutions`, tagged `outcome` with `resolved`, `excluded`, `not_found`, `unavailable` or `error`. The registry's reachability SHALL NOT be a health indicator.
 
 #### Scenario: Registry down
 
@@ -56,5 +65,5 @@ The service SHALL count each license target resolution in the metric `license.ta
 
 #### Scenario: Each outcome
 
-- **WHEN** one start resolves, one is excluded, one names an unknown version and one meets a registry outage
-- **THEN** each of the four outcomes grows by one
+- **WHEN** one start resolves, one is excluded, one names an unknown version, one meets a registry outage and one meets an unexpected registry answer
+- **THEN** each of the five outcomes grows by one

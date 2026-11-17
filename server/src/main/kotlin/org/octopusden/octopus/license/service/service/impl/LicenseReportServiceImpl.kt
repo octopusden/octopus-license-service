@@ -17,6 +17,7 @@ import org.octopusden.octopus.license.service.state.report.StoredReport
 import org.octopusden.octopus.license.target.LicenseTargetResolver
 import org.octopusden.octopus.license.target.exception.ComponentVersionNotFoundException
 import org.octopusden.octopus.license.target.exception.ComponentsRegistryUnavailableException
+import org.octopusden.octopus.license.target.exception.UnexpectedRegistryAnswerException
 import org.octopusden.octopus.license.target.model.LicenseTarget
 import org.octopusden.octopus.license.target.model.TargetResolution
 import org.slf4j.LoggerFactory
@@ -97,6 +98,9 @@ class LicenseReportServiceImpl(
             countResolution("unavailable")
             log.warn("Cannot start a license report for {}:{}", request.component, request.version, e)
             throw ServiceUnavailableException(e.message ?: "Components registry is unavailable", e)
+        } catch (e: UnexpectedRegistryAnswerException) {
+            countResolution("error")
+            throw e
         }
 
     // A registry outage is a metric, not a health indicator: the registry is called per request

@@ -3,6 +3,7 @@ package org.octopusden.octopus.license.target.impl
 import com.fasterxml.jackson.databind.ObjectMapper
 import feign.FeignException
 import feign.Retryer
+import feign.codec.DecodeException
 import org.octopusden.octopus.components.registry.client.ComponentsRegistryServiceClient
 import org.octopusden.octopus.components.registry.client.impl.ClassicComponentsRegistryServiceClient
 import org.octopusden.octopus.components.registry.client.impl.ClassicComponentsRegistryServiceClientUrlProvider
@@ -12,6 +13,7 @@ import org.octopusden.octopus.components.registry.core.exceptions.RepositoryNotP
 import org.octopusden.octopus.license.target.LicenseTargetResolver
 import org.octopusden.octopus.license.target.exception.ComponentVersionNotFoundException
 import org.octopusden.octopus.license.target.exception.ComponentsRegistryUnavailableException
+import org.octopusden.octopus.license.target.exception.UnexpectedRegistryAnswerException
 import org.octopusden.octopus.license.target.impl.describer.ExclusionRules
 import org.octopusden.octopus.license.target.impl.describer.LicenseTargetDescriber
 import org.octopusden.octopus.license.target.impl.describer.RegistryArtifactPattern
@@ -71,12 +73,17 @@ class RegistryLicenseTargetResolver(
             throw ComponentVersionNotFoundException("Component version $component:$version is not found", e)
         } catch (e: RepositoryNotPreparedException) {
             throw ComponentsRegistryUnavailableException("Components registry is still loading its repository: ${e.message}", e)
+        } catch (e: DecodeException) {
+            throw UnexpectedRegistryAnswerException(
+                "Components registry answered $component:$version with a body that could not be read",
+                e,
+            )
         } catch (e: FeignException) {
             // status() is -1 when no answer came back at all: refused, reset or timed out.
             if (e.status() >= SERVER_ERROR || e.status() < 0) {
                 throw ComponentsRegistryUnavailableException("Components registry is unavailable: ${e.message}", e)
             }
-            throw e
+            throw UnexpectedRegistryAnswerException("Components registry answered ${e.status()} for $component:$version", e)
         }
 
     private fun DetailedComponent.toFacts(version: String) =

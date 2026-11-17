@@ -29,6 +29,7 @@ import org.octopusden.octopus.license.service.service.impl.EmptyLicenseReportGen
 import org.octopusden.octopus.license.target.LicenseTargetResolver
 import org.octopusden.octopus.license.target.exception.ComponentVersionNotFoundException
 import org.octopusden.octopus.license.target.exception.ComponentsRegistryUnavailableException
+import org.octopusden.octopus.license.target.exception.UnexpectedRegistryAnswerException
 import org.octopusden.octopus.license.target.model.ComponentVersion
 import org.octopusden.octopus.license.target.model.DistributionSpec
 import org.octopusden.octopus.license.target.model.LicenseTarget
@@ -119,6 +120,20 @@ class LicenseReportApiTest {
     }
 
     @Test
+    @DisplayName("an unexpected registry answer is a 500 that names neither the registry's URL nor its body")
+    fun unexpectedRegistryAnswer() {
+        val response = send(
+            HttpRequest
+                .newBuilder(URI("http://localhost:$port/rest/api/1/license-reports"))
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString("""{"component":"$REGISTRY_FORBIDDEN_COMPONENT","version":"$VERSION"}""")),
+        )
+
+        assertEquals(HTTP_INTERNAL_SERVER_ERROR, response.statusCode())
+        assertFalse(response.body().contains(UPSTREAM_DETAIL), response.body())
+    }
+
+    @Test
     @DisplayName("an unreachable components registry answers 503, a ServiceUnavailableException for the client")
     fun registryUnavailable() {
         assertThrows<ServiceUnavailableException> {
@@ -127,7 +142,9 @@ class LicenseReportApiTest {
     }
 
     @Test
-    @DisplayName("every license target resolution is counted by its outcome, so a registry outage shows as a metric")
+    @DisplayName(
+        "every license target resolution is counted by its outcome, so a registry outage or a registry refusing us shows as a metric",
+    )
     fun resolutionsCountedByOutcome() {
         val before = OUTCOMES.associateWith { resolutions(it) }
 
@@ -135,6 +152,7 @@ class LicenseReportApiTest {
         client.startReport(LicenseReportRequest(EXCLUDED_COMPONENT, VERSION))
         assertThrows<NotFoundException> { client.startReport(LicenseReportRequest(UNKNOWN_COMPONENT, VERSION)) }
         assertThrows<ServiceUnavailableException> { client.startReport(LicenseReportRequest(REGISTRY_DOWN_COMPONENT, VERSION)) }
+        assertThrows<RuntimeException> { client.startReport(LicenseReportRequest(REGISTRY_FORBIDDEN_COMPONENT, VERSION)) }
 
         assertEquals(OUTCOMES.associateWith { before.getValue(it) + 1 }, OUTCOMES.associateWith { resolutions(it) })
     }
@@ -398,6 +416,10 @@ class LicenseReportApiTest {
                     "Components registry is unavailable",
                     IllegalStateException("connection refused"),
                 )
+                REGISTRY_FORBIDDEN_COMPONENT -> throw UnexpectedRegistryAnswerException(
+                    "Components registry answered 403 for $component:$version",
+                    IllegalStateException("http://registry.example/... answered <html>$UPSTREAM_DETAIL</html>"),
+                )
                 EXCLUDED_COMPONENT -> TargetResolution.Excluded(ComponentVersion(component, version), EXCLUSION_REASON)
                 else -> TargetResolution.Resolved(targetOf(component, version))
             }
@@ -425,12 +447,15 @@ class LicenseReportApiTest {
         const val EXCLUSION_REASON = "Documentation component"
         const val UNKNOWN_COMPONENT = "no-such-component"
         const val REGISTRY_DOWN_COMPONENT = "registry-down-component"
+        const val REGISTRY_FORBIDDEN_COMPONENT = "registry-forbidden-component"
+        const val UPSTREAM_DETAIL = "secret-upstream-detail"
         const val VERSION = "1.2.3"
         const val JOINED_VERSION = "2.0.0-joined"
         const val CHECK_VERSION = "3.0.0-check"
-        val OUTCOMES = listOf("resolved", "excluded", "not_found", "unavailable")
+        val OUTCOMES = listOf("resolved", "excluded", "not_found", "unavailable", "error")
         const val UNKNOWN_ID = "00000000-0000-0000-0000-000000000000"
         const val HTTP_OK = 200
+        const val HTTP_INTERNAL_SERVER_ERROR = 500
         const val HTTP_ACCEPTED = 202
         const val HTTP_FOUND = 302
         const val HTTP_BAD_REQUEST = 400
