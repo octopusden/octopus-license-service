@@ -6,7 +6,7 @@ How the service turns a license target into its license inventory: every file th
 
 ### Requirement: The convention builds are found by name at each artifact version
 
-The service SHALL look up the build-info of `{component}_{x}e`, where `x` is `e` for an explicit component and `i` otherwise, and of the same name with `_docker`, at each artifact version of the target in order, keeping the first that exists. Build-info that is missing or cannot be read SHALL mean no build, not a failure.
+The service SHALL look up the build-info of `{component}_{x}e`, where `x` is `e` for an explicit component and `i` otherwise, and of the same name with `_docker`, at each artifact version of the target in order, keeping the first that exists. Build-info that is missing SHALL mean no build; build-info Artifactory cannot serve SHALL fail the inventory.
 
 #### Scenario: Build exists only at the build version
 
@@ -25,7 +25,7 @@ The service SHALL look up the build-info of `{component}_{x}e`, where `x` is `e`
 
 ### Requirement: Every Maven file a convention build published is listed with its selection
 
-The service SHALL list each non-docker file of a convention build as `group:artifact:extension[:classifier]`, the group from the module id and the artifact id, classifier and extension from the file name. It SHALL select the file when the entry equals a declared Maven artifact, or when its group and artifact each fully match a pattern of one Maven artifact pattern entry. A selected file that is not declared and has extension `pom`, `module`, `md5`, `sha1`, `sha256` or `asc`, or classifier `sources`, `javadoc`, `tests`, `test-sources` or `test-fixtures`, SHALL be `METADATA`. A file not selected SHALL be `NOT_SELECTED`. Both SHALL be listed and not read.
+The service SHALL list each non-docker file of a convention build as `group:artifact:extension[:classifier]`, the group from the module id and the artifact id, classifier and extension from the file name. It SHALL select the file when the entry equals a declared Maven artifact, or when its group and artifact each fully match a pattern of one Maven artifact pattern entry. A selected file that is not declared and whose last extension is `pom`, `module`, `md5`, `sha1`, `sha256` or `asc`, or classifier `sources`, `javadoc`, `tests`, `test-sources` or `test-fixtures`, SHALL be `METADATA`. A file not selected SHALL be `NOT_SELECTED`. Both SHALL be listed and not read.
 
 #### Scenario: File of another artifact id in the same module
 
@@ -45,6 +45,11 @@ The service SHALL list each non-docker file of a convention build as `group:arti
 #### Scenario: Pattern-selected pom
 
 - **WHEN** a pom matches a pattern and is not declared
+- **THEN** the file is `METADATA` and is not read
+
+#### Scenario: Pattern-selected signature
+
+- **WHEN** `sample-portal-2.4.0-118.jar.asc` matches a pattern and is not declared
 - **THEN** the file is `METADATA` and is not read
 
 #### Scenario: Declared pom
@@ -151,7 +156,7 @@ The service SHALL give a located file the status `PLAIN_FILE`, with finding `NOT
 
 ### Requirement: The service waits until Xray has finished scanning a file
 
-The service SHALL ask Xray for a file's license scan status before reading its scan, and SHALL wait while the scan is pending, up to the configured timeout per report (5 minutes by default, one budget for all the report's files). It SHALL then read the file's scan whatever the status, and a scan Xray answers with an error for the file SHALL count as not indexed.
+The service SHALL ask Xray for a file's license scan status before reading its scan, and SHALL wait while the scan is pending, up to the wait the caller gives for that scan (one budget for all its files, measured by the clock). With no wait it SHALL not ask for the status. It SHALL then read the file's scan whatever the status, and a scan Xray answers with an error for the file SHALL count as not indexed.
 
 #### Scenario: Scan finishes while waiting
 
@@ -168,6 +173,11 @@ The service SHALL ask Xray for a file's license scan status before reading its s
 - **WHEN** the file is still pending when the timeout passes, and its scan answers an error for the file
 - **THEN** the file is not indexed: it is read from its build only, with finding `NOT_IN_XRAY`
 
+#### Scenario: No wait asked
+
+- **WHEN** the caller gives no wait, for a quick check
+- **THEN** the status is not asked, and the file's scan is read as Xray has it now
+
 #### Scenario: Not scanned
 
 - **WHEN** Xray reports the file's license scan `NOT_SCANNED`
@@ -175,7 +185,7 @@ The service SHALL ask Xray for a file's license scan status before reading its s
 
 ### Requirement: A read file's packages come from every source it has
 
-For a `READ` file the service SHALL take, in order: the packages Xray found in it (evidence `BINARY_SCAN`); and when its build is known, the components of every CycloneDX file (`.cdx.json`, `bom.json`, `sbom.json`, `-cyclonedx.json`) any module of the build published, without purl qualifiers, with their license ids, names or expressions (evidence `SBOM`); the `prod` dependencies of every `npm` module (evidence `BUILD_RECORD`); and the shipped dependencies of the module that published the file. When no module published the file it SHALL add finding `NO_PRODUCING_MODULE` and read no dependencies.
+For a `READ` file the service SHALL take, in order: the packages Xray found in it (evidence `BINARY_SCAN`); and when its build is known, the components of every CycloneDX file (`.cdx.json`, `bom.json`, `sbom.json`, `-cyclonedx.json`) any module of the build published, without purl qualifiers and percent-decoded, with their license ids, names or expressions (evidence `SBOM`); the `prod` dependencies of every `npm` module (evidence `BUILD_RECORD`); and the shipped dependencies of the module that published the file, by its sha1 when both have one, or by its name. When no module published the file it SHALL add finding `NO_PRODUCING_MODULE` and read no dependencies.
 
 #### Scenario: Fat jar library only in build-info
 
@@ -186,6 +196,11 @@ For a `READ` file the service SHALL take, in order: the packages Xray found in i
 
 - **WHEN** Xray and the build both report `spring-core`
 - **THEN** one package is found with evidence `BINARY_SCAN` and `BUILD_RECORD`, and Xray's licenses, since a build record names none
+
+#### Scenario: Scoped npm package in an SBOM
+
+- **WHEN** an SBOM lists `pkg:npm/%40angular/core@17.0.0`
+- **THEN** the package is `pkg:npm/@angular/core@17.0.0`, the one Xray names
 
 #### Scenario: SBOM that cannot be read
 
@@ -228,7 +243,7 @@ The service SHALL read a dependency of the producing module when one of its scop
 
 ### Requirement: Our own archives inside a file are followed into their builds
 
-The service SHALL follow a dependency whose type is `zip`, `tar`, `tgz`, `gz`, `war` or `ear` and whose group starts with an internal group, instead of reading it as a package, when one of its scopes ships, or when none of its scopes mentions `test` or `debug` and Xray's scan of the current file lists exactly its group, artifact and version. It SHALL locate the archive by its Maven path, then by its sha1, and its build as for declared entries; with no file or no build it SHALL add finding `UNRESOLVED_INTERNAL_ARCHIVE`. It SHALL read the archive as a file, its packages counting for the outer released file, following each build and dependency once per released file, and only from a file at depth 10 or less, the released file being depth 0. An archive whose Xray scan lists no library other than itself and docker layers SHALL contribute only Xray's packages, with finding `NO_LIBRARIES_IN_FILE`.
+The service SHALL follow a dependency whose type is `zip`, `tar`, `tgz`, `gz`, `war` or `ear` and whose group is an internal group or starts with one followed by `.`, instead of reading it as a package, when one of its scopes ships, or when none of its scopes mentions `test` or `debug` and Xray's scan of the current file lists exactly its group, artifact and version. It SHALL locate the archive by its Maven path, then by its sha1, and its build as for declared entries; with no file or no build it SHALL add finding `UNRESOLVED_INTERNAL_ARCHIVE`. It SHALL read the archive as a file, its packages counting for the outer released file, following each build and dependency once per released file, and only from a file at depth 10 or less, the released file being depth 0. An archive Xray has indexed whose scan lists no library other than itself and docker layers SHALL contribute only Xray's packages, with finding `NO_LIBRARIES_IN_FILE`; one Xray has not indexed SHALL be read from its build.
 
 #### Scenario: Plugin zip under a custom configuration
 
@@ -249,6 +264,11 @@ The service SHALL follow a dependency whose type is `zip`, `tar`, `tgz`, `gz`, `
 
 - **WHEN** a followed archive's Xray scan lists only the archive itself
 - **THEN** only that is found from it, its build is not read, and finding `NO_LIBRARIES_IN_FILE` names it
+
+#### Scenario: Archive Xray has not indexed
+
+- **WHEN** a followed archive has no Xray scan, and its build records `guava` under `runtime`
+- **THEN** `guava` is found from its build, and no finding `NO_LIBRARIES_IN_FILE` is added
 
 #### Scenario: Sources checksum
 
@@ -329,12 +349,17 @@ The inventory SHALL hold every listed file in listing order with its status, sel
 
 ### Requirement: An unreachable Artifactory or Xray fails the inventory
 
-The service SHALL fail the inventory with `InventorySourceUnavailableException` when Artifactory or Xray cannot be asked, apart from the tolerated cases (missing build-info, an unreadable SBOM, a failed license call, an error Xray gives for one path).
+The service SHALL fail the inventory with `InventorySourceUnavailableException` when Artifactory or Xray cannot be asked, apart from the tolerated cases (build-info that does not exist, an unreadable SBOM, a failed license call, an error Xray gives for one path).
 
 #### Scenario: Artifactory down
 
 - **WHEN** an AQL search fails with `503` after retries
 - **THEN** the scan fails with `InventorySourceUnavailableException` naming Artifactory
+
+#### Scenario: Build-info unavailable
+
+- **WHEN** build-info is answered with `503` after retries
+- **THEN** the scan fails with `InventorySourceUnavailableException` naming Artifactory, not as a file with no build
 
 #### Scenario: Xray error for one path
 

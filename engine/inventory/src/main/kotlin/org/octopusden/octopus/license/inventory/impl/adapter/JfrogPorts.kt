@@ -11,11 +11,10 @@ import org.octopusden.octopus.license.inventory.impl.adapter.xray.XrayLicenseDat
 import org.octopusden.octopus.license.inventory.impl.port.ScanPorts
 import java.time.Duration
 
-/** The four ports over one JFrog platform; the clients are built once, the Xray wait budget per scan. */
+/** The four ports over one JFrog platform; the clients are built once, the ports per scan with that scan's Xray wait. */
 internal class JfrogPorts(
     url: String,
     token: String,
-    private val xrayWait: Duration,
     private val xrayPoll: Duration,
 ) {
     private val parameters =
@@ -28,7 +27,7 @@ internal class JfrogPorts(
     private val xray = XrayClassicClient(parameters)
     private val calls = JfrogCalls()
 
-    fun create() =
+    fun create(xrayWait: Duration) =
         ScanPorts(
             records = ArtifactoryBuildRecords(artifactory, calls),
             store = ArtifactoryArtifactStore(artifactory, calls),

@@ -264,14 +264,14 @@ internal interface LicenseDatabase {
 ### 4. Convention builds
 
 - Names: `{component}_{e|i}e` (first letter from `explicit`), then the same with `_docker`. The second letter is always `e`: an internal component is excluded before the scan.
-- Each name is looked up at each artifact version in order; the first that exists is the build. Missing or unreadable build-info is "no build", never an error.
+- Each name is looked up at each artifact version in order; the first that exists is the build. Missing build-info (`404`) is "no build"; build-info Artifactory cannot serve fails the scan (Decision 13, D11).
 - `LicenseTarget` gains `explicit`, read from the same registry call (`distribution.explicit`).
 
 ### 5. Listing (step A)
 
 - Docker: an artifact of a `docker` module, or any artifact whose path ends in `manifest.json`, is an image only when its name ends in `manifest.json` and is not `list.manifest.json`, as the prototype tests it; other files of those modules are not listed. The entry is the path's folder as `image:tag`. Always selected (`DOCKER_BUILD`), and also `DECLARED` when its image name equals a declared image's name, and that declared image is then no leftover. Located by its `manifest.json` path at its own tag; missing is `NOT_FOUND`.
 - Maven: group from the module id; artifact id, classifier and extension from the file name (`PublishedFileName`), the artifact id falling back to the module's when the file name lacks `-{version}`. Entry `g:a:ext[:classifier]`.
-- Selection: declared (exact entry) and/or pattern (group and artifact each fully match one pattern of the same entry); neither is `NOT_SELECTED`. Not declared, and extension in `pom module md5 sha1 sha256 asc` or classifier in `sources javadoc tests test-sources test-fixtures`: `METADATA`.
+- Selection: declared (exact entry) and/or pattern (group and artifact each fully match one pattern of the same entry); neither is `NOT_SELECTED`. Not declared, and last extension in `pom module md5 sha1 sha256 asc` or classifier in `sources javadoc tests test-sources test-fixtures`: `METADATA`.
 - A selected file is located by sha1; missing is `NOT_FOUND` with finding `ARTIFACT_NOT_FOUND`.
 - Declared leftovers (Maven entries and images no convention file matched): `Unsupported` is `UNSUPPORTED` with finding `UNSUPPORTED_DISTRIBUTION_ENTRY`; Maven by path `g/a/v/a-v[-c].ext` at each artifact version; an image at its tag, else at each artifact version. Its build via `BuildLocator`; a build not named by convention is finding `BUILD_NAME_DIFFERS`.
 - Nothing to read at all (every listed file is `NOT_SELECTED` or `METADATA`, or nothing is listed): finding `NO_DISTRIBUTION`, and steps B and C are skipped. A `NOT_FOUND` or `UNSUPPORTED` file counts as something to read here.
@@ -283,17 +283,17 @@ internal interface LicenseDatabase {
 - `FileContentReader`, for a `READ` file, as `collect()`:
   1. Xray's packages, evidence `BINARY_SCAN`;
   2. no build: stop;
-  3. a nested archive (depth > 0) whose Xray list has no library other than itself and docker layers: finding `NO_LIBRARIES_IN_FILE`, stop;
+  3. a nested archive (depth > 0) Xray has indexed whose list has no library other than itself and docker layers: finding `NO_LIBRARIES_IN_FILE`, stop;
   4. every SBOM of every module of the build, evidence `SBOM`;
   5. production dependencies of every `npm` module, evidence `BUILD_RECORD`;
-  6. the producing module (an artifact with the file's sha1 or name); none: finding `NO_PRODUCING_MODULE`, stop;
+  6. the producing module (an artifact with the file's sha1, both present, or its name); none: finding `NO_PRODUCING_MODULE`, stop;
   7. its dependencies (Decision 7).
 - Evidence for nested packages is their own; the files they are found in are the outer released file's.
 
 ### 7. Shipped dependencies and our own archives
 
 - A dependency is read when any of its scopes ships (`compile`, `runtime`, `runtimeClasspath`, `embed`; or matching `Release\w*RuntimeClasspath$|Embed$` with no `test`/`debug` in it), or when it is our own archive that ships by proof.
-- Our own archive: type `zip tar tgz gz war ear`, group starting with an internal group. Shipped by proof: no scope mentions `test` or `debug`, and Xray's scan of the current file lists exactly `pkg:maven/g/a@v`.
+- Our own archive: type `zip tar tgz gz war ear`, group an internal group or starting with one followed by `.`, `:` or `/`. Shipped by proof: no scope mentions `test` or `debug`, and Xray's scan of the current file lists exactly `pkg:maven/g/a@v`.
 - `Gradle API`, `Local Groovy`, `Gradle TestKit`: skipped. An id without three non-empty coordinate parts: finding `LOCAL_FILE_DEPENDENCY`.
 - Our own archive is followed, never listed as a package: located by path `g/a/v/a-v.{type}`, else by its sha1 (coordinates first: a dependency resolved by several configurations can carry its sources' checksum); its build via `BuildLocator`; no file or no build: finding `UNRESOLVED_INTERNAL_ARCHIVE`. Each `(build name, number, dependency id)` is followed once per released file. An archive is followed only from a file at depth 10 or less (the released file is depth 0), so the deepest archive read is at depth 11, as in the prototype.
 - An id with fewer than three `:`-separated parts, an empty group, artifact or version, or starting with `sha256`, has no Maven coordinates: finding `LOCAL_FILE_DEPENDENCY`.
@@ -326,7 +326,7 @@ Kept because the prototype's results are the baseline; each may be revisited aft
 10. Xray's artifact summary lists packages only under a license, so a package Xray reports with no license entry at all is not found from the scan.
 11. The `file:`/`http:`/`https:` check applies to `docker` entries too in the prototype; the target parses only `GAV` entries that way, so a `docker` entry written as a URL becomes an image (Decision 11).
 12. A file gets every shipped dependency of its producing module: build-info records dependencies per module, not per file, so two files of one module get the same list. `requestedBy` is not read; it names the dependency path, not the file.
-13. The producing module is the first one with a file of the same sha1 or the same name, so a same-named file in an earlier module wins.
+13. The producing module is the first one with a file of the same sha1 or the same name, so a same-named file in an earlier module wins. Two missing sha1s are not the same (D11).
 14. A build file is an SBOM by its name's ending (`.cdx.json`, `bom.json`, `sbom.json`, `-cyclonedx.json`), with no separator before `bom.json`; only its top-level `components` are read.
 15. A dependency's classifier (the fourth part of its id) is ignored: a nested archive is looked up as `a-v.type`, and the package is listed without it. The same holds for an Xray `gav://` id.
 16. The artifact id of a published file is its name up to the first `-{version}`.
@@ -345,13 +345,20 @@ Kept because the prototype's results are the baseline; each may be revisited aft
 | A `GAV` entry starting with `FILE:`, `HTTP:` or `HTTPS:` in any case is a file share (already in the target) | The target compares the scheme without case | None in run 14 |
 | An SBOM that is not CycloneDX JSON is skipped | The prototype skips only one that cannot be downloaded, and fails on a malformed one | None known |
 | A docker manifest with no usable path in build-info is not listed | The prototype fails the component on it | None known |
+| Two missing sha1s do not make a module the producing one; only the name does then | In the prototype `None == None` matches, so a file takes the dependencies of the first module with any file without a checksum | A build whose modules publish files without checksums |
+| Build-info Artifactory cannot serve (`5xx`, `401`, `403`, no answer) fails the scan; only `404` is no build | The prototype reads every error as no build, so an outage ends as a clean report with fewer libraries (Decision 13) | Any component while Artifactory is failing |
+| A file is `METADATA` by its last extension: `lib-1.0.jar.asc` is a signature | The prototype takes everything after the version (`jar.asc`) and selects signatures as released files | A pattern-selected module that signs or checksums its artifacts |
+| A nested archive Xray has not indexed is read from its build, not as data | The prototype merges "not indexed" with "nothing found" and ignores its build | Our archives Xray has never indexed |
+| An internal group matches only up to `.`, `:`, `/` or the end | The prototype's prefix makes `org.examplesoft` ours under `org.example` | A third-party group that extends an internal one |
+| SBOM purls are percent-decoded | The prototype keeps `%40angular/core` apart from Xray's `@angular/core`, so the SBOM row never gets a license | Scoped npm packages in SBOMs |
+| The Xray wait is given per scan, none for a quick check | A regular build gets only a check of what Xray knows now; RC and RELEASE wait (decision of 2026-11-12) | None on already scanned files |
 
 ### 12. Waiting for Xray
 
 - Before reading a file's scan, `XrayBinaryScanner` asks `POST /xray/api/v1/artifact/status` and reads `details.sca.status` (the license scan; the overall status also covers security scans the service does not need). An answer without it is read by its overall status.
-- Pending (`PENDING`, `SCANNING`): poll every `xray-scan-poll-interval` (10 s), up to `xray-scan-timeout` (5 min) per report.
+- Pending (`PENDING`, `SCANNING`): poll every `xray-scan-poll-interval` (10 s), up to the wait the caller gives that scan: `scan(target, xrayWait)`. A quick check gives none, and then the status is not asked at all; a full report gives 5 minutes. The scan module knows nothing of report modes; the server maps them.
 - Then, whatever the status, it reads the artifact summary, exactly as the prototype reads it: an `errors` entry for the path means "not indexed", and the file is read from its build only, with finding `NOT_IN_XRAY`. So `NOT_SUPPORTED`, `NOT_SCANNED`, `FAILED`, `UNKNOWN`, a status call answered with a client error, or a scan still pending at the timeout all end as the prototype would have them; the status only decides whether to wait.
-- The 5 minutes are one budget for the whole scan, not per file, measured by the clock from the first status call: the status calls spend it too, not only the pauses between them.
+- The wait is one budget for the whole scan, not per file, measured by the clock from the first status call: the status calls spend it too, not only the pauses between them.
 - Treating every status but `DONE` as "not indexed" was weighed and rejected: a file whose status and summary disagree would lose a list the prototype read.
 - A status call that gets no answer or a server error after retries fails the scan like any other call (Decision 13); the prototype has no such call.
 - The wait lives in the adapter: the algorithm only sees "indexed" or "not indexed".
@@ -360,7 +367,7 @@ Kept because the prototype's results are the baseline; each may be revisited aft
 ### 13. Failures
 
 - Artifactory or Xray unreachable, `5xx` after retries, or `401`/`403`: `InventorySourceUnavailableException(system)`; the scan fails, as the prototype's component ended in `ERROR`.
-- Tolerated as the prototype tolerates them: build-info missing or unreadable (no build); an SBOM that cannot be downloaded or parsed (skipped); a license batch that fails (no licenses); Xray answering with an error for a path (not indexed).
+- Tolerated as the prototype tolerates them: build-info that does not exist (no build); an SBOM that cannot be downloaded or parsed (skipped); a license batch that fails (no licenses); Xray answering with an error for a path (not indexed).
 - Retries: each call is tried three times, 1 s then 2 s apart, on no answer or a server error, as the prototype retried (`JfrogCalls`). The Artifactory client reports every error but `404` as a server error, so an Artifactory client error is tried three times too; harmless, only slower.
 
 ### 14. Clients in octopus-external-systems-client
@@ -382,7 +389,7 @@ Kept because the prototype's results are the baseline; each may be revisited aft
 - What the server will need, recorded here so the module's public constructor fits it:
   - `jfrog.url` (required) and `jfrog.token` (required, from Vault);
   - `inventory.internal-groups` and `inventory.own-repository-prefixes` (required, from Spring Cloud Config: company names stay out of this public repository);
-  - `inventory.xray-scan-timeout` (default 5 min), `inventory.xray-scan-poll-interval` (default 10 s);
+  - `inventory.xray-scan-timeout` (default 5 min, the wait a full report gives each scan; a check gives none), `inventory.xray-scan-poll-interval` (default 10 s);
   - one `JfrogLicenseInventoryScanner` for every generation thread, as it keeps no state across scans;
   - a counter `license.inventory.scans{outcome}`, no health indicator (per-request dependency, as the components registry).
 
@@ -415,7 +422,7 @@ Kept because the prototype's results are the baseline; each may be revisited aft
 
 - **Two releases before the service builds.** No longer stands: both clients are released as `2.0.114`.
 - **Calls time out sooner than the prototype's.** The clients keep Feign's default timeouts; the prototype waited 300 s per call. A slow AQL or a large build-info can fail three times where the prototype answered: for build-info that reads as no build, for anything else the scan fails. Accepted until the parity run shows it; raising it needs a timeout option in both clients.
-- **A report holds a generation thread while Xray scans.** Up to 5 minutes per report; with 4 threads, 4 slow scans block the rest, which queue. Accepted for report-only rollout; the timeout and thread count are configuration.
+- **A full report holds a generation thread while Xray scans.** Up to 5 minutes per report; with 4 threads, 4 slow scans block the rest, which queue. Accepted for report-only rollout; the timeout and thread count are configuration.
 - **A scan still pending after 5 minutes gives a weaker list, not a failure.** The file is read from its build only, as the prototype reads any file Xray has no scan of; finding `NOT_IN_XRAY` shows it, and grading will lower trust for it. Accepted to match the prototype; a rerun after Xray finishes gives the full list.
 - **Parity is measured against a moving target.** Artifactory and Xray change; a stale prototype run shows false differences. Mitigated by running the prototype locally right before the parity check.
-- **Odd rules are ported on purpose (Decision 10).** Some will turn out wrong; fixing them after parity keeps each change explainable against the baseline.
+- **Odd rules are ported on purpose (Decision 10).** Some will turn out wrong; fixing them after parity keeps each change explainable against the baseline. The ones review found to turn a gap into a clean result are fixed already, each a row of Decision 11.

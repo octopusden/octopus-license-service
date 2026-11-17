@@ -9,8 +9,11 @@ import org.octopusden.octopus.license.inventory.model.OwnershipRules
 internal class Ownership(
     private val rules: OwnershipRules,
 ) {
-    /** [groupOrId] may be a whole dependency id: the group comes first. */
-    fun isInternalGroup(groupOrId: String) = rules.internalGroups.any { groupOrId.startsWith(it) }
+    /** [groupOrId] may be a whole dependency id: the group comes first. A group matches up to a boundary only (D11). */
+    fun isInternalGroup(groupOrId: String) =
+        rules.internalGroups.any { group -> groupOrId.startsWith(group) && groupOrId.getOrNull(group.length).isBoundary() }
+
+    private fun Char?.isBoundary() = this == null || this in BOUNDARIES
 
     /** Gradle distributions name a bundled jar `group.artifact-version.jar`, which names ours even outside our repositories. */
     fun isInternalFileName(fileName: String) = rules.internalGroups.any { fileName.startsWith("$it.") }
@@ -19,5 +22,6 @@ internal class Ownership(
 
     private companion object {
         const val LOCAL = "local"
+        val BOUNDARIES = setOf('.', ':', '/')
     }
 }

@@ -2,6 +2,7 @@ package org.octopusden.octopus.license.inventory.impl.reading.source
 
 import org.octopusden.octopus.license.inventory.impl.port.data.BuildDependency
 import org.octopusden.octopus.license.inventory.impl.port.data.BuildRecord
+import org.octopusden.octopus.license.inventory.impl.port.data.BuiltFile
 import org.octopusden.octopus.license.inventory.impl.port.data.StoredFile
 import org.octopusden.octopus.license.inventory.impl.reading.data.DependencyReading
 import org.octopusden.octopus.license.inventory.impl.reading.data.NestedArchive
@@ -26,7 +27,7 @@ internal class BuildDependencyReader(
     ): DependencyReading {
         val packages = npmPackages(build).toMutableList()
         val producing =
-            build.modules.firstOrNull { module -> module.files.any { it.sha1 == file.sha1 || it.name == file.name } }
+            build.modules.firstOrNull { module -> module.files.any { it.isSameSha1(file) || it.name == file.name } }
                 ?: return DependencyReading(
                     packages,
                     emptyList(),
@@ -69,6 +70,9 @@ internal class BuildDependencyReader(
         val (g, a, v) = coordinates(dependency.id) ?: return false
         return PackageId.maven(g, a, v) in scanned
     }
+
+    // Two missing checksums are no evidence of one file (D11).
+    private fun BuiltFile.isSameSha1(file: StoredFile) = !sha1.isNullOrEmpty() && sha1 == file.sha1
 
     private fun isOwnArchive(dependency: BuildDependency) =
         dependency.type in ARCHIVE_TYPES && ownership.isInternalGroup(dependency.id) && coordinates(dependency.id) != null

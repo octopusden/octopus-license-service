@@ -61,11 +61,17 @@ class ArtifactoryAdaptersTest {
     }
 
     @Test
-    @DisplayName("missing build-info and a server error are both no build, never a failure")
+    @DisplayName("missing build-info is no build")
     fun noBuild() {
         assertEquals(null, records.find("gone", "1"))
-        jfrog.answer("GET /artifactory/api/build/broken/1", 500 to "")
-        assertEquals(null, records.find("broken", "1"))
+    }
+
+    @Test
+    @DisplayName("build-info Artifactory cannot serve fails the scan as Artifactory unavailable, not as no build (D13)")
+    fun buildInfoUnavailable() {
+        jfrog.answer("GET /artifactory/api/build/broken/1", 503 to "")
+
+        assertEquals("Artifactory", assertThrows<InventorySourceUnavailableException> { records.find("broken", "1") }.system)
     }
 
     @Test

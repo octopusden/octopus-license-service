@@ -253,6 +253,18 @@ class FileContentReaderTest {
     }
 
     @Test
+    @DisplayName("a followed archive Xray has not indexed is not data: it is read from its build (D11)")
+    fun unindexedArchiveReadFromBuild() {
+        ownArchive("portal-model", dependency("com.google.guava:guava:32.1.2-jre", "runtime"))
+        scanner.scanned(zip)
+
+        val reading = read(zipBuild(ownDependency("portal-model")))
+
+        assertEquals(listOf(PackageId.parse("pkg:maven/com.google.guava/guava@32.1.2-jre")), table.libraries().map { it.id })
+        assertEquals(emptyList<Finding>(), reading.findings)
+    }
+
+    @Test
     @DisplayName("a followed archive is located at its Maven path before its sha1, which can be its sources'")
     fun nestedByPathFirst() {
         ownArchive("portal-plugins", dependency("org.apache.commons:commons-text:1.11.0", "runtime"))

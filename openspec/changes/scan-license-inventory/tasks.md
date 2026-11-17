@@ -65,6 +65,7 @@
 - [x] 5.11 (added on review) `declared` is derived from `selectedBy`: a declared image is `{DOCKER_BUILD, DECLARED}`, so the flag no longer repeats what the set says. The parity view drops `DECLARED` from an image's selection, as the prototype records it in `in_registry` only.
 - [x] 5.12 (added on review) `LicenseInventory.files` and `packages` are `releasedFiles` and `libraries`, `FoundPackage` is `FoundLibrary` and `PackageTable` is `LibraryTable`: a library is the word the reports use, and it says the list is what is inside the files. `PackageId` keeps its name, as a package URL is the id's format. `:license-inventory:test` 178 green.
 - [x] 5.13 (added on review) `SbomReader` skips an SBOM on any exception, Jackson's parse errors and a broken download included, and reads a build's SBOMs once per scan; tests for both and for a malformed SBOM.
+- [x] 5.14 (added on review) Six prototype rules that turn a gap into a clean result are fixed, each a row of Decision 11 with its test: two missing sha1s are no match; only `404` build-info is no build; `METADATA` by the last extension; a nested archive Xray has not indexed is read from its build; an internal group matches up to a boundary; SBOM purls are percent-decoded.
 
 ## 6. Adapters (Decisions 12, 13)
 
@@ -79,6 +80,7 @@
 - [x] 6.5 (added on review) Ports are built per scan (`JfrogPorts.create`), so the Xray wait budget is one report's.
 - [x] 6.6 Confirm: `:license-inventory:test` 172 green, against a stub HTTP server for the adapters; ktlint and detekt clean.
 - [x] 6.7 (added on review) The Xray wait is a deadline taken from a clock at the first status call, so the status calls spend the budget too; tested with a clock that advances during calls.
+- [x] 6.8 (added on review) The Xray wait is the caller's, per scan: `scan(target, xrayWait)`; no wait asks no status. The public constructor keeps only the poll interval.
 
 ## 7. Docs
 
@@ -91,6 +93,7 @@
 - [x] 8.3 Run the prototype locally with `--only` for two components of run 14, one with nested archives and npm modules, one with docker images, and then the parity check; record the differences here, each fixed or explained by Decision 11.
   - Released files, their builds and the libraries in them match exactly for both components.
   - Three license sets differed (`HdrHistogram@2.2.2` in both, `jakarta.annotation-api@2.0.0` in one), all read only from Xray's scan of the file, which both sides call and merge the same way. Xray's answer changed between the prototype run and the scan a few minutes later; asking Xray again ten times gave the service's answer every time. Not a porting difference: the moving-target risk in the design.
+- [ ] 8.3.1 (added on review) Rerun 8.3 after the fixes of 5.14; record the result here.
 - [ ] 8.4 Same for all components of run 14's scope; record the result here.
 
 ## 8a. Review against the prototype (Decision 17)

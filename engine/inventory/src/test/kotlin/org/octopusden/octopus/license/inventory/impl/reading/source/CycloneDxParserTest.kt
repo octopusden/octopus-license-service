@@ -41,6 +41,17 @@ class CycloneDxParserTest {
     }
 
     @Test
+    @DisplayName("a percent-encoded purl is decoded, so a scoped npm package is the one Xray names (D11)")
+    fun percentDecoded() {
+        val sbom = """{"components":[{"purl":"pkg:npm/%40angular/core@17.0.0","licenses":[{"license":{"id":"MIT"}}]}]}"""
+
+        assertEquals(
+            mapOf(PackageId.Purl("npm", "@angular/core", "17.0.0") to setOf("MIT")),
+            CycloneDxParser.parse(sbom.toByteArray()),
+        )
+    }
+
+    @Test
     @DisplayName("SBOM file names: CycloneDX suffixes only")
     fun sbomNames() {
         assertEquals(

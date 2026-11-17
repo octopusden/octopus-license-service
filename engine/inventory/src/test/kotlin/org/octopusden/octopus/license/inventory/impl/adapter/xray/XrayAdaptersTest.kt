@@ -102,6 +102,15 @@ class XrayAdaptersTest {
     }
 
     @Test
+    @DisplayName("a scan with no wait asked does not ask Xray for the status at all: the summary is read as it is")
+    fun noWaitAsked() {
+        jfrog.answer(SUMMARY, summary)
+
+        assertEquals(2, scanner(budget = Duration.ZERO).scan(zip)?.size)
+        assertEquals(emptyList<Any>(), jfrog.requests(STATUS))
+    }
+
+    @Test
     @DisplayName("not scanned: no wait, the summary is read as it is")
     fun notScanned() {
         jfrog.answer(STATUS, status("NOT_SCANNED"))

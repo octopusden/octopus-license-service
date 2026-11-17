@@ -47,6 +47,7 @@ internal class XrayBinaryScanner(
     }
 
     private fun waitWhilePending(file: StoredFile) {
+        if (waitBudget <= Duration.ZERO) return
         val until = deadline ?: now().plus(waitBudget).also { deadline = it }
         while (status(file) in PENDING) {
             val left = Duration.between(now(), until)

@@ -18,6 +18,15 @@ class OwnershipTest {
     }
 
     @Test
+    @DisplayName("an internal group matches only up to a boundary: org.examples is not org.example (D11)")
+    fun internalGroupBoundary() {
+        assertTrue(ownership.isInternalGroup("org.example"))
+        assertTrue(ownership.isInternalGroup("org.example:lib:1.0"))
+        assertFalse(ownership.isInternalGroup("org.examples"))
+        assertFalse(ownership.isInternalGroup("org.examplesoft:lib:1.0"))
+    }
+
+    @Test
     @DisplayName("a file named group.artifact-version.jar after an internal group is ours, as Gradle distributions name bundled jars")
     fun internalFileName() {
         assertTrue(ownership.isInternalFileName("org.example.parser-1.2.jar"))

@@ -19,8 +19,8 @@ This change ports the first half of that algorithm: from the license target to t
 
 - Each released file is read from every source it has: Xray's scan of the file, and when its build is known, the build's SBOM files, its npm production dependencies and the producing module's shipped dependencies.
 - A file Xray has not indexed is still read from its build (`BUILD_RECORD` only). A plain text file Xray does not index is `PLAIN_FILE` and is not read. A file with neither Xray nor a build is `NOT_READABLE`.
-- Our own archives inside a released file are followed into their own build, recursively, from a file at depth 10 or less. An inner archive Xray finds no library in is data: only Xray's list counts for it.
-- Before reading a file's scan, the service waits for Xray to finish scanning it, up to 5 minutes per report. It then reads the scan whatever the status; a file Xray answers an error for is read from its build only, as the prototype reads any file Xray has no scan of.
+- Our own archives inside a released file are followed into their own build, recursively, from a file at depth 10 or less. An inner archive Xray finds no library in is data: only Xray's list counts for it. One Xray has not indexed is read from its build.
+- Before reading a file's scan, the service waits for Xray to finish scanning it, as long as the caller asks: no wait for a quick check, 5 minutes for a full report. It then reads the scan whatever the status; a file Xray answers an error for is read from its build only, as the prototype reads any file Xray has no scan of.
 
 **Part C: naming and licenses (stage 10)**
 

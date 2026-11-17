@@ -58,11 +58,13 @@ internal class FileContentReader(
             ownId: PackageId?,
             depth: Int,
         ) {
-            val scanned = scanner.scan(file).orEmpty()
+            val scan = scanner.scan(file)
+            val scanned = scan.orEmpty()
             scanned.forEach { (id, licenses) -> table.add(id, licenses, Evidence.BINARY_SCAN, foundIn) }
             if (build == null) return
-            // An inner archive with no library is data (a model zip): its build recorded the tools that made it, not what it holds.
-            if (depth > 0 && scanned.keys.none { it != ownId && it.type != DOCKER }) {
+            // An inner archive Xray found no library in is data (a model zip): its build recorded the tools that made it, not
+            // what it holds. One Xray has not indexed proves nothing, so its build is read (D11).
+            if (depth > 0 && scan != null && !hasLibraries(scan, ownId)) {
                 findings += Finding(FindingCode.NO_LIBRARIES_IN_FILE, file.name, "inner archive without libraries, build-info ignored")
                 return
             }
@@ -72,6 +74,11 @@ internal class FileContentReader(
             findings += reading.findings
             reading.nested.forEach { follow(it, depth) }
         }
+
+        private fun hasLibraries(
+            scan: Map<PackageId, Set<String>>,
+            ownId: PackageId?,
+        ) = scan.keys.any { it != ownId && it.type != DOCKER }
 
         private fun follow(
             archive: NestedArchive,
