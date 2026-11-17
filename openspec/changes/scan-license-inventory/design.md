@@ -338,7 +338,7 @@ Kept because the prototype's results are the baseline; each may be revisited aft
 | Pattern ranges selected with `versions-api` (already in the target) | The registry's own parser; the prototype's range regex is an approximation | A component whose range bounds use registry version formats |
 | Docker tag split on the last `:` after the last `/` (already in the target) | A registry host with a port stays in the image name | Declared images with `host:port`; none in run 14 |
 | Patterns compiled as Java regexes | The registry stores Java regexes; the prototype patched one Python incompatibility | None known |
-| Waits for Xray to finish scanning (Decision 12) | A new RC is scanned seconds before the report | None on already scanned files |
+| Waits for Xray to finish scanning (Decision 12), `NOT_SCANNED` included | A new RC is scanned seconds before the report | A full report with a file Xray will never scan waits out its budget once |
 | Caches live for one report, not one batch run | A service has no batch | None: one report sees one state |
 | A `docker` entry written as a URL is an image, not unsupported (already in the target) | The target parses URIs only in `GAV` | None in run 14 |
 | A finding is listed once | The same code, subject and detail twice says nothing more; the prototype repeats `NOT_SCANNABLE` and `BUILD_NAME_DIFFERS` for an entry declared twice | An entry written twice in `GAV` that no convention build produces |
@@ -356,12 +356,13 @@ Kept because the prototype's results are the baseline; each may be revisited aft
 ### 12. Waiting for Xray
 
 - Before reading a file's scan, `XrayBinaryScanner` asks `POST /xray/api/v1/artifact/status` and reads `details.sca.status` (the license scan; the overall status also covers security scans the service does not need). An answer without it is read by its overall status.
-- Pending (`PENDING`, `SCANNING`): poll every `xray-scan-poll-interval` (10 s), up to the wait the caller gives that scan: `scan(target, xrayWait)`. A quick check gives none, and then the status is not asked at all; a full report gives 5 minutes. The scan module knows nothing of report modes; the server maps them.
-- Then, whatever the status, it reads the artifact summary, exactly as the prototype reads it: an `errors` entry for the path means "not indexed", and the file is read from its build only, with finding `NOT_IN_XRAY`. So `NOT_SUPPORTED`, `NOT_SCANNED`, `FAILED`, `UNKNOWN`, a status call answered with a client error, or a scan still pending at the timeout all end as the prototype would have them; the status only decides whether to wait.
+- Pending (`PENDING`, `SCANNING`, `NOT_SCANNED`): poll every `xray-scan-poll-interval` (10 s), up to the wait the caller gives that scan: `scan(target, xrayWait)`. A quick check gives none, and then the status is not asked at all; a full report gives 5 minutes. The scan module knows nothing of report modes; the server maps them.
+- Then, whatever the status, it reads the artifact summary, exactly as the prototype reads it: an `errors` entry for the path means "not indexed", and the file is read from its build only, with finding `NOT_IN_XRAY`. So `NOT_SUPPORTED`, `FAILED`, `UNKNOWN`, a status call answered with a client error, or a scan still pending at the timeout all end as the prototype would have them; the status only decides whether to wait.
 - The wait is one budget for the whole scan, not per file, measured by the clock from the first status call: the status calls spend it too, not only the pauses between them.
 - Treating every status but `DONE` as "not indexed" was weighed and rejected: a file whose status and summary disagree would lose a list the prototype read.
 - A status call that gets no answer or a server error after retries fails the scan like any other call (Decision 13); the prototype has no such call.
 - The wait lives in the adapter: the algorithm only sees "indexed" or "not indexed".
+- `NOT_SCANNED` is waited for: on our Xray a freshly uploaded zip answered `NOT_SCANNED` for 28 s, then `DONE`, and never `PENDING`. A file Xray will never scan spends the scan's budget once, then is read from its build as before.
 - Checked against our Xray (3.150.37): a released zip answers `DONE`, a pom `NOT_SUPPORTED`, a missing file an `error` body; the artifact summary answers a pom with an `errors` entry ("not indexed/cached"); the component summary answers ids without their scheme (`com.google.guava:guava:32.1.2-jre`, `react:18.2.0`).
 
 ### 13. Failures

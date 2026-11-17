@@ -81,6 +81,7 @@
 - [x] 6.6 Confirm: `:license-inventory:test` 172 green, against a stub HTTP server for the adapters; ktlint and detekt clean.
 - [x] 6.7 (added on review) The Xray wait is a deadline taken from a clock at the first status call, so the status calls spend the budget too; tested with a clock that advances during calls.
 - [x] 6.8 (added on review) The Xray wait is the caller's, per scan: `scan(target, xrayWait)`; no wait asks no status. The public constructor keeps only the poll interval.
+- [x] 6.9 (added on review) `NOT_SCANNED` is waited for like a pending scan: a zip uploaded to our Xray answered `NOT_SCANNED` for 28 s, then `DONE`.
 
 ## 7. Docs
 
@@ -93,7 +94,8 @@
 - [x] 8.3 Run the prototype locally with `--only` for two components of run 14, one with nested archives and npm modules, one with docker images, and then the parity check; record the differences here, each fixed or explained by Decision 11.
   - Released files, their builds and the libraries in them match exactly for both components.
   - Three license sets differed (`HdrHistogram@2.2.2` in both, `jakarta.annotation-api@2.0.0` in one), all read only from Xray's scan of the file, which both sides call and merge the same way. Xray's answer changed between the prototype run and the scan a few minutes later; asking Xray again ten times gave the service's answer every time. Not a porting difference: the moving-target risk in the design.
-- [ ] 8.3.1 (added on review) Rerun 8.3 after the fixes of 5.14; record the result here.
+- [x] 8.3.1 (added on review) Rerun 8.3 after the fixes of 5.14; record the result here.
+  - Both components the same: released files, builds, libraries and licenses. None of the six fixes changes either component.
 - [ ] 8.4 Same for all components of run 14's scope; record the result here.
 
 ## 8a. Review against the prototype (Decision 17)
@@ -115,7 +117,7 @@
 ## 8b. Second review against the prototype and the docs
 
 - [x] 8b.1 `ScanPorts.memoized()` keeps an answer of nothing found, as the prototype's cache does: a missing build, a file not found and a file Xray has not indexed are asked once per scan. Before, a not indexed file was asked twice, and Xray finishing in between gave it packages after it was judged `NOT_IN_XRAY`. `ScanPortsTest`.
-- [x] 8b.2 Tests for what the spec says and nothing tested: `NOT_SCANNED` is not waited for; a leftover with no convention build lists no build and keeps its build's number.
+- [x] 8b.2 Tests for what the spec says and nothing tested: `NOT_SCANNED` is not waited for; a leftover with no convention build lists no build and keeps its build's number. (Superseded by 6.9: it is waited for now.)
 - [x] 8b.3 `PackageDependencyTest`: reading may import `listing.data` and nothing else under `listing`, by folder rather than by class name; the adapters import nothing of `shared`.
 - [x] 8b.4 Docs brought in line with the code: proposal (images, depth, the wait), spec (manifest names, `BUILD_NAME_DIFFERS`, licenses of two sources), design (worked example count, skeleton, Decisions 10 to 14, parity view, risks), `README.md`, `docs/architecture.md`.
 - [x] 8b.5 Recorded, not changed: four more odd rules (Decision 10.13 to 10.16), four more differences (Decision 11), and the clients' default call timeout as a risk.

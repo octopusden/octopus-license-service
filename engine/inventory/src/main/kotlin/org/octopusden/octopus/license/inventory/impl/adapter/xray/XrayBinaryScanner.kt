@@ -70,7 +70,9 @@ internal class XrayBinaryScanner(
 
     private companion object {
         const val DEFAULT_WATCH = "default"
-        val PENDING = setOf(ScanState.PENDING, ScanState.SCANNING)
+
+        // Xray answers NOT_SCANNED for about half a minute after an upload before it starts (D12).
+        val PENDING = setOf(ScanState.PENDING, ScanState.SCANNING, ScanState.NOT_SCANNED)
         val CLIENT_ERRORS = 400..499
     }
 }

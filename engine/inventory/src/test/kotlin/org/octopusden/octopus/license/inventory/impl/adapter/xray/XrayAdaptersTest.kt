@@ -111,13 +111,13 @@ class XrayAdaptersTest {
     }
 
     @Test
-    @DisplayName("not scanned: no wait, the summary is read as it is")
-    fun notScanned() {
-        jfrog.answer(STATUS, status("NOT_SCANNED"))
+    @DisplayName("not scanned yet, as Xray answers for about half a minute after an upload: waited for like a pending scan (D12)")
+    fun notScannedYet() {
+        jfrog.answer(STATUS, status("NOT_SCANNED"), status("NOT_SCANNED"), status("DONE"))
         jfrog.answer(SUMMARY, summary)
 
         assertEquals(2, scanner().scan(zip)?.size)
-        assertEquals(emptyList<Duration>(), sleeps)
+        assertEquals(listOf(Duration.ofSeconds(10), Duration.ofSeconds(10)), sleeps)
     }
 
     @Test

@@ -180,8 +180,8 @@ The service SHALL ask Xray for a file's license scan status before reading its s
 
 #### Scenario: Not scanned
 
-- **WHEN** Xray reports the file's license scan `NOT_SCANNED`
-- **THEN** the service does not wait, and reads the file's scan as the prototype does
+- **WHEN** Xray reports the file's license scan `NOT_SCANNED`, as it does for about half a minute after an upload
+- **THEN** the service waits for it like a pending scan, and then reads the file's scan whatever the status
 
 ### Requirement: A read file's packages come from every source it has
 
