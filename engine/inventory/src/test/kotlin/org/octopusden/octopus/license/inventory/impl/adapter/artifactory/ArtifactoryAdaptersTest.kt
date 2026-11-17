@@ -160,6 +160,17 @@ class ArtifactoryAdaptersTest {
     }
 
     @Test
+    @DisplayName("no connection at all is tried three times, 1 s then 2 s apart, then Artifactory is unavailable")
+    fun noConnection() {
+        jfrog.close()
+
+        val error = assertThrows<InventorySourceUnavailableException> { records.find("any", "1") }
+
+        assertEquals("Artifactory", error.system)
+        assertEquals(listOf(Duration.ofSeconds(1), Duration.ofSeconds(2)), pauses)
+    }
+
+    @Test
     @DisplayName("a server that recovers on the second try answers normally")
     fun recovers() {
         jfrog.answer(AQL, 502 to "", 200 to """{"results":[{"repo":"a-local","path":"p","name":"n"}]}""")
