@@ -48,7 +48,7 @@ The service SHALL check the head of the registry's default branch on a fixed int
 
 ### Requirement: Every refresh is counted by its outcome
 
-The service SHALL count each refresh that asks the license registry in the metric `license.policy.refreshes`, tagged `outcome` with `loaded`, `unchanged`, `unavailable` or `invalid`. A failing refresh after the first load SHALL NOT change readiness.
+The service SHALL count each refresh that asks the license registry in the metric `license.policy.refreshes`, tagged `outcome` with `loaded`, `unchanged`, `unavailable`, `invalid`, or `failed` for any other error. A failing refresh after the first load SHALL NOT change readiness.
 
 #### Scenario: Bitbucket down after the first load
 
@@ -59,6 +59,20 @@ The service SHALL count each refresh that asks the license registry in the metri
 
 - **WHEN** one refresh loads a policy, one finds the head unchanged, one meets a Bitbucket outage and one reads a registry without a whitelist
 - **THEN** each of the four outcomes grows by one
+
+#### Scenario: An error nobody expected
+
+- **WHEN** a refresh fails with any other error
+- **THEN** the `failed` count grows by one, and the policy before it stays
+
+### Requirement: The loaded policy's problems are counted
+
+The service SHALL publish the number of registry entries the loaded policy skipped as the gauge `license.policy.problems`, 0 before the first load.
+
+#### Scenario: A skipped override
+
+- **WHEN** the loaded policy skipped one malformed override
+- **THEN** the gauge reads 1
 
 ### Requirement: The license registry settings are required
 
