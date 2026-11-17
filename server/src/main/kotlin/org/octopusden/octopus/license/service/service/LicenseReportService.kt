@@ -6,10 +6,12 @@ import org.octopusden.octopus.license.core.dto.LicenseReportRequest
 interface LicenseReportService {
     /**
      * Resolves the component version first: an excluded one is registered EXCLUDED and never
-     * generated; any other is registered RUNNING and generated in the background.
+     * generated; any other is registered RUNNING and generated in the background. While a report
+     * for the same component version and mode is still running, that report is returned instead.
      *
      * @throws org.octopusden.octopus.license.core.exception.NotFoundException the registry knows no such component version.
      * @throws org.octopusden.octopus.license.core.exception.ServiceUnavailableException the registry could not be asked.
+     * @throws org.octopusden.octopus.license.core.exception.ServiceBusyException every generation is busy.
      */
     fun start(request: LicenseReportRequest): LicenseReport
 

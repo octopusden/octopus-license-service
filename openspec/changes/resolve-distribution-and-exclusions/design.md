@@ -150,7 +150,8 @@ data class ArtifactPattern(val groups: List<String>, val artifacts: List<String>
   - `Resolved`: register `RUNNING`, generate in the background with the target;
   - `Excluded`: register the report already `EXCLUDED`, with the reason and no files; nothing goes to the executor;
   - an exception: nothing is registered.
-- `LicenseReportGenerator.generate` takes a `LicenseTarget` instead of `component` and `version`. `EmptyLicenseReportGenerator` ignores it until the scan lands.
+- `LicenseReportGenerator.generate` takes a `LicenseTarget` and the report mode, instead of `component`, `version` and mode. `EmptyLicenseReportGenerator` ignores both until the scan lands.
+- A resolved report joins a report for the same component version and mode that is still running; an excluded one never runs, so there is nothing to join.
 
 ### 9. Configuration
 

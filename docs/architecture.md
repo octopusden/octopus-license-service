@@ -94,7 +94,7 @@ Dependencies point one way: `controller → service → state`. Nothing hides `s
 What each part does on a request:
 
 - the controller only translates HTTP;
-- the service checks the request, resolves the license target, registers the report and runs the generation in the background;
+- the service checks the request, resolves the license target, registers the report and runs the generation in the background; while a report for the same component version is still running, it returns that one instead, so a component version is generated once at a time;
 - the generator produces the result from what it was given;
 - the report store keeps reports in memory until their TTL ends.
 

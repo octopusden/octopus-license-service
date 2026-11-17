@@ -41,6 +41,8 @@
 - [x] 2.3 `:client:test`: 5 tests, 0 failures.
 - [x] 2.4 (added on review) detekt's `SwallowedException` flagged the server re-throwing the module's exceptions without their cause. `LicenseServiceException`, `NotFoundException` and `ServiceUnavailableException` take an optional `cause`; it stays on the server side, only the message crosses the wire.
 - [x] 2.5 (added on review) Merging the skeleton's queue cap brought `ServiceBusyException`, also on `503`. `ServiceBusyException` now extends `ServiceUnavailableException`. The server sends `Retry-After` only when it is busy, and the client maps a `503` with `Retry-After` to `ServiceBusyException` and any other `503` to `ServiceUnavailableException`. A caller that catches `ServiceUnavailableException` gets both. Client tests cover both mappings; `BusyServiceApiTest` resolves through a stub target resolver.
+- [x] 2.6 (added on review) The skeleton's error contract changed: `ServiceBusyException` carries `retryAfter` and no longer extends anything, and `ServiceUnreachableException` covers gateway and network failures. `ServiceUnavailableException` stays a sibling for a system the service reads: an enveloped `503` without `Retry-After`. The runner waits it out with the same backoff as an unreachable service (test: a registry outage at start is retried).
+- [x] 2.7 (added on review) The skeleton's report mode and joining of a running report: `start` resolves first, then joins a running report for the same component version and mode; `LicenseReportGenerator.generate(target, mode)`.
 
 ## 3. `server`: resolve at start
 

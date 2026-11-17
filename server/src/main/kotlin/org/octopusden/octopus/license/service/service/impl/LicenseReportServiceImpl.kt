@@ -44,6 +44,7 @@ class LicenseReportServiceImpl(
             component = request.component,
             version = request.version,
             status = LicenseReportStatus.RUNNING,
+            mode = request.mode,
         )
         return when (val resolution = resolve(request)) {
             is TargetResolution.Excluded ->
@@ -52,7 +53,8 @@ class LicenseReportServiceImpl(
                     log.info("License report {} for {}:{} excluded: {}", it.id, it.component, it.version, resolution.reason)
                 }
             is TargetResolution.Resolved -> {
-                licenseReportStore.add(report)
+                val current = licenseReportStore.addUnlessRunning(report)
+                if (current.id != report.id) return current
                 try {
                     licenseReportExecutor.execute { generate(report, resolution.target) }
                 } catch (_: TaskRejectedException) {
@@ -106,7 +108,7 @@ class LicenseReportServiceImpl(
         target: LicenseTarget,
     ) {
         val startedAt = clock.instant()
-        val finished = runCatching { licenseReportGenerator.generate(target) }.fold(
+        val finished = runCatching { licenseReportGenerator.generate(target, report.mode) }.fold(
             onSuccess = { generated ->
                 report.copy(status = LicenseReportStatus.DONE, summary = generated.summary).also {
                     licenseReportStore.finish(it, generated.files)
@@ -114,9 +116,14 @@ class LicenseReportServiceImpl(
             },
             onFailure = { e ->
                 log.error("License report {} for {}:{} failed", report.id, report.component, report.version, e)
-                report.copy(status = LicenseReportStatus.FAILED, error = e.message ?: e.javaClass.name).also {
-                    licenseReportStore.finish(it, null)
-                }
+                // The exception text can carry upstream URLs and repository paths; it stays in the log.
+                report
+                    .copy(
+                        status = LicenseReportStatus.FAILED,
+                        error = "Generation failed; the service log has the details of report ${report.id}",
+                    ).also {
+                        licenseReportStore.finish(it, null)
+                    }
             },
         )
         log.info(

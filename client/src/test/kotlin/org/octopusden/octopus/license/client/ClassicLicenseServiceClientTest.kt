@@ -4,7 +4,6 @@ import com.sun.net.httpserver.HttpServer
 import feign.FeignException
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
@@ -19,7 +18,10 @@ import org.octopusden.octopus.license.core.exception.LicenseFilesNotAvailableExc
 import org.octopusden.octopus.license.core.exception.NotFoundException
 import org.octopusden.octopus.license.core.exception.ServiceBusyException
 import org.octopusden.octopus.license.core.exception.ServiceUnavailableException
+import org.octopusden.octopus.license.core.exception.ServiceUnreachableException
 import java.net.InetSocketAddress
+import java.net.ServerSocket
+import java.time.Duration
 import java.time.Instant
 
 /**
@@ -90,18 +92,57 @@ class ClassicLicenseServiceClientTest {
     fun mapsServiceUnavailable() {
         answerError("/rest/api/1/license-reports", HTTP_SERVICE_UNAVAILABLE)
 
-        val error = assertThrows<ServiceUnavailableException> { client.startReport(LicenseReportRequest("c", "1")) }
-        assertFalse(error is ServiceBusyException)
+        assertThrows<ServiceUnavailableException> { client.startReport(LicenseReportRequest("c", "1")) }
     }
 
     @Test
     @DisplayName("an answer without the error envelope stays a plain Feign error")
     fun nonEnvelopeErrorStaysFeignError() {
-        answer("/rest/api/1/license-reports/$REPORT_ID", HTTP_BAD_GATEWAY, "<html>Bad Gateway</html>")
+        answer("/rest/api/1/license-reports/$REPORT_ID", HTTP_INTERNAL_SERVER_ERROR, "<html>Internal Server Error</html>")
 
         val error = assertThrows<FeignException> { client.getReport(REPORT_ID) }
 
-        assertEquals("<html>Bad Gateway</html>", error.contentUTF8())
+        assertEquals("<html>Internal Server Error</html>", error.contentUTF8())
+    }
+
+    @Test
+    @DisplayName("a gateway error without the envelope is ServiceUnreachableException: it is worth asking again")
+    fun gatewayErrorIsUnreachable() {
+        answer("/rest/api/1/license-reports/$REPORT_ID", HTTP_BAD_GATEWAY, "<html>Bad Gateway</html>")
+
+        assertThrows<ServiceUnreachableException> { client.getReport(REPORT_ID) }
+    }
+
+    @Test
+    @DisplayName("a refused connection is ServiceUnreachableException, after one attempt: the caller decides on retries")
+    fun refusedConnectionIsUnreachable() {
+        val closedPort = ServerSocket(0).use { it.localPort }
+        val unreachable = ClassicLicenseServiceClient(
+            object : LicenseServiceClientParametersProvider {
+                override fun getApiUrl() = "http://localhost:$closedPort"
+            },
+        )
+
+        val started = System.nanoTime()
+        assertThrows<ServiceUnreachableException> { unreachable.getReport(REPORT_ID) }
+
+        assertTrue(Duration.ofNanos(System.nanoTime() - started) < Duration.ofSeconds(1), "no hidden retries")
+    }
+
+    @Test
+    @DisplayName("a busy answer carries the Retry-After the service asked for")
+    fun busyCarriesRetryAfter() {
+        server.createContext("/rest/api/1/license-reports") { exchange ->
+            val bytes = """{"error":{"code":503,"message":"busy"}}""".toByteArray()
+            exchange.responseHeaders.add("Content-Type", "application/json")
+            exchange.responseHeaders.add("Retry-After", "60")
+            exchange.sendResponseHeaders(HTTP_SERVICE_UNAVAILABLE, bytes.size.toLong())
+            exchange.responseBody.use { it.write(bytes) }
+        }
+
+        val error = assertThrows<ServiceBusyException> { client.startReport(LicenseReportRequest("c", "1")) }
+
+        assertEquals(Duration.ofSeconds(RETRY_AFTER_SECONDS), error.retryAfter)
     }
 
     @Test
@@ -144,5 +185,6 @@ class ClassicLicenseServiceClientTest {
         const val HTTP_INTERNAL_SERVER_ERROR = 500
         const val HTTP_BAD_GATEWAY = 502
         const val HTTP_SERVICE_UNAVAILABLE = 503
+        const val RETRY_AFTER_SECONDS = 60L
     }
 }

@@ -1,5 +1,6 @@
 package org.octopusden.octopus.license.service.service
 
+import org.octopusden.octopus.license.core.dto.LicenseReportMode
 import org.octopusden.octopus.license.core.dto.LicenseReportSummary
 import org.octopusden.octopus.license.target.model.LicenseTarget
 
@@ -8,7 +9,10 @@ import org.octopusden.octopus.license.target.model.LicenseTarget
  * background and keeping the result is the caller's job. Never sees an excluded component.
  */
 interface LicenseReportGenerator {
-    fun generate(target: LicenseTarget): GeneratedReport
+    fun generate(
+        target: LicenseTarget,
+        mode: LicenseReportMode,
+    ): GeneratedReport
 }
 
 /** [files] is the zip of license files, ready to download. */

@@ -9,6 +9,7 @@ import org.junit.jupiter.api.assertThrows
 import org.octopusden.octopus.license.client.LicenseServiceClient
 import org.octopusden.octopus.license.client.impl.ClassicLicenseServiceClient
 import org.octopusden.octopus.license.client.impl.LicenseServiceClientParametersProvider
+import org.octopusden.octopus.license.core.dto.LicenseReportMode
 import org.octopusden.octopus.license.core.dto.LicenseReportRequest
 import org.octopusden.octopus.license.core.exception.ServiceBusyException
 import org.octopusden.octopus.license.service.service.GeneratedReport
@@ -36,7 +37,10 @@ import java.time.Clock
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 
-/** One generation thread and no queue: a second report while the first runs finds the service busy. */
+/**
+ * One generation thread and no queue: a report for another version while the first runs finds the
+ * service busy. The same version would join the running report instead.
+ */
 @SpringBootTest(
     webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
     properties = [
@@ -81,7 +85,7 @@ class BusyServiceApiTest {
         client.startReport(LicenseReportRequest(COMPONENT, VERSION))
         val stored = licenseReportStore.ids()
 
-        assertThrows<ServiceBusyException> { client.startReport(LicenseReportRequest(COMPONENT, VERSION)) }
+        assertThrows<ServiceBusyException> { client.startReport(LicenseReportRequest(COMPONENT, OTHER_VERSION)) }
         assertEquals(stored, licenseReportStore.ids())
     }
 
@@ -94,7 +98,7 @@ class BusyServiceApiTest {
             HttpRequest
                 .newBuilder(URI("http://localhost:$port/rest/api/1/license-reports"))
                 .header("Content-Type", "application/json")
-                .POST(HttpRequest.BodyPublishers.ofString("""{"component":"$COMPONENT","version":"$VERSION"}"""))
+                .POST(HttpRequest.BodyPublishers.ofString("""{"component":"$COMPONENT","version":"$OTHER_VERSION"}"""))
                 .build(),
             HttpResponse.BodyHandlers.ofString(),
         )
@@ -110,10 +114,13 @@ class BusyServiceApiTest {
         @Volatile
         var gate = CountDownLatch(1)
 
-        override fun generate(target: LicenseTarget): GeneratedReport {
+        override fun generate(
+            target: LicenseTarget,
+            mode: LicenseReportMode,
+        ): GeneratedReport {
             gate.await(GATE_TIMEOUT_SECONDS, TimeUnit.SECONDS)
             gate = CountDownLatch(1)
-            return delegate.generate(target)
+            return delegate.generate(target, mode)
         }
     }
 
@@ -148,6 +155,7 @@ class BusyServiceApiTest {
     private companion object {
         const val COMPONENT = "some-component"
         const val VERSION = "1.2.3"
+        const val OTHER_VERSION = "2.0.0"
         const val HTTP_SERVICE_UNAVAILABLE = 503
         const val GATE_TIMEOUT_SECONDS = 10L
         const val POLL_INTERVAL_MS = 20L

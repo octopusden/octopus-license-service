@@ -30,6 +30,19 @@ configure<PublishingExtension> {
     }
 }
 
+configure<PublishingExtension> {
+    repositories {
+        maven {
+            name = "GitHubPackages"
+            url = uri("https://maven.pkg.github.com/octopusden/octopus-license-service")
+            credentials {
+                username = System.getenv("GITHUB_PACKAGES_USERNAME")
+                password = System.getenv("GITHUB_PACKAGES_TOKEN")
+            }
+        }
+    }
+}
+
 configure<SigningExtension> {
     isRequired = project.extra["signingRequired"] as Boolean
     val signingKey: String? by project
