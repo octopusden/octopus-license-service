@@ -28,7 +28,8 @@ fun library(
     licenses: Set<String> = emptySet(),
     foundIn: Set<String> = setOf(ZIP),
     ours: Boolean = false,
-) = FoundLibrary(PackageId.parse(id), licenses, setOf(Evidence.BINARY_SCAN), foundIn, ours)
+    evidence: Set<Evidence> = setOf(Evidence.BINARY_SCAN),
+) = FoundLibrary(PackageId.parse(id), licenses, evidence, foundIn, ours)
 
 /** The design's worked example registry: `Apache-2.0` and `MIT` allowed, one synonym, one override. */
 val policy =

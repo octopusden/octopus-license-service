@@ -11,6 +11,7 @@ import org.octopusden.octopus.license.evaluation.inventory
 import org.octopusden.octopus.license.evaluation.library
 import org.octopusden.octopus.license.evaluation.parity.EvaluationParityView.LibraryView
 import org.octopusden.octopus.license.evaluation.policy
+import org.octopusden.octopus.license.inventory.model.Evidence
 
 class EvaluationParityTest {
     private val checksumOnly = "generic://sha256:${"cd".repeat(32)}/vendor-blob.so"
@@ -173,6 +174,42 @@ class EvaluationParityTest {
         assertEquals(
             listOf("LICENCE_NOT_ALLOWED pkg:npm/left-pad@1.3.0: only in the prototype"),
             EvaluationParityDiff.diff(prototype, missing).others,
+        )
+    }
+
+    @Test
+    @DisplayName(
+        "Python only in images that the build declared: judged by the service, read back as skipped and listed as deliberate (D3.3)",
+    )
+    fun declaredImagePython() {
+        val declared = "pkg:pypi/pyyaml@6.0.1"
+        val prototypeSkippedIt =
+            prototype.copy(baseImagePython = 2, skippedPerFile = mapOf(IMAGE to 3))
+        val serviceJudgedIt =
+            EvaluationParityView.of(
+                LicenseEvaluator().evaluate(
+                    inventory(
+                        library(checksumOnly, setOf("Unknown")),
+                        library("pkg:maven/org.example/sample-lib@1.5", setOf("GPL-3.0")),
+                        library("pkg:npm/left-pad@1.3.0"),
+                        library(declared, setOf("MIT"), foundIn = setOf(IMAGE), evidence = setOf(Evidence.BINARY_SCAN, Evidence.SBOM)),
+                        library("pkg:pypi/requests@2.31.0", setOf("Apache-2.0"), foundIn = setOf(IMAGE)),
+                        library("pkg:rpm/openssl-libs@3.0.7", setOf("OpenSSL"), foundIn = setOf(IMAGE)),
+                    ),
+                    policy,
+                ),
+            )
+
+        assertEquals(prototypeSkippedIt, serviceJudgedIt.copy(declaredImagePython = emptySet()))
+        assertEquals(
+            EvaluationDiffs(
+                policyRules = emptyList(),
+                others = emptyList(),
+                deliberate = listOf(
+                    "library $declared: Python only in images, declared by the build: judged, the prototype skips it (D3.3)",
+                ),
+            ),
+            EvaluationParityDiff.diff(prototypeSkippedIt, serviceJudgedIt),
         )
     }
 

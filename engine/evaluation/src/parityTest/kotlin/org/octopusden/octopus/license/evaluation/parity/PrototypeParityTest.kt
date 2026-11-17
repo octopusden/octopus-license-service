@@ -34,6 +34,7 @@ class PrototypeParityTest {
         val component: String,
         val differences: List<String>,
         val policyRules: List<String> = emptyList(),
+        val deliberate: List<String> = emptyList(),
     )
 
     @Test
@@ -87,6 +88,7 @@ class PrototypeParityTest {
                                     name,
                                     ParityDiff.diff(ParityView.ofPrototype(component), ParityView.of(inventory)) + evaluation.others,
                                     evaluation.policyRules,
+                                    evaluation.deliberate,
                                 )
                             }
                         }
@@ -104,12 +106,13 @@ class PrototypeParityTest {
                     val result = if (it.differences.isEmpty()) "same" else "${it.differences.size} difference(s)"
                     appendLine("| ${it.component} | $result | ${it.policyRules.size} |")
                 }
-                results.filter { it.differences.isNotEmpty() || it.policyRules.isNotEmpty() }.forEach { result ->
+                results.filter { it.differences.size + it.policyRules.size + it.deliberate.size > 0 }.forEach { result ->
                     appendLine()
                     appendLine("## ${result.component}")
                     appendLine()
                     result.differences.forEach { appendLine("- $it") }
                     result.policyRules.forEach { appendLine("- policy rules (D6): $it") }
+                    result.deliberate.forEach { appendLine("- deliberate: $it") }
                 }
             },
         )

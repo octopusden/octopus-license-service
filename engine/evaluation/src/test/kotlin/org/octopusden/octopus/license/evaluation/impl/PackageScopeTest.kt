@@ -4,12 +4,14 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.EnumSource
 import org.junit.jupiter.params.provider.ValueSource
 import org.octopusden.octopus.license.evaluation.IMAGE
 import org.octopusden.octopus.license.evaluation.ZIP
 import org.octopusden.octopus.license.evaluation.image
 import org.octopusden.octopus.license.evaluation.library
 import org.octopusden.octopus.license.evaluation.zip
+import org.octopusden.octopus.license.inventory.model.Evidence
 
 class PackageScopeTest {
     private val scope = PackageScope(listOf(zip, image))
@@ -45,6 +47,19 @@ class PackageScopeTest {
     @DisplayName("a Python package found in no file is counted: only one found in images, and nowhere else, is base-image Python (D3.3)")
     fun pythonFoundNowhere() {
         assertEquals(Scope.COUNTED, scope.of(library("pkg:pypi/attrs@23.2.0", foundIn = emptySet())))
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @EnumSource(value = Evidence::class, names = ["SBOM", "BUILD_RECORD"])
+    @DisplayName(
+        "a Python package only in images that the build itself declared is counted: it is the application's, not the base image's (D3.3)",
+    )
+    fun declaredPythonInImage(declaredBy: Evidence) {
+        assertEquals(
+            Scope.COUNTED,
+            scope.of(library("pkg:pypi/requests@2.31.0", foundIn = setOf(IMAGE), evidence = setOf(Evidence.BINARY_SCAN, declaredBy))),
+        )
+        assertEquals(Scope.COUNTED, scope.of(library("pkg:pypi/requests@2.31.0", foundIn = setOf(IMAGE), evidence = setOf(declaredBy))))
     }
 
     @ParameterizedTest(name = "{0}")

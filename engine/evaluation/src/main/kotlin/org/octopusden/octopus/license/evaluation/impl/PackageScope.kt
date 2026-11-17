@@ -1,5 +1,6 @@
 package org.octopusden.octopus.license.evaluation.impl
 
+import org.octopusden.octopus.license.inventory.model.Evidence
 import org.octopusden.octopus.license.inventory.model.FileKind
 import org.octopusden.octopus.license.inventory.model.FoundLibrary
 import org.octopusden.octopus.license.inventory.model.ReleasedFile
@@ -10,7 +11,10 @@ internal enum class Scope {
     /** Comes with the operating system of an image; skipped and counted. */
     OS_PACKAGE,
 
-    /** Xray cannot tell base-image Python (yum, subscription-manager) from an application's. */
+    /**
+     * Xray cannot tell base-image Python (yum, subscription-manager) from an application's, so Python
+     * the image scan alone found in images is set aside; Python the build itself declared is counted.
+     */
     BASE_IMAGE_PYTHON,
 
     /** Not a package; counted nowhere. */
@@ -27,7 +31,8 @@ internal class PackageScope(
         when (library.id.type) {
             DOCKER -> Scope.IMAGE_LAYER
             in OS_PACKAGE_TYPES -> Scope.OS_PACKAGE
-            PYPI if library.foundIn.isNotEmpty() && library.foundIn.all { it in images } -> Scope.BASE_IMAGE_PYTHON
+            PYPI if library.evidence == ONLY_BINARY_SCAN && library.foundIn.isNotEmpty() && library.foundIn.all { it in images } ->
+                Scope.BASE_IMAGE_PYTHON
             else -> Scope.COUNTED
         }
 
@@ -35,5 +40,6 @@ internal class PackageScope(
         const val DOCKER = "docker"
         const val PYPI = "pypi"
         val OS_PACKAGE_TYPES = setOf("rpm", "deb", "alpine")
+        val ONLY_BINARY_SCAN = setOf(Evidence.BINARY_SCAN)
     }
 }

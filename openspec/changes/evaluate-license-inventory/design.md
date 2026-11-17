@@ -127,9 +127,7 @@ data class AssessedLibrary(
     val verdict: LibraryVerdict,
     val licenses: List<String>,              // the policy's canonical names; for INTERNAL and UNIDENTIFIED too
     val overridden: Boolean,
-) {
-    val thirdParty get() = verdict != LibraryVerdict.INTERNAL
-}
+)
 
 enum class LibraryVerdict { INTERNAL, ALLOWED, NOT_ALLOWED, UNKNOWN, UNIDENTIFIED }
 
@@ -174,7 +172,8 @@ data class FoundLibrary(
 
 1. Type `docker` (an image layer): dropped. Not counted, not listed, not in any total.
 2. Type `rpm`, `deb` or `alpine`: skipped as an OS package.
-3. Type `pypi`, and every released file it was found in is an image (`FileKind.DOCKER`): skipped as base-image Python. Xray cannot tell base-image Python (yum, subscription-manager) from an application's.
+3. Type `pypi`, every released file it was found in is an image (`FileKind.DOCKER`), and the image scan is its only evidence (`BINARY_SCAN` alone): skipped as base-image Python. Xray cannot tell base-image Python (yum, subscription-manager) from an application's; Python the build itself declared (its SBOM or build record) is the application's and is counted.
+   - Decided on review, a deliberate difference from the prototype, which skips every `pypi` package found only in images: skipping what the build declared lets a Python service released only as an image report clean. The parity check reads such a package back as skipped and lists it as deliberate, so the rest still compares (Decision 11).
 4. Anything else: counted.
 
 - A skipped library adds one to `perFile` for every released file it was found in; `osPackages` counts rule 2, `baseImagePython` rule 3.

@@ -78,6 +78,14 @@ class LibraryJudgeTest {
     }
 
     @Test
+    @DisplayName("licenses from two sources are judged together: one allowed name makes the library ALLOWED, as the license plugins do")
+    fun sourcesDisagree() {
+        val gplInXrayMitInSbom = library("pkg:maven/org.example/two-sources@1.0", setOf("GPL-3.0", "MIT"))
+
+        assertEquals(Triple(ALLOWED, listOf("GPL-3.0", "MIT"), false), judged(gplInXrayMitInSbom))
+    }
+
+    @Test
     @DisplayName("no license, or only Unknown, is UNKNOWN")
     fun unknown() {
         assertEquals(Triple(UNKNOWN, emptyList<String>(), false), judged(library("pkg:npm/left-pad@1.3.0")))

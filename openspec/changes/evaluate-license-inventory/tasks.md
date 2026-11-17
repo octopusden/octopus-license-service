@@ -84,6 +84,15 @@
 - [x] 5b.3 `Ownership` keeps `isOurs` and takes the scan's boundary rule for internal groups; no test here relied on a bare prefix.
 - [x] 5b.4 Docs: the Xray wait is chosen per request; `NOT_SCANNED` is waited for.
 
+## 5c. Review of the evaluation (added on review)
+
+- [x] 5c.1 Python only in images is skipped only when the image scan is its only evidence; Python the build declared (SBOM, build record) is judged (Decision 3.3). `PackageScopeTest.declaredPythonInImage`, `LicenseEvaluatorTest.declaredPythonInImageOnlyComponent`.
+- [x] 5c.2 The parity view reads such a package back as skipped and lists it as deliberate (`EvaluationParityTest.declaredImagePython`); the parity report has a "deliberate" line for it.
+- [x] 5c.3 `AssessedLibrary.thirdParty` removed: nothing read it, `SummaryMapper` decides third party itself.
+- [x] 5c.4 Test: licenses from two sources are judged together, one allowed name wins, as the license plugins do (`LibraryJudgeTest.sourcesDisagree`). Kept on purpose.
+- [x] 5c.5 Kept on purpose, recorded: OS package types are skipped wherever found (TD-002); `perFile` has no production reader yet and the report store bounds zip bytes only (both noted for the license files issue).
+- [x] 5c.6 Not in this change: the summary does not carry the scan's findings, so the license step stays out of the build templates until trust grading lands.
+
 ## 6. Parity, end to end (Decision 11)
 
 - [x] 6.1 `:license-inventory`: `java-test-fixtures`; move `ParityView` and `ParityDiff` into `testFixtures`, unchanged; its `test` and `parityTest` still compile and pass. The fixtures take the Artifactory client for Jackson, as `parityTest` does. `:license-inventory:test` 201 green.
@@ -93,6 +102,7 @@
 - [x] 6.4 Run: a fresh local prototype run over the components of run 14, then `./gradlew :license-evaluation:parityTest`. Record the result here: components compared, differences outside "policy rules" (expected 0), the "policy rules" list.
   - [x] 6.4.1 Targeted run on six explicit external components, each at its latest RELEASE, chosen for what they exercise: nested archives and npm modules, docker images with OS packages and Python, SBOM-only ecosystems, an image with copyleft modules, and many checksum-only files of ours. The prototype ran just before, license registry `50085de`: all six `same`, no difference in the inventory or the evaluation.
   - [x] 6.4.2 Policy rules: one, in three of the six: `pkg:maven/xalan/xalan@2.7.3-atlassian-hosted` overridden by `xalan--xalan--2.7.3` in the service, not in the prototype (`versions-api` reads the version as 2.7.3; the prototype compares the string). Same verdict and license, `ALLOWED` `Apache-2.0`, on both sides.
+  - [x] 6.4.2a (added on review) Rerun after the merge with the scan's review changes and the declared-Python rule, license registry `32f0966`: all six the same, no policy-rule or deliberate line. A first run showed three libraries whose licenses both sides copy from Xray's scan of the file differ; asked again minutes later, Xray gave both sides the same answer.
   - [ ] 6.4.3 The full run over every external component: optional, before rollout; same script without the component list (`parity/run-parity.sh` in the prototype's folder takes it as its first argument).
 
 ## 6a. Review against the prototype's stage 11 (added on review)

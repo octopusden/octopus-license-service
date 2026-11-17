@@ -4,10 +4,12 @@ package org.octopusden.octopus.license.evaluation.parity
  * @param policyRules verdicts and overrides that differ on the same licenses found: the license
  * policy's rules differ from the prototype's `verdict()` and `override_for()` on purpose (D6).
  * @param others every other difference.
+ * @param deliberate where the service departs from the prototype on purpose, listed, never failing.
  */
 data class EvaluationDiffs(
     val policyRules: List<String>,
     val others: List<String>,
+    val deliberate: List<String> = emptyList(),
 )
 
 /**
@@ -40,7 +42,11 @@ object EvaluationParityDiff {
                 lines += "library $id: overridden: prototype ${theirs.overridden}, service ${ours.overridden}"
             }
         }
-        return EvaluationDiffs(policyRules, others + skipped(prototype, service) + notAllowed(prototype, service))
+        val deliberate =
+            service.declaredImagePython.sorted().map {
+                "library $it: Python only in images, declared by the build: judged, the prototype skips it (D3.3)"
+            }
+        return EvaluationDiffs(policyRules, others + skipped(prototype, service) + notAllowed(prototype, service), deliberate)
     }
 
     private fun skipped(

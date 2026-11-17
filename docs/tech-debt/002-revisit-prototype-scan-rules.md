@@ -18,6 +18,7 @@ Open. **Should do**, after the parity check passes for all components in scope.
 - the producing module is the first with a file of the same sha1 or the same name, so a same-named file in an earlier module wins;
 - a build file named `mybom.json` is read as an SBOM, and an SBOM's nested components are not read;
 - a dependency's classifier is ignored, for the nested archive looked up and for the package listed.
+- evaluation skips `rpm`, `deb` and `alpine` packages wherever they are found, not only in images: a released zip that bundles third-party `.rpm` files is not judged (`license-evaluation`, `PackageScope`).
 
 ## Why this matters
 

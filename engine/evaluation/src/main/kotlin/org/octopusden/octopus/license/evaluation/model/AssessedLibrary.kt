@@ -12,6 +12,4 @@ data class AssessedLibrary(
     val verdict: LibraryVerdict,
     val licenses: List<String>,
     val overridden: Boolean,
-) {
-    val thirdParty get() = verdict != LibraryVerdict.INTERNAL
-}
+)

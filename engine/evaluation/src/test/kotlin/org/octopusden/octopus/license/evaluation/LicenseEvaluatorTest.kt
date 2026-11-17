@@ -6,10 +6,12 @@ import org.junit.jupiter.api.Test
 import org.octopusden.octopus.license.evaluation.model.AssessedLibrary
 import org.octopusden.octopus.license.evaluation.model.LibraryVerdict.ALLOWED
 import org.octopusden.octopus.license.evaluation.model.LibraryVerdict.INTERNAL
+import org.octopusden.octopus.license.evaluation.model.LibraryVerdict.NOT_ALLOWED
 import org.octopusden.octopus.license.evaluation.model.LibraryVerdict.UNIDENTIFIED
 import org.octopusden.octopus.license.evaluation.model.LibraryVerdict.UNKNOWN
 import org.octopusden.octopus.license.evaluation.model.LicenseAssessment
 import org.octopusden.octopus.license.evaluation.model.SkippedPackages
+import org.octopusden.octopus.license.inventory.model.Evidence
 
 class LicenseEvaluatorTest {
     private val evaluator = LicenseEvaluator()
@@ -45,6 +47,22 @@ class LicenseEvaluatorTest {
             ),
             evaluator.evaluate(inventory, policy),
         )
+    }
+
+    @Test
+    @DisplayName("an image-only component's Python that its SBOM declares is judged, not skipped as base-image Python (D3.3)")
+    fun declaredPythonInImageOnlyComponent() {
+        val declared =
+            library(
+                "pkg:pypi/pyyaml@6.0.1",
+                setOf("GPL-3.0"),
+                foundIn = setOf(IMAGE),
+                evidence = setOf(Evidence.BINARY_SCAN, Evidence.SBOM),
+            )
+        val assessment = evaluator.evaluate(inventory(declared, requests, files = listOf(image)), policy)
+
+        assertEquals(listOf(AssessedLibrary(declared, NOT_ALLOWED, listOf("GPL-3.0"), false)), assessment.libraries)
+        assertEquals(SkippedPackages(osPackages = 0, baseImagePython = 1, perFile = mapOf(IMAGE to 1)), assessment.skipped)
     }
 
     @Test

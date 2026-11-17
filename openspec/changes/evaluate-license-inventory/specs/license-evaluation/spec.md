@@ -29,7 +29,7 @@ The service SHALL skip every library of type `rpm`, `deb` or `alpine`: it SHALL 
 
 ### Requirement: Python packages found only in images are skipped
 
-The service SHALL skip a library of type `pypi` when every released file it was found in is an image: it SHALL NOT be judged, it SHALL add one to the base-image Python total, and one to the skipped count of each released file it was found in. A `pypi` library found in any file that is not an image SHALL be counted.
+The service SHALL skip a library of type `pypi` when every released file it was found in is an image and the image scan is its only evidence: it SHALL NOT be judged, it SHALL add one to the base-image Python total, and one to the skipped count of each released file it was found in. A `pypi` library found in any file that is not an image, or declared by the build itself (its SBOM or build record), SHALL be counted.
 
 #### Scenario: Python package only in an image
 
@@ -40,6 +40,11 @@ The service SHALL skip a library of type `pypi` when every released file it was 
 
 - **WHEN** `pkg:pypi/attrs@23.2.0` was found in an image and in a zip
 - **THEN** it is counted and judged
+
+#### Scenario: Python package only in an image, declared by the build
+
+- **WHEN** `pkg:pypi/pyyaml@6.0.1` was found only in an image, and the build's SBOM lists it
+- **THEN** it is counted and judged: it is the application's, not the base image's
 
 ### Requirement: Our own libraries are internal
 
