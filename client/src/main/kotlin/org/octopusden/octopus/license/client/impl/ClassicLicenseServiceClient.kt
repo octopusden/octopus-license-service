@@ -2,12 +2,15 @@ package org.octopusden.octopus.license.client.impl
 
 import feign.Feign
 import feign.Request
+import feign.RetryableException
+import feign.Retryer
 import feign.codec.Decoder
 import feign.jackson3.Jackson3Decoder
 import feign.jackson3.Jackson3Encoder
 import org.octopusden.octopus.license.client.LicenseServiceClient
 import org.octopusden.octopus.license.client.LicenseServiceErrorDecoder
 import org.octopusden.octopus.license.core.dto.LicenseReportRequest
+import org.octopusden.octopus.license.core.exception.ServiceUnreachableException
 import tools.jackson.databind.DeserializationFeature
 import tools.jackson.databind.json.JsonMapper
 import tools.jackson.module.kotlin.KotlinModule
@@ -18,15 +21,23 @@ class ClassicLicenseServiceClient(
 ) : LicenseServiceClient {
     private val client = createClient(parametersProvider.getApiUrl())
 
-    override fun startReport(request: LicenseReportRequest) = client.startReport(request)
+    override fun startReport(request: LicenseReportRequest) = unreachableOnIo { client.startReport(request) }
 
-    override fun getReport(id: String) = client.getReport(id)
+    override fun getReport(id: String) = unreachableOnIo { client.getReport(id) }
 
-    override fun downloadFiles(id: String) = client.downloadFiles(id)
+    override fun downloadFiles(id: String) = unreachableOnIo { client.downloadFiles(id) }
+
+    /** Feign reports a network failure as [RetryableException]; callers see the shared type. */
+    private fun <T> unreachableOnIo(call: () -> T): T =
+        try {
+            call()
+        } catch (e: RetryableException) {
+            throw ServiceUnreachableException(e.message ?: "The license service could not be reached", e)
+        }
 
     private companion object {
-        const val CONNECT_TIMEOUT_SECONDS = 30L
-        const val READ_TIMEOUT_MINUTES = 5L
+        const val CONNECT_TIMEOUT_SECONDS = 10L
+        const val READ_TIMEOUT_SECONDS = 60L
 
         val jsonMapper: JsonMapper = JsonMapper
             .builder()
@@ -40,8 +51,11 @@ class ClassicLicenseServiceClient(
             return Feign
                 .builder()
                 .options(
-                    Request.Options(CONNECT_TIMEOUT_SECONDS, TimeUnit.SECONDS, READ_TIMEOUT_MINUTES, TimeUnit.MINUTES, true),
-                ).encoder(Jackson3Encoder(jsonMapper))
+                    Request.Options(CONNECT_TIMEOUT_SECONDS, TimeUnit.SECONDS, READ_TIMEOUT_SECONDS, TimeUnit.SECONDS, true),
+                )
+                // One attempt per call: waiting and asking again is the caller's decision, within its own deadline.
+                .retryer(Retryer.NEVER_RETRY)
+                .encoder(Jackson3Encoder(jsonMapper))
                 .decoder { response, type ->
                     if (type == ByteArray::class.java) bytesDecoder.decode(response, type) else jsonDecoder.decode(response, type)
                 }.errorDecoder(LicenseServiceErrorDecoder(jsonMapper))

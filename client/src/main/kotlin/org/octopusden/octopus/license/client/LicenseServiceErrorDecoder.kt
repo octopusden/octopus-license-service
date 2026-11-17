@@ -8,8 +8,10 @@ import org.octopusden.octopus.license.core.exception.InvalidRequestException
 import org.octopusden.octopus.license.core.exception.LicenseFilesNotAvailableException
 import org.octopusden.octopus.license.core.exception.NotFoundException
 import org.octopusden.octopus.license.core.exception.ServiceBusyException
+import org.octopusden.octopus.license.core.exception.ServiceUnreachableException
 import tools.jackson.core.JacksonException
 import tools.jackson.databind.json.JsonMapper
+import java.time.Duration
 
 internal class LicenseServiceErrorDecoder(
     private val jsonMapper: JsonMapper,
@@ -29,20 +31,37 @@ internal class LicenseServiceErrorDecoder(
             } catch (_: JacksonException) {
                 null
             }
-        } ?: return default.decode(methodKey, buffered)
-        return when (response.status()) {
-            HTTP_BAD_REQUEST -> InvalidRequestException(message)
-            HTTP_NOT_FOUND -> NotFoundException(message)
-            HTTP_CONFLICT -> LicenseFilesNotAvailableException(message)
-            HTTP_SERVICE_UNAVAILABLE -> ServiceBusyException(message)
+        }
+        val status = response.status()
+        return when {
+            message == null && status in GATEWAY_ERRORS ->
+                ServiceUnreachableException("$methodKey answered $status from a gateway, not from the license service")
+            message == null -> default.decode(methodKey, buffered)
+            status == HTTP_BAD_REQUEST -> InvalidRequestException(message)
+            status == HTTP_NOT_FOUND -> NotFoundException(message)
+            status == HTTP_CONFLICT -> LicenseFilesNotAvailableException(message)
+            status == HTTP_SERVICE_UNAVAILABLE -> ServiceBusyException(message, retryAfter(response))
             else -> default.decode(methodKey, buffered)
         }
     }
+
+    private fun retryAfter(response: Response) =
+        response
+            .headers()
+            .entries
+            .firstOrNull { it.key.equals(RETRY_AFTER, ignoreCase = true) }
+            ?.value
+            ?.firstOrNull()
+            ?.trim()
+            ?.toLongOrNull()
+            ?.let(Duration::ofSeconds)
 
     private companion object {
         const val HTTP_BAD_REQUEST = 400
         const val HTTP_NOT_FOUND = 404
         const val HTTP_CONFLICT = 409
         const val HTTP_SERVICE_UNAVAILABLE = 503
+        const val RETRY_AFTER = "Retry-After"
+        val GATEWAY_ERRORS = setOf(502, HTTP_SERVICE_UNAVAILABLE, 504)
     }
 }
