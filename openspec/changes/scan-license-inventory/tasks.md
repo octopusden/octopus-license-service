@@ -64,6 +64,7 @@
 
 - [x] 5.11 (added on review) `declared` is derived from `selectedBy`: a declared image is `{DOCKER_BUILD, DECLARED}`, so the flag no longer repeats what the set says. The parity view drops `DECLARED` from an image's selection, as the prototype records it in `in_registry` only.
 - [x] 5.12 (added on review) `LicenseInventory.files` and `packages` are `releasedFiles` and `libraries`, `FoundPackage` is `FoundLibrary` and `PackageTable` is `LibraryTable`: a library is the word the reports use, and it says the list is what is inside the files. `PackageId` keeps its name, as a package URL is the id's format. `:license-inventory:test` 178 green.
+- [x] 5.13 (added on review) `SbomReader` skips an SBOM on any exception, Jackson's parse errors and a broken download included, and reads a build's SBOMs once per scan; tests for both and for a malformed SBOM.
 
 ## 6. Adapters (Decisions 12, 13)
 
@@ -77,6 +78,7 @@
 - [x] 6.4 (added on review) `JfrogCalls` retries three times, 1 s then 2 s apart, as the prototype did; the Artifactory client reports every error but `404` as a server error, so a client error is retried too (Decision 13).
 - [x] 6.5 (added on review) Ports are built per scan (`JfrogPorts.create`), so the Xray wait budget is one report's.
 - [x] 6.6 Confirm: `:license-inventory:test` 172 green, against a stub HTTP server for the adapters; ktlint and detekt clean.
+- [x] 6.7 (added on review) The Xray wait is a deadline taken from a clock at the first status call, so the status calls spend the budget too; tested with a clock that advances during calls.
 
 ## 7. Docs
 

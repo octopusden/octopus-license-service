@@ -351,7 +351,7 @@ Kept because the prototype's results are the baseline; each may be revisited aft
 - Before reading a file's scan, `XrayBinaryScanner` asks `POST /xray/api/v1/artifact/status` and reads `details.sca.status` (the license scan; the overall status also covers security scans the service does not need). An answer without it is read by its overall status.
 - Pending (`PENDING`, `SCANNING`): poll every `xray-scan-poll-interval` (10 s), up to `xray-scan-timeout` (5 min) per report.
 - Then, whatever the status, it reads the artifact summary, exactly as the prototype reads it: an `errors` entry for the path means "not indexed", and the file is read from its build only, with finding `NOT_IN_XRAY`. So `NOT_SUPPORTED`, `NOT_SCANNED`, `FAILED`, `UNKNOWN`, a status call answered with a client error, or a scan still pending at the timeout all end as the prototype would have them; the status only decides whether to wait.
-- The 5 minutes are one budget for the whole scan, not per file.
+- The 5 minutes are one budget for the whole scan, not per file, measured by the clock from the first status call: the status calls spend it too, not only the pauses between them.
 - Treating every status but `DONE` as "not indexed" was weighed and rejected: a file whose status and summary disagree would lose a list the prototype read.
 - A status call that gets no answer or a server error after retries fails the scan like any other call (Decision 13); the prototype has no such call.
 - The wait lives in the adapter: the algorithm only sees "indexed" or "not indexed".
