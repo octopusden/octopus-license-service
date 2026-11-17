@@ -1,5 +1,6 @@
 package org.octopusden.octopus.license.runner
 
+import org.octopusden.octopus.license.core.dto.LicenseReportMode
 import org.octopusden.octopus.license.core.dto.LicenseReportStatus
 import org.octopusden.octopus.license.core.dto.LicenseReportSummary
 import org.octopusden.octopus.license.core.dto.TrustLevel
@@ -23,13 +24,22 @@ object BuildLog {
                 val report = outcome.report
                 when (report.status) {
                     LicenseReportStatus.DONE ->
-                        listOf(LogLine("License report for $coordinates: DONE")) + summaryLines(requireNotNull(report.summary))
+                        report.summary?.let { listOf(doneLine(coordinates, report.mode)) + summaryLines(it) }
+                            ?: listOf(LogLine("License report for $coordinates is DONE, but the service sent no summary", warning = true))
                     LicenseReportStatus.EXCLUDED -> listOf(LogLine("License report for $coordinates skipped: ${report.exclusionReason}"))
                     LicenseReportStatus.FAILED -> listOf(LogLine("License report for $coordinates FAILED: ${report.error}", warning = true))
                     LicenseReportStatus.RUNNING -> error("A finished outcome cannot be RUNNING")
                 }
             }
         }
+    }
+
+    private fun doneLine(
+        coordinates: String,
+        mode: LicenseReportMode,
+    ) = when (mode) {
+        LicenseReportMode.FULL -> LogLine("License report for $coordinates: DONE")
+        LicenseReportMode.CHECK -> LogLine("License check for $coordinates: DONE (quick check on what Xray knows now; preliminary)")
     }
 
     fun render(line: LogLine) = if (line.warning) "WARNING: ${line.text}" else line.text

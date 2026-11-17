@@ -4,4 +4,5 @@ package org.octopusden.octopus.license.core.dto
 data class LicenseReportRequest(
     val component: String,
     val version: String,
+    val mode: LicenseReportMode = LicenseReportMode.FULL,
 )

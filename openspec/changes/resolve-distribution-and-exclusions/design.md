@@ -115,6 +115,7 @@ data class ArtifactPattern(val groups: List<String>, val artifacts: List<String>
 - `Excluded` is a normal answer the caller acts on, so it is a `TargetResolution` case.
 - An unknown component version and an unreachable registry (no answer, a `5xx`, or a `425` while it loads its repository) mean no answer exists, so they are the module's own exceptions: `ComponentVersionNotFoundException`, `ComponentsRegistryUnavailableException`.
 - `server` maps them to `core`'s `NotFoundException` (`404`) and a new `ServiceUnavailableException` (`503`).
+- Any other answer (a `4xx` other than `404`, or a body the client cannot decode) is `UnexpectedRegistryAnswerException`. Its message names only the status and the component version; the registry's URL and body stay in the cause, so they reach the log and never the caller. The server answers it as any unexpected error: `500`.
 
 ### 4. Exclusion rules: fixed order, first match wins, cheapest call first
 
@@ -136,6 +137,7 @@ data class ArtifactPattern(val groups: List<String>, val artifacts: List<String>
 
 - A `maven-artifacts` key is a version range in the registry's own syntax; `VersionRangeFactory` from `org.octopusden.octopus.releng:versions-api`, built from the registry's `version-names`, parses it exactly as the registry does.
 - Every entry whose range holds the requested version is kept; comma-separated group and artifact patterns are split and trimmed.
+- A key `versions-api` cannot parse leaves its patterns out and is kept in the target as an `UnreadableRange` with the parser's reason, like an `Unsupported` declared entry (Decision 7). One bad key never fails every version of the component.
 - Patterns stay strings in the target. Compiling and matching them against build output is the license scan's job, so a pattern the registry stored but cannot compile surfaces there, against the file it failed on.
 
 ### 7. `GAV` and `docker` parsing never fails the resolution
@@ -150,7 +152,8 @@ data class ArtifactPattern(val groups: List<String>, val artifacts: List<String>
   - `Resolved`: register `RUNNING`, generate in the background with the target;
   - `Excluded`: register the report already `EXCLUDED`, with the reason and no files; nothing goes to the executor;
   - an exception: nothing is registered.
-- `LicenseReportGenerator.generate` takes a `LicenseTarget` instead of `component` and `version`. `EmptyLicenseReportGenerator` ignores it until the scan lands.
+- `LicenseReportGenerator.generate` takes a `LicenseTarget` and the report mode, instead of `component`, `version` and mode. `EmptyLicenseReportGenerator` ignores both until the scan lands.
+- A resolved report joins a report for the same component version and mode that is still running; an excluded one never runs, so there is nothing to join.
 
 ### 9. Configuration
 
@@ -159,7 +162,7 @@ data class ArtifactPattern(val groups: List<String>, val artifacts: List<String>
 
 ### 10. A registry outage is a metric, not a health indicator
 
-- Every resolution is counted as `license.target.resolutions` with tag `outcome`: `resolved`, `excluded`, `not_found` or `unavailable`. Prometheus scrapes it as `license_target_resolutions_total`.
+- Every resolution is counted as `license.target.resolutions` with tag `outcome`: `resolved`, `excluded`, `not_found`, `unavailable` or `error` (an unexpected registry answer, such as a `403`). Prometheus scrapes it as `license_target_resolutions_total`.
 - No health indicator for the registry. It is called per request and shared by every pod: in readiness it would turn every pod unready at once, blocking even `GET` of running reports; in liveness it would restart pods that cannot fix it.
 - An outage already answers `503` per request; the `unavailable` count is what an alert watches.
 - The counter lives in `server`, not in `license-target-registry`: the module reads one system and knows nothing of Micrometer.
@@ -167,7 +170,7 @@ data class ArtifactPattern(val groups: List<String>, val artifacts: List<String>
 ## Risks / Trade-offs
 
 - **Two Feign versions meet in the server's test classpath.** The client is built for Feign 12 and runs on 13 there. Accepted: the adapter test exercises it end to end; the published client upgrading its Feign is a version bump here.
-- **The start request waits on the registry.** Up to three calls, normally a few hundred milliseconds. Accepted for a clear `404`; caching can come with the portal.
+- **The start request waits on the registry.** Up to three calls, normally a few hundred milliseconds, on the request thread and before the queue cap: under a burst of starts, the queue does not bound these calls, and callers wait on the registry. Accepted for a clear `404`; caching can come with the portal.
 - **A hanging registry still holds a start for minutes.** The published client reads with Feign's default 60 s timeout and does not let a caller change it; with 2 attempts per call and up to three calls, the worst case is about 6 minutes on a request thread. Fixing it needs the client to accept request options, a change in components-registry.
 - **Exclusion by name prefix.** A component named `doc-…` that is not documentation would be excluded. Accepted: it is the prototype's rule; a false match is fixed by renaming or by a configured override later.
 - **The configured list is the only way to exclude a component that still applies the old plugins.** Forgetting to add one gives that component a second, competing set of license files. Accepted for now; the rollout issue lists those components.

@@ -97,6 +97,7 @@ It fills the `engine/` slot the architecture page reserves for the license regis
 - Missing `licenses-whitelist.txt`, or an empty whitelist, fails the load: a policy that allows nothing would fail every library.
 - Any other file missing is read as empty and named in `problems`; the plugin fails the build instead. Without `merges.txt`, every synonym would quietly become `NOT_ALLOWED`.
 - `thirdparty-licenses.properties` and `licenses.properties` are read with `java.util.Properties`, as the plugin reads them: escapes, `:` separators and continuation lines behave the same.
+- A properties file with a malformed `\u` escape is the one exception: `Properties` gives up on the whole file, so it is unreadable, and the load fails as an invalid registry. The refresh is counted `invalid` and the policy before it stays; reading it as empty would drop every override or text in it without a signal.
 - A malformed entry is skipped and named in the policy's `problems`, never fatal:
   - an override key without three `--` parts;
   - an override range `versions-api` cannot parse;
@@ -105,6 +106,7 @@ It fills the `engine/` slot the architecture page reserves for the license regis
   - two `licenses.properties` entries for synonyms of one license: the entry under the license's own name wins, else the smallest key; the others are problems. The plugin looks texts up by merged name only, so it never reads them either.
 - An override with an empty value is ignored, as the plugin ignores it; it is not a problem.
 - Blank lines and `#` comments are ignored in the text files; names are trimmed.
+- A byte order mark at the start of any file is dropped before parsing, so it never becomes part of the first name or key.
 
 ### 5. The verdict rules, in order
 
@@ -145,9 +147,10 @@ sealed interface LicenseText {
 - Texts: `text(license)` looks up the canonical name in `licenses.properties`, exact first, then ignoring case. `licensesWithoutText` lists the allowed licenses, whitelist only, with no entry or with an entry skipped as a problem. A URL counts as a text; fetching it is the license files' job.
 - `licenses` in the judgement are the canonical names, sorted, so every report spells a license one way.
 
-### 6. Version ranges with `versions-api`, as the plugin does
+### 6. Ranges with `versions-api`, single versions as written
 
-- `VersionRangeFactory` and `NumericVersionFactory` over `VersionNames("", "", "")`; a single version is wrapped as `[v]`.
+- A range (a version opening with `[` or `(`) is read by `VersionRangeFactory` and matched with `NumericVersionFactory`, over `VersionNames("", "", "")`, as the plugin does.
+- A single version applies only to that version as written. **A deliberate difference from the plugin**, which wraps it as `[v]` and matches by numbers only: there, `1.6R1` also covers `1.7R2` and `r872-jdk15` covers `r872-jdk5`, so an override written for one build allows another. In a license check the costly mistake is a wrong `ALLOWED`. The cost: an override for `1.5` no longer covers `1.5.0`; the registry writes a range when it means one.
 - Ranges are parsed once, when the policy is loaded; a range that does not parse is a `problem` (Decision 4), not a failure when judging.
 
 ### 7. The server holds one policy and swaps it whole
@@ -157,7 +160,8 @@ sealed interface LicenseText {
   - before the first load: tries every minute;
   - after it: every 15 minutes asks for the head commit only, and reloads only when it changed;
   - a failure is logged and keeps the current policy;
-  - every refresh that asks Bitbucket is counted in `license.policy.refreshes`, tagged `outcome`: `loaded`, `unchanged`, `unavailable`, `invalid`. A tick that is not due asks nothing and counts nothing. Once a policy is loaded readiness stays up, so this counter is what an alert watches; the same pattern as `license.target.resolutions`.
+  - every refresh that asks Bitbucket is counted in `license.policy.refreshes`, tagged `outcome`: `loaded`, `unchanged`, `unavailable`, `invalid`, or `failed` for an error nobody expected, so no refresh escapes the counter. A tick that is not due asks nothing and counts nothing. Once a policy is loaded readiness stays up, so this counter is what an alert watches; the same pattern as `license.target.resolutions`;
+  - the gauge `license.policy.problems` is the number of registry entries the loaded policy skipped. A skipped override still loads as `loaded` but changes verdicts, so an alert watches this number too; 0 before the first load.
 - `start` reads the holder once: null raises `ServiceUnavailableException` (`503`, "license registry not loaded yet"); otherwise the generation gets that policy instance, so a reload during a generation does not change its answer.
 - A `licenseRegistry` `HealthIndicator` is down while the holder is empty; its details show the commit, the load time, `licensesWithoutText` and `problems`.
 - Probes are enabled, as in components-registry-service: the readiness group is `readinessState` and `licenseRegistry`, the liveness group `livenessState` only. A pod without a policy stays alive, answers `503` and gets no traffic; a Bitbucket outage never restarts it through liveness.
@@ -188,4 +192,5 @@ sealed interface LicenseText {
 - **Up to 15 minutes between a registry merge and the service using it.** Accepted: the commit in each summary says which policy judged it.
 - **Re-reading the head commit to get a consistent load.** A merge during a load costs a second load. Removed by `TD-001`, reading through octopus-vcs-facade.
 - **Ignoring case can allow what the plugin rejects.** Only for a name the registry spells in no casing it lists, matching an allowed name in another casing. A casing that matches names of two licenses takes the first in registry order: `Gnu Lesser General Public License` reads as `LGPL-2.1`. Accepted.
+- **Any allowed name wins (Decision 5), as in the license plugins.** The scan merges the names a library was found with from every source, and an SBOM is written by the build being judged: Xray's `GPL-3.0` and the SBOM's `MIT` give `ALLOWED`. Kept here: the policy does not know where a name came from. The scan, which does, reports a library whose sources disagree; that belongs to the scan's change.
 - **The Bitbucket client runs on newer Feign and Jackson in the server than it is built for** (13 and 2.21 against 12 and 2.14), as the components registry client does. Accepted: a server test loads a policy through it on that classpath; a client upgrade is a version bump here.

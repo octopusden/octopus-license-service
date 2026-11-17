@@ -76,6 +76,16 @@
 - [x] 2a.3 (added on review) Aligning the docs showed Decision 2 claimed the adapter test covers the Bitbucket client on the server's classpath; it covers the module's (Feign 12.2, Jackson 2.14), while the server runs Feign 13.6 and Jackson 2.21. `state/policy/BitbucketOnServerClasspathTest` now loads a policy and reads an error through the client on the server's classpath.
 - [x] 2a.4 `:license-service:test`: 49 tests, 0 failures; detekt and ktlint clean.
 
+## 2c. Review of the stacked PRs (added on review)
+
+- [x] 2c.1 A byte order mark at the start of a registry file is dropped before parsing; tested on the whitelist, an override key and a text key.
+- [x] 2c.2 A file list longer than one Bitbucket page is read to its last page; the stub now pages like Bitbucket.
+- [x] 2c.3 The Bitbucket client's logger is pinned to INFO in `application.yaml`: at DEBUG it logs each request at Feign's `FULL` level, Authorization header included.
+- [x] 2c.4 A malformed `\u` escape in a `.properties` file made `Properties.load` throw `IllegalArgumentException`, which nothing mapped: no refresh outcome was counted and a new pod never became ready. Decided: the file is unreadable, so the registry is invalid (Design 4); the refresher also counts any other error as `failed`, so no refresh escapes the counter.
+- [x] 2c.5 A dropped override counts as a `loaded` refresh. Decided: the gauge `license.policy.problems`, the loaded policy's problem count (Design 7).
+- [x] 2c.6 A single override version matched by its numbers only (`1.6R1` also applied to `1.7R2`; `r872-jdk15` to `r872-jdk5`), as in the license plugins. Decided: a single version is compared as written; ranges keep `versions-api` (Design 6). An unclosed `[1.0,` still goes to the range parser and stays a problem.
+- [x] 2c.7 Any allowed license name wins, as in the license plugins, also when the scan merged names from Xray and the build's own SBOM. Decided: the rule stays in the policy, which does not know a name's source; the scan reports a library whose sources disagree, in its own change (Design, Risks).
+
 ## 3. Documentation
 
 - [x] 3.1 `docs/architecture.md` — the `engine/` license registry slot becomes `engine/policy-registry` (`:license-policy-registry`): solid in the diagram, Bitbucket client and `versions-api` in its table row; the request flow checks the policy before it registers a report and records its commit.
@@ -85,7 +95,7 @@
 
 ## 4. Finalization
 
-- [x] 4.1 `./gradlew build qualityCheck` green: 191 tests across all modules, 0 failures, 0 skipped; detekt and ktlint clean.
+- [x] 4.1 `./gradlew build qualityCheck` green: 243 tests across all modules, 0 failures, 0 skipped; detekt and ktlint clean.
 - [x] 4.2 Out of scope holds: no library is judged in a report (`server` never calls `judge`); nothing writes license files; `LicenseVerdict` has no `UNIDENTIFIED`.
 - [x] 4.3 `engine/policy-registry/src` imports neither Spring nor `org.octopusden.octopus.license.core` (grep).
 - [x] 4.4 No project, repository or real component name in the repository: fixtures use `SAMPLE`, `sample-license-registry`, `org.example`; grep finds no internal host or project.

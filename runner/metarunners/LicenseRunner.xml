@@ -6,13 +6,15 @@
         * env.LICENSE_SERVICE_URL - the license service base URL
         * env.LICENSE_RUNNER_JAVA_HOME - a JDK 25 home, used to download and run the runner
         The report and the license files are written to LICENSE_OUTPUT_DIR; publish it with the build's artifact rules.
+        Regular builds pass --check-only in LICENSE_RUNNER_ARGS: a quick check on what Xray knows now, with no wait and no license files.
+        RC and RELEASE leave it out, to wait for Xray and get the license files.
     </description>
     <settings>
         <parameters>
             <param name="COMPONENT_NAME" value="" spec="text description='Component name in the components registry' validationMode='not_empty' display='normal'"/>
             <param name="BUILD_VERSION" value="" spec="text description='Component version' validationMode='not_empty' display='normal'"/>
             <param name="LICENSE_OUTPUT_DIR" value="license-report" spec="text description='Directory for the report and the license files' validationMode='not_empty' display='normal'"/>
-            <param name="LICENSE_RUNNER_ARGS" value="" spec="text description='Extra license-runner options, e.g. --timeout PT45M' display='normal'"/>
+            <param name="LICENSE_RUNNER_ARGS" value="" spec="text description='Extra license-runner options, e.g. --check-only or --timeout 45m' display='normal'"/>
         </parameters>
         <build-runners>
             <runner name="Download ${name}" type="Maven2">

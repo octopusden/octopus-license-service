@@ -25,7 +25,7 @@ The service SHALL read the license policy from the default branch of the license
 
 ### Requirement: Malformed registry lines are skipped and reported
 
-The service SHALL skip a malformed override or license text line, keep the rest of the policy, and list each skipped line among the policy's problems.
+The service SHALL skip a malformed override or license text line, keep the rest of the policy, and list each skipped line among the policy's problems. A properties file that cannot be read at all, such as one with a malformed `\u` escape, SHALL make the registry invalid instead: the load fails and the policy before it stays.
 
 #### Scenario: Override key without a version
 
@@ -37,6 +37,11 @@ The service SHALL skip a malformed override or license text line, keep the rest 
 - **WHEN** an override's version is `[1.0,`
 - **THEN** that line is a problem and the load succeeds
 
+#### Scenario: Malformed unicode escape
+
+- **WHEN** `thirdparty-licenses.properties` or `licenses.properties` holds a malformed `\u` escape
+- **THEN** the load fails as an invalid registry, and no policy is produced from it
+
 #### Scenario: Missing file other than the whitelist
 
 - **WHEN** the registry has no `merges.txt`
@@ -44,7 +49,7 @@ The service SHALL skip a malformed override or license text line, keep the rest 
 
 ### Requirement: An override replaces the licenses of a Maven library
 
-The service SHALL apply overrides before anything else, reading `thirdparty-licenses.properties` as Java properties. Among the entries whose group and artifact equal the library's and whose version or version range holds its version, the one with the greatest key in sorted order SHALL replace the licenses found, as the license plugins' last match does. An entry with an empty value SHALL be ignored.
+The service SHALL apply overrides before anything else, reading `thirdparty-licenses.properties` as Java properties. Among the entries whose group and artifact equal the library's and whose version equals its version as written, or whose version range holds it, the one with the greatest key in sorted order SHALL replace the licenses found, as the license plugins' last match does. An entry with an empty value SHALL be ignored.
 
 #### Scenario: Version in the range
 
@@ -59,7 +64,12 @@ The service SHALL apply overrides before anything else, reading `thirdparty-lice
 #### Scenario: Single version
 
 - **WHEN** the override is `org.example--sample-lib--1.5=MIT`
-- **THEN** it applies to `1.5` only
+- **THEN** it applies to `1.5` only, not to `1.5.0` or `1.5.1`
+
+#### Scenario: Single version with letters
+
+- **WHEN** the override is `org.example--sample-lib--1.6R1=MIT`
+- **THEN** it applies to `1.6R1`, and not to `1.7R2`, whose numbers a range comparison would match
 
 #### Scenario: Several licenses in one override
 
