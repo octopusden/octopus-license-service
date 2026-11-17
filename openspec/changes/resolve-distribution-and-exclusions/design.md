@@ -168,7 +168,7 @@ data class ArtifactPattern(val groups: List<String>, val artifacts: List<String>
 ## Risks / Trade-offs
 
 - **Two Feign versions meet in the server's test classpath.** The client is built for Feign 12 and runs on 13 there. Accepted: the adapter test exercises it end to end; the published client upgrading its Feign is a version bump here.
-- **The start request waits on the registry.** Up to three calls, normally a few hundred milliseconds. Accepted for a clear `404`; caching can come with the portal.
+- **The start request waits on the registry.** Up to three calls, normally a few hundred milliseconds, on the request thread and before the queue cap: under a burst of starts, the queue does not bound these calls, and callers wait on the registry. Accepted for a clear `404`; caching can come with the portal.
 - **A hanging registry still holds a start for minutes.** The published client reads with Feign's default 60 s timeout and does not let a caller change it; with 2 attempts per call and up to three calls, the worst case is about 6 minutes on a request thread. Fixing it needs the client to accept request options, a change in components-registry.
 - **Exclusion by name prefix.** A component named `doc-…` that is not documentation would be excluded. Accepted: it is the prototype's rule; a false match is fixed by renaming or by a configured override later.
 - **The configured list is the only way to exclude a component that still applies the old plugins.** Forgetting to add one gives that component a second, competing set of license files. Accepted for now; the rollout issue lists those components.
