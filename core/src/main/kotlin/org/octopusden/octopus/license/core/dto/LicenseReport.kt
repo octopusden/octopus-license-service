@@ -11,6 +11,7 @@ data class LicenseReport(
     val component: String,
     val version: String,
     val status: LicenseReportStatus,
+    val mode: LicenseReportMode = LicenseReportMode.FULL,
     val summary: LicenseReportSummary? = null,
     val exclusionReason: String? = null,
     val error: String? = null,

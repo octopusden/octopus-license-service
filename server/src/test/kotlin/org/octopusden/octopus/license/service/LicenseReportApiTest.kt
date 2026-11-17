@@ -3,6 +3,7 @@ package org.octopusden.octopus.license.service
 import io.micrometer.core.instrument.MeterRegistry
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -16,6 +17,7 @@ import org.octopusden.octopus.license.client.LicenseServiceClient
 import org.octopusden.octopus.license.client.impl.ClassicLicenseServiceClient
 import org.octopusden.octopus.license.client.impl.LicenseServiceClientParametersProvider
 import org.octopusden.octopus.license.core.dto.LicenseReport
+import org.octopusden.octopus.license.core.dto.LicenseReportMode
 import org.octopusden.octopus.license.core.dto.LicenseReportRequest
 import org.octopusden.octopus.license.core.dto.LicenseReportStatus
 import org.octopusden.octopus.license.core.exception.InvalidRequestException
@@ -34,6 +36,7 @@ import org.octopusden.octopus.license.service.state.policy.LoadedPolicy
 import org.octopusden.octopus.license.target.LicenseTargetResolver
 import org.octopusden.octopus.license.target.exception.ComponentVersionNotFoundException
 import org.octopusden.octopus.license.target.exception.ComponentsRegistryUnavailableException
+import org.octopusden.octopus.license.target.exception.UnexpectedRegistryAnswerException
 import org.octopusden.octopus.license.target.model.ComponentVersion
 import org.octopusden.octopus.license.target.model.DistributionSpec
 import org.octopusden.octopus.license.target.model.LicenseTarget
@@ -53,9 +56,11 @@ import java.net.http.HttpResponse
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicInteger
 import java.util.zip.ZipInputStream
 
 @SpringBootTest(
@@ -174,6 +179,20 @@ class LicenseReportApiTest {
     }
 
     @Test
+    @DisplayName("an unexpected registry answer is a 500 that names neither the registry's URL nor its body")
+    fun unexpectedRegistryAnswer() {
+        val response = send(
+            HttpRequest
+                .newBuilder(URI("http://localhost:$port/rest/api/1/license-reports"))
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString("""{"component":"$REGISTRY_FORBIDDEN_COMPONENT","version":"$VERSION"}""")),
+        )
+
+        assertEquals(HTTP_INTERNAL_SERVER_ERROR, response.statusCode())
+        assertFalse(response.body().contains(UPSTREAM_DETAIL), response.body())
+    }
+
+    @Test
     @DisplayName("an unreachable components registry answers 503, a ServiceUnavailableException for the client")
     fun registryUnavailable() {
         assertThrows<ServiceUnavailableException> {
@@ -182,7 +201,9 @@ class LicenseReportApiTest {
     }
 
     @Test
-    @DisplayName("every license target resolution is counted by its outcome, so a registry outage shows as a metric")
+    @DisplayName(
+        "every license target resolution is counted by its outcome, so a registry outage or a registry refusing us shows as a metric",
+    )
     fun resolutionsCountedByOutcome() {
         val before = OUTCOMES.associateWith { resolutions(it) }
 
@@ -190,6 +211,7 @@ class LicenseReportApiTest {
         client.startReport(LicenseReportRequest(EXCLUDED_COMPONENT, VERSION))
         assertThrows<NotFoundException> { client.startReport(LicenseReportRequest(UNKNOWN_COMPONENT, VERSION)) }
         assertThrows<ServiceUnavailableException> { client.startReport(LicenseReportRequest(REGISTRY_DOWN_COMPONENT, VERSION)) }
+        assertThrows<RuntimeException> { client.startReport(LicenseReportRequest(REGISTRY_FORBIDDEN_COMPONENT, VERSION)) }
 
         assertEquals(OUTCOMES.associateWith { before.getValue(it) + 1 }, OUTCOMES.associateWith { resolutions(it) })
     }
@@ -257,6 +279,7 @@ class LicenseReportApiTest {
         assertTrue(unknownPath.body().startsWith("""{"error":{"code":404,"""), unknownPath.body())
         assertEquals(HTTP_METHOD_NOT_ALLOWED, wrongMethod.statusCode())
         assertTrue(wrongMethod.body().startsWith("""{"error":{"code":405,"""), wrongMethod.body())
+        assertTrue(wrongMethod.headers().firstValue("Allow").isPresent, "a 405 says which methods are allowed")
     }
 
     @Test
@@ -343,6 +366,29 @@ class LicenseReportApiTest {
     }
 
     @Test
+    @DisplayName("a second start for a component version still running joins that report: it is generated once")
+    fun runningComponentVersionIsJoined() {
+        val first = client.startReport(LicenseReportRequest(SLOW_COMPONENT, JOINED_VERSION))
+        val second = client.startReport(LicenseReportRequest(SLOW_COMPONENT, JOINED_VERSION))
+        generator.release()
+
+        awaitFinished(first.id)
+
+        assertEquals(first.id, second.id)
+        assertEquals(1, generator.generations("$SLOW_COMPONENT:$JOINED_VERSION"))
+    }
+
+    @Test
+    @DisplayName("a report records the mode it was asked for: a quick check, or by default a full report")
+    fun reportRecordsMode() {
+        val check = client.startReport(LicenseReportRequest(COMPONENT, CHECK_VERSION, LicenseReportMode.CHECK))
+        val full = client.startReport(LicenseReportRequest(COMPONENT, VERSION))
+
+        assertEquals(LicenseReportMode.CHECK, awaitFinished(check.id).mode)
+        assertEquals(LicenseReportMode.FULL, awaitFinished(full.id).mode)
+    }
+
+    @Test
     @DisplayName("files of a RUNNING report are not available yet")
     fun filesOfRunningReportNotAvailable() {
         val started = client.startReport(LicenseReportRequest(SLOW_COMPONENT, VERSION))
@@ -359,7 +405,9 @@ class LicenseReportApiTest {
         val failed = awaitFinished(started.id)
 
         assertEquals(LicenseReportStatus.FAILED, failed.status)
-        assertNotNull(failed.error)
+        val error = requireNotNull(failed.error) { "a FAILED report says it failed" }
+        assertFalse(error.contains("Xray is unreachable"), "the exception text stays in the service log: $error")
+        assertTrue(error.contains(started.id), "the error names the report, to find it in the log: $error")
         assertNull(failed.summary)
         assertThrows<LicenseFilesNotAvailableException> { client.downloadFiles(started.id) }
     }
@@ -388,6 +436,8 @@ class LicenseReportApiTest {
         @Volatile
         private var slowGate = CountDownLatch(1)
 
+        private val generationCounts = ConcurrentHashMap<String, AtomicInteger>()
+
         fun release() {
             slowGate.countDown()
             slowGate = CountDownLatch(1)
@@ -395,15 +445,21 @@ class LicenseReportApiTest {
 
         override fun generate(
             target: LicenseTarget,
+            mode: LicenseReportMode,
             policy: LicensePolicy,
         ): GeneratedReport {
             targets += target
-            return when (target.componentVersion.component) {
-                SLOW_COMPONENT -> slowGate.await(AWAIT_TIMEOUT.seconds, TimeUnit.SECONDS).let { delegate.generate(target, policy) }
+            val (component, version) = target.componentVersion
+            generationCounts.computeIfAbsent("$component:$version") { AtomicInteger() }.incrementAndGet()
+            return when (component) {
+                SLOW_COMPONENT ->
+                    slowGate.await(AWAIT_TIMEOUT.seconds, TimeUnit.SECONDS).let { delegate.generate(target, mode, policy) }
                 BROKEN_COMPONENT -> error("Xray is unreachable")
-                else -> delegate.generate(target, policy)
+                else -> delegate.generate(target, mode, policy)
             }
         }
+
+        fun generations(componentVersion: String) = generationCounts[componentVersion]?.get() ?: 0
     }
 
     /** Stands in for the components registry: two components fail, one is excluded, the rest resolve. */
@@ -421,8 +477,12 @@ class LicenseReportApiTest {
                     "Components registry is unavailable",
                     IllegalStateException("connection refused"),
                 )
+                REGISTRY_FORBIDDEN_COMPONENT -> throw UnexpectedRegistryAnswerException(
+                    "Components registry answered 403 for $component:$version",
+                    IllegalStateException("http://registry.example/... answered <html>$UPSTREAM_DETAIL</html>"),
+                )
                 EXCLUDED_COMPONENT -> TargetResolution.Excluded(ComponentVersion(component, version), EXCLUSION_REASON)
-                else -> TargetResolution.Resolved(targetOf(component))
+                else -> TargetResolution.Resolved(targetOf(component, version))
             }
     }
 
@@ -452,11 +512,16 @@ class LicenseReportApiTest {
         const val EXCLUSION_REASON = "Documentation component"
         const val UNKNOWN_COMPONENT = "no-such-component"
         const val REGISTRY_DOWN_COMPONENT = "registry-down-component"
+        const val REGISTRY_FORBIDDEN_COMPONENT = "registry-forbidden-component"
+        const val UPSTREAM_DETAIL = "secret-upstream-detail"
         const val VERSION = "1.2.3"
         const val REGISTRY_COMMIT = "a1b2c3d"
-        val OUTCOMES = listOf("resolved", "excluded", "not_found", "unavailable")
+        const val JOINED_VERSION = "2.0.0-joined"
+        const val CHECK_VERSION = "3.0.0-check"
+        val OUTCOMES = listOf("resolved", "excluded", "not_found", "unavailable", "error")
         const val UNKNOWN_ID = "00000000-0000-0000-0000-000000000000"
         const val HTTP_OK = 200
+        const val HTTP_INTERNAL_SERVER_ERROR = 500
         const val HTTP_ACCEPTED = 202
         const val HTTP_FOUND = 302
         const val HTTP_BAD_REQUEST = 400
@@ -465,13 +530,15 @@ class LicenseReportApiTest {
         const val POLL_INTERVAL_MS = 50L
         val AWAIT_TIMEOUT: Duration = Duration.ofSeconds(10)
 
-        fun targetOf(component: String) =
-            LicenseTarget(
-                componentVersion = ComponentVersion(component, VERSION),
-                artifactVersions = listOf(VERSION),
-                buildSystem = "GRADLE",
-                labels = emptySet(),
-                distribution = DistributionSpec(declared = emptyList(), patterns = emptyList()),
-            )
+        fun targetOf(
+            component: String,
+            version: String = VERSION,
+        ) = LicenseTarget(
+            componentVersion = ComponentVersion(component, version),
+            artifactVersions = listOf(version),
+            buildSystem = "GRADLE",
+            labels = emptySet(),
+            distribution = DistributionSpec(declared = emptyList(), patterns = emptyList()),
+        )
     }
 }

@@ -100,7 +100,7 @@ Dependencies point one way: `controller → service → state`, and `health → 
 What each part does on a request:
 
 - the controller only translates HTTP;
-- the service checks the request, takes the current license policy, resolves the license target, registers the report and runs the generation in the background;
+- the service checks the request, takes the current license policy, resolves the license target, registers the report and runs the generation in the background; while a report for the same component version is still running, it returns that one instead, so a component version is generated once at a time;
 - the generator produces the result from what it was given;
 - the report store keeps reports in memory until their TTL ends;
 - the policy refresher loads the license policy in the background: every minute until the first load succeeds, then every 15 minutes it checks the registry's head commit and reloads only when it moved; a failed reload keeps the policy it has;
@@ -110,7 +110,7 @@ What each part does on a request:
 
 - **Readiness covers only what this pod holds.** A pod that cannot serve until it has loaded something is unready until it has it: the `licenseRegistry` indicator is down until the license policy is in memory, and up from then on, whatever Bitbucket does later. Liveness stays `livenessState` only: a restart fixes nothing outside the pod.
 - **A per-request dependency is never a health indicator.** The components registry, and later Xray and Artifactory, are called per request and shared by every pod. In readiness, an outage would turn every pod unready at once, and block even `GET` of reports already running.
-- **Instead, an outage answers `503` with a message, and is counted.** `license.target.resolutions{outcome}` (`license_target_resolutions_total` in Prometheus) counts each resolution as `resolved`, `excluded`, `not_found` or `unavailable`; an alert watches `unavailable`. A later dependency gets its own counter the same way.
+- **Instead, an outage answers `503` with a message, and is counted.** `license.target.resolutions{outcome}` (`license_target_resolutions_total` in Prometheus) counts each resolution as `resolved`, `excluded`, `not_found`, `unavailable` or `error` (an unexpected registry answer); an alert watches `unavailable` and `error`. A later dependency gets its own counter the same way.
 - **A background dependency is counted the same way.** The license policy is refreshed from Bitbucket in the background; once a policy is loaded readiness stays up, so a failing refresh shows only as a metric. `license.policy.refreshes{outcome}` (`license_policy_refreshes_total`) counts each refresh that asks Bitbucket as `loaded`, `unchanged`, `unavailable` or `invalid`; an alert watches `unavailable` and `invalid`.
 - **Metrics live in `server`.** `engine/` modules know nothing of Micrometer; the server counts what they answer or throw.
 

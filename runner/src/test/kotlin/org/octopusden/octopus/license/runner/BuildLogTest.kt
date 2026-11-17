@@ -5,6 +5,7 @@ import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.octopusden.octopus.license.core.dto.GenerationInputs
 import org.octopusden.octopus.license.core.dto.LicenseReport
+import org.octopusden.octopus.license.core.dto.LicenseReportMode
 import org.octopusden.octopus.license.core.dto.LicenseReportStatus
 import org.octopusden.octopus.license.core.dto.LicenseReportSummary
 import org.octopusden.octopus.license.core.dto.Trust
@@ -56,6 +57,32 @@ class BuildLogTest {
 
         assertEquals(LogLine("Trust: LOW", warning = true), lines[2])
         assertEquals(LogLine("  app.jar has no build-info; fix: publish build-info", warning = true), lines[3])
+    }
+
+    @Test
+    @DisplayName("a quick check says it is preliminary: it judged only what Xray knew at that moment")
+    fun checkIsMarkedPreliminary() {
+        val report = LicenseReport(REPORT_ID, COMPONENT, VERSION, LicenseReportStatus.DONE, LicenseReportMode.CHECK, summary())
+
+        val lines = BuildLog.lines(COMPONENT, VERSION, RunOutcome.Finished(report, null))
+
+        assertEquals(
+            LogLine("License check for some-component:1.2.3: DONE (quick check on what Xray knows now; preliminary)"),
+            lines.first(),
+        )
+    }
+
+    @Test
+    @DisplayName("a DONE report without a summary is one warning line, never an exception")
+    fun doneWithoutSummaryIsWarning() {
+        val report = LicenseReport(REPORT_ID, COMPONENT, VERSION, LicenseReportStatus.DONE)
+
+        val lines = BuildLog.lines(COMPONENT, VERSION, RunOutcome.Finished(report, byteArrayOf()))
+
+        assertEquals(
+            listOf(LogLine("License report for some-component:1.2.3 is DONE, but the service sent no summary", warning = true)),
+            lines,
+        )
     }
 
     @Test

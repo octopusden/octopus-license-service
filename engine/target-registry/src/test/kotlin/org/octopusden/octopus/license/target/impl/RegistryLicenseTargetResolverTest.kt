@@ -3,12 +3,14 @@ package org.octopusden.octopus.license.target.impl
 import com.sun.net.httpserver.HttpServer
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.octopusden.octopus.license.target.exception.ComponentVersionNotFoundException
 import org.octopusden.octopus.license.target.exception.ComponentsRegistryUnavailableException
+import org.octopusden.octopus.license.target.exception.UnexpectedRegistryAnswerException
 import org.octopusden.octopus.license.target.model.ArtifactPattern
 import org.octopusden.octopus.license.target.model.ComponentVersion
 import org.octopusden.octopus.license.target.model.ConfiguredExclusion
@@ -138,6 +140,27 @@ class RegistryLicenseTargetResolverTest {
     }
 
     @Test
+    @DisplayName("a 4xx other than 404, with a body that is not JSON, is an unexpected answer that names neither the URL nor the body")
+    fun clientErrorWithoutJson() {
+        answers["$API/components/sample-app/versions/1.4.12"] = FORBIDDEN to "<html>$UPSTREAM_DETAIL</html>"
+
+        val error = assertThrows<UnexpectedRegistryAnswerException> { resolver().resolve("sample-app", "1.4.12") }
+
+        assertFalse(error.message.orEmpty().contains(UPSTREAM_DETAIL), error.message)
+        assertFalse(error.message.orEmpty().contains("localhost"), error.message)
+    }
+
+    @Test
+    @DisplayName("a body the client cannot decode is an unexpected answer")
+    fun undecodableBody() {
+        answers["$API/components/sample-app/versions/1.4.12"] = OK to "{not json $UPSTREAM_DETAIL"
+
+        val error = assertThrows<UnexpectedRegistryAnswerException> { resolver().resolve("sample-app", "1.4.12") }
+
+        assertFalse(error.message.orEmpty().contains(UPSTREAM_DETAIL), error.message)
+    }
+
+    @Test
     @DisplayName("a registry nobody listens on is an unavailable error")
     fun unreachable() {
         val closedPort = ServerSocket(0).use { it.localPort }
@@ -150,7 +173,9 @@ class RegistryLicenseTargetResolverTest {
         const val API = "/rest/api/2"
         const val OK = 200
         const val NOT_FOUND = 404
+        const val FORBIDDEN = 403
         const val TOO_EARLY = 425
         const val SERVICE_UNAVAILABLE = 503
+        const val UPSTREAM_DETAIL = "secret-upstream-detail"
     }
 }

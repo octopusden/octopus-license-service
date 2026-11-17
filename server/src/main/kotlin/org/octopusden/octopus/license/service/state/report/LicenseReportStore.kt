@@ -1,6 +1,7 @@
 package org.octopusden.octopus.license.service.state.report
 
 import org.octopusden.octopus.license.core.dto.LicenseReport
+import org.octopusden.octopus.license.core.dto.LicenseReportStatus
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
@@ -23,10 +24,23 @@ class LicenseReportStore(
     private val entries = ConcurrentHashMap<String, Entry>()
     private var storedBytes = 0L
 
+    /**
+     * Stores [report] unless a report for the same component version and mode is still running;
+     * then that one is returned and [report] is not stored, so one component version is generated
+     * once at a time per mode. A finished report is never reused: a new request reads the current
+     * data.
+     */
     @Synchronized
-    fun add(report: LicenseReport) {
-        put(report.id, Entry(StoredReport(report, null), finishedAt = null))
-    }
+    fun addUnlessRunning(report: LicenseReport): LicenseReport =
+        entries.values
+            .map { it.stored.report }
+            .firstOrNull {
+                it.status == LicenseReportStatus.RUNNING &&
+                    it.component == report.component &&
+                    it.version == report.version &&
+                    it.mode == report.mode
+            }
+            ?: report.also { put(it.id, Entry(StoredReport(it, null), finishedAt = null)) }
 
     @Synchronized
     fun finish(

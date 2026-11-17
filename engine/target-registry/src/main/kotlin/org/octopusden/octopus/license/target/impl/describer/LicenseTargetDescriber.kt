@@ -4,7 +4,9 @@ import org.octopusden.octopus.license.target.model.ArtifactPattern
 import org.octopusden.octopus.license.target.model.ComponentVersion
 import org.octopusden.octopus.license.target.model.DistributionSpec
 import org.octopusden.octopus.license.target.model.LicenseTarget
+import org.octopusden.octopus.license.target.model.UnreadableRange
 import org.octopusden.releng.versions.NumericVersionFactory
+import org.octopusden.releng.versions.ParseVersionException
 import org.octopusden.releng.versions.VersionNames
 import org.octopusden.releng.versions.VersionRangeFactory
 
@@ -25,6 +27,7 @@ internal object LicenseTargetDescriber {
     ): LicenseTarget {
         val version = NumericVersionFactory(versionNames).create(component.version)
         val rangeFactory = VersionRangeFactory(versionNames)
+        val ranges = artifactPatterns.mapValues { (range, _) -> parse(rangeFactory, range) }
         return LicenseTarget(
             componentVersion = ComponentVersion(component.id, component.version),
             artifactVersions = listOfNotNull(component.version, component.buildVersion).distinct(),
@@ -33,11 +36,26 @@ internal object LicenseTargetDescriber {
             distribution = DistributionSpec(
                 declared = DistributionParser.parse(component.gav, component.docker),
                 patterns = artifactPatterns
-                    .filterKeys { range -> rangeFactory.create(range).containsVersion(version) }
+                    .filterKeys { range -> ranges.getValue(range).getOrNull()?.containsVersion(version) == true }
                     .values
                     .map { ArtifactPattern(split(it.groupPattern), split(it.artifactPattern)) },
+                unreadableRanges = ranges.mapNotNull { (range, parsed) ->
+                    parsed.exceptionOrNull()?.let { UnreadableRange(range, it.message ?: it.javaClass.simpleName) }
+                },
             ),
         )
+    }
+
+    // One bad key must not fail every version of the component; it is reported instead (D7).
+    private fun parse(
+        rangeFactory: VersionRangeFactory,
+        range: String,
+    ) = try {
+        Result.success(rangeFactory.create(range))
+    } catch (e: IllegalArgumentException) {
+        Result.failure(e)
+    } catch (e: ParseVersionException) {
+        Result.failure(e)
     }
 
     private fun split(patterns: String?) =
