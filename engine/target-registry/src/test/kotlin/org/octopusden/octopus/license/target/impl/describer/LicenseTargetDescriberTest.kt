@@ -1,6 +1,7 @@
 package org.octopusden.octopus.license.target.impl.describer
 
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.octopusden.octopus.license.target.model.ArtifactPattern
@@ -9,6 +10,7 @@ import org.octopusden.octopus.license.target.model.DeclaredArtifact.DockerImage
 import org.octopusden.octopus.license.target.model.DeclaredArtifact.MavenArtifact
 import org.octopusden.octopus.license.target.model.DistributionSpec
 import org.octopusden.octopus.license.target.model.LicenseTarget
+import org.octopusden.octopus.license.target.model.UnreadableRange
 import org.octopusden.releng.versions.VersionNames
 
 class LicenseTargetDescriberTest {
@@ -64,6 +66,27 @@ class LicenseTargetDescriberTest {
     @DisplayName("an implicit component's target is not explicit, which names its builds {component}_ie")
     fun implicitComponent() {
         assertEquals(false, describe(registryComponent(explicit = false)).explicit)
+    }
+
+    @Test
+    @DisplayName("D7: an unreadable range key is kept as unreadable, and the other entries are still selected")
+    fun unreadableRangeKept() {
+        val distribution = describe(
+            patterns = mapOf(
+                "[1.0,)" to RegistryArtifactPattern("org.example.sample", "sample-app"),
+                "not a range" to RegistryArtifactPattern("org.example.other", "other-app"),
+            ),
+        ).distribution
+
+        assertEquals(listOf(ArtifactPattern(listOf("org.example.sample"), listOf("sample-app"))), distribution.patterns)
+        assertEquals(listOf("not a range"), distribution.unreadableRanges.map(UnreadableRange::range))
+        assertTrue(
+            distribution.unreadableRanges
+                .single()
+                .reason
+                .isNotBlank(),
+            "an unreadable range should say why",
+        )
     }
 
     @Test

@@ -18,14 +18,14 @@ plugins {
 }
 
 octopusQuality {
+    // Every publication goes to GitHub Packages, none to Central (release.yml); the set still
+    // guards against a publication appearing or changing unnoticed.
     publication {
         enforceCentralPublications.set(true)
         centralPublications.set(
             setOf(
                 ":client|maven|org.octopusden.octopus.license:client|[jar, jar:javadoc, jar:sources]",
                 ":core|maven|org.octopusden.octopus.license:core|[jar, jar:javadoc, jar:sources]",
-                // Routed to GitHub Packages by release.yml (github-packages-publications), never to
-                // Central: the publication guard refuses the -all jar there.
                 ":license-runner|maven|org.octopusden.octopus.license:license-runner|" +
                     "[jar, jar:all, jar:javadoc, jar:sources, zip:metarunners]",
             ),

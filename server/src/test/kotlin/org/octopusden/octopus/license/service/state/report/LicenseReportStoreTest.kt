@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.octopusden.octopus.license.core.dto.LicenseReport
+import org.octopusden.octopus.license.core.dto.LicenseReportMode
 import org.octopusden.octopus.license.core.dto.LicenseReportStatus
 import java.time.Clock
 import java.time.Duration
@@ -19,7 +20,7 @@ class LicenseReportStoreTest {
     @Test
     @DisplayName("a finished report is kept until the TTL has passed since it finished")
     fun finishedReportKeptUntilTtl() {
-        store.add(report(LicenseReportStatus.RUNNING))
+        store.addUnlessRunning(report(LicenseReportStatus.RUNNING))
         clock.advance(Duration.ofMinutes(5))
         store.finish(report(LicenseReportStatus.DONE), FILES)
 
@@ -31,7 +32,7 @@ class LicenseReportStoreTest {
     @Test
     @DisplayName("a finished report is gone once the TTL has passed since it finished")
     fun finishedReportDroppedAfterTtl() {
-        store.add(report(LicenseReportStatus.RUNNING))
+        store.addUnlessRunning(report(LicenseReportStatus.RUNNING))
         store.finish(report(LicenseReportStatus.DONE), FILES)
 
         clock.advance(TTL)
@@ -42,7 +43,7 @@ class LicenseReportStoreTest {
     @Test
     @DisplayName("a running report never expires: the TTL counts from the end of the generation")
     fun runningReportNeverExpires() {
-        store.add(report(LicenseReportStatus.RUNNING))
+        store.addUnlessRunning(report(LicenseReportStatus.RUNNING))
 
         clock.advance(TTL.multipliedBy(3))
 
@@ -52,10 +53,10 @@ class LicenseReportStoreTest {
     @Test
     @DisplayName("evictExpired drops only the reports whose TTL has passed")
     fun evictExpiredDropsOnlyExpired() {
-        store.add(report(LicenseReportStatus.RUNNING, id = "old"))
+        store.addUnlessRunning(report(LicenseReportStatus.RUNNING, id = "old"))
         store.finish(report(LicenseReportStatus.DONE, id = "old"), FILES)
         clock.advance(TTL)
-        store.add(report(LicenseReportStatus.RUNNING, id = "new"))
+        store.addUnlessRunning(report(LicenseReportStatus.RUNNING, id = "new"))
         store.finish(report(LicenseReportStatus.FAILED, id = "new"), null)
 
         store.evictExpired()
@@ -66,7 +67,7 @@ class LicenseReportStoreTest {
     @Test
     @DisplayName("finish keeps the license files with the report")
     fun finishKeepsFiles() {
-        store.add(report(LicenseReportStatus.RUNNING))
+        store.addUnlessRunning(report(LicenseReportStatus.RUNNING))
         store.finish(report(LicenseReportStatus.DONE), FILES)
 
         assertEquals(FILES.toList(), store.find(REPORT_ID)?.files?.toList())
@@ -75,7 +76,7 @@ class LicenseReportStoreTest {
     @Test
     @DisplayName("over the byte limit, the oldest finished reports go first and running ones stay")
     fun byteLimitDropsOldestFinishedFirst() {
-        store.add(report(LicenseReportStatus.RUNNING, id = "running"))
+        store.addUnlessRunning(report(LicenseReportStatus.RUNNING, id = "running"))
         finish("oldest", ByteArray(4))
         clock.advance(Duration.ofMinutes(1))
         finish("older", ByteArray(4))
@@ -111,11 +112,56 @@ class LicenseReportStoreTest {
         assertEquals(emptyList<String>(), store.ids())
     }
 
+    @Test
+    @DisplayName("a second report for a component version still running gets the running one, and is not stored")
+    fun runningComponentVersionIsJoined() {
+        val running = report(LicenseReportStatus.RUNNING, id = "first")
+        store.addUnlessRunning(running)
+
+        val answer = store.addUnlessRunning(report(LicenseReportStatus.RUNNING, id = "second"))
+
+        assertEquals("first", answer.id)
+        assertEquals(listOf("first"), store.ids())
+    }
+
+    @Test
+    @DisplayName("once the report has finished, the same component version starts a new one: data may have changed")
+    fun finishedComponentVersionStartsNew() {
+        finish("first", FILES)
+
+        val answer = store.addUnlessRunning(report(LicenseReportStatus.RUNNING, id = "second"))
+
+        assertEquals("second", answer.id)
+        assertEquals(listOf("first", "second"), store.ids())
+    }
+
+    @Test
+    @DisplayName("a quick check and a full report of the same component version are separate reports")
+    fun otherModeIsSeparate() {
+        store.addUnlessRunning(report(LicenseReportStatus.RUNNING, id = "full"))
+
+        val answer = store.addUnlessRunning(
+            LicenseReport("check", "component", "1.0.0", LicenseReportStatus.RUNNING, mode = LicenseReportMode.CHECK),
+        )
+
+        assertEquals("check", answer.id)
+    }
+
+    @Test
+    @DisplayName("another version of the same component is a report of its own")
+    fun otherVersionIsSeparate() {
+        store.addUnlessRunning(report(LicenseReportStatus.RUNNING, id = "first"))
+
+        val answer = store.addUnlessRunning(LicenseReport("second", "component", "2.0.0", LicenseReportStatus.RUNNING))
+
+        assertEquals("second", answer.id)
+    }
+
     private fun finish(
         id: String,
         files: ByteArray,
     ) {
-        store.add(report(LicenseReportStatus.RUNNING, id = id))
+        store.addUnlessRunning(report(LicenseReportStatus.RUNNING, id = id))
         store.finish(report(LicenseReportStatus.DONE, id = id), files)
     }
 

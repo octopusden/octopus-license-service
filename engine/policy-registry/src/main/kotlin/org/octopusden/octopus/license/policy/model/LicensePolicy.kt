@@ -60,8 +60,8 @@ class LicensePolicy internal constructor(
 
     /** The greatest matching key wins: the plugin applies every match in sorted order, the last one last (D5). */
     private fun overrideFor(coordinates: MavenCoordinates): OverrideRule? {
-        val version = runCatching { versionFactory.create(coordinates.version) }.getOrNull() ?: return null
-        return overrides.filter { it.matches(coordinates, version) }.maxByOrNull { it.key }
+        val numericVersion by lazy { runCatching { versionFactory.create(coordinates.version) }.getOrNull() }
+        return overrides.filter { it.matches(coordinates) { numericVersion } }.maxByOrNull { it.key }
     }
 
     private fun canonical(name: String) = canonicalNames[name] ?: name

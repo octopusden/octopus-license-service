@@ -6,6 +6,7 @@ import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.octopusden.octopus.license.core.dto.GenerationInputs
+import org.octopusden.octopus.license.core.dto.LicenseReportMode
 import org.octopusden.octopus.license.core.dto.Verdict
 import org.octopusden.octopus.license.core.dto.Violation
 import org.octopusden.octopus.license.evaluation.LicenseEvaluator
@@ -15,12 +16,15 @@ import org.octopusden.octopus.license.inventory.model.Evidence
 import org.octopusden.octopus.license.inventory.model.FoundLibrary
 import org.octopusden.octopus.license.inventory.model.LicenseInventory
 import org.octopusden.octopus.license.inventory.model.PackageId
+import org.octopusden.octopus.license.service.configuration.LicenseServiceProperties
+import org.octopusden.octopus.license.service.configuration.XrayProperties
 import org.octopusden.octopus.license.service.state.policy.LicensePolicyRefresherTest.Companion.samplePolicy
 import org.octopusden.octopus.license.target.model.ComponentVersion
 import org.octopusden.octopus.license.target.model.DistributionSpec
 import org.octopusden.octopus.license.target.model.LicenseTarget
 import org.springframework.boot.info.BuildProperties
 import java.time.Clock
+import java.time.Duration
 import java.time.Instant
 import java.time.ZoneOffset
 import java.util.Properties
@@ -38,12 +42,21 @@ class EvaluatingLicenseReportGeneratorTest {
             distribution = DistributionSpec(declared = emptyList(), patterns = emptyList()),
         )
 
+    private val waits = mutableListOf<Duration>()
+
     private fun generator(scan: (LicenseTarget) -> LicenseInventory) =
         EvaluatingLicenseReportGenerator(
             object : LicenseInventoryScanner {
-                override fun scan(target: LicenseTarget) = scan(target)
+                override fun scan(
+                    target: LicenseTarget,
+                    xrayWait: Duration,
+                ): LicenseInventory {
+                    waits += xrayWait
+                    return scan(target)
+                }
             },
             LicenseEvaluator(),
+            LicenseServiceProperties(xray = XrayProperties(scanTimeout = FULL_WAIT)),
             Clock.fixed(now, ZoneOffset.UTC),
             BuildProperties(Properties().apply { setProperty("version", "1.0.0") }),
             meterRegistry,
@@ -72,7 +85,7 @@ class EvaluatingLicenseReportGeneratorTest {
             generator {
                 scanned += it
                 inventory(library("pkg:npm/left-pad@1.3.0", emptySet()), library("pkg:npm/react@18.2.0", setOf("MIT")))
-            }.generate(target, samplePolicy("a1b2c3d"))
+            }.generate(target, LicenseReportMode.FULL, samplePolicy("a1b2c3d"))
 
         assertEquals(listOf(target), scanned)
         assertEquals(GenerationInputs("a1b2c3d", now, "1.0.0"), generated.summary.inputs)
@@ -90,7 +103,9 @@ class EvaluatingLicenseReportGeneratorTest {
         val failure = InventorySourceUnavailableException("Xray", "Xray answered 503")
 
         val thrown =
-            assertThrows<InventorySourceUnavailableException> { generator { throw failure }.generate(target, samplePolicy("a1b2c3d")) }
+            assertThrows<InventorySourceUnavailableException> {
+                generator { throw failure }.generate(target, LicenseReportMode.FULL, samplePolicy("a1b2c3d"))
+            }
 
         assertEquals(failure, thrown)
         assertEquals(1.0, scans("unavailable"))
@@ -100,13 +115,27 @@ class EvaluatingLicenseReportGeneratorTest {
     @Test
     @DisplayName("any other scan failure goes to the caller, counted failed")
     fun failed() {
-        assertThrows<IllegalStateException> { generator { error("unexpected answer") }.generate(target, samplePolicy("a1b2c3d")) }
+        assertThrows<IllegalStateException> {
+            generator { error("unexpected answer") }.generate(target, LicenseReportMode.FULL, samplePolicy("a1b2c3d"))
+        }
 
         assertEquals(1.0, scans("failed"))
         assertEquals(0.0, scans("unavailable"))
     }
 
+    @Test
+    @DisplayName("a FULL report waits for Xray as long as configured; a CHECK does not wait at all (decision of 2026-11-12)")
+    fun xrayWaitByMode() {
+        val generator = generator { inventory() }
+
+        generator.generate(target, LicenseReportMode.FULL, samplePolicy("a1b2c3d"))
+        generator.generate(target, LicenseReportMode.CHECK, samplePolicy("a1b2c3d"))
+
+        assertEquals(listOf(FULL_WAIT, Duration.ZERO), waits)
+    }
+
     private companion object {
         const val ZIP = "org.example.portal:sample-portal:zip"
+        val FULL_WAIT: Duration = Duration.ofMinutes(5)
     }
 }

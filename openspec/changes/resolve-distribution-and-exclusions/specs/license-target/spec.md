@@ -85,6 +85,11 @@ The service SHALL keep every Maven artifact pattern entry whose version range, p
 - **WHEN** the matching entry has group pattern `org.a, org.b` and artifact pattern `x-.*`
 - **THEN** the target holds groups `org.a` and `org.b` and artifacts `x-.*`
 
+#### Scenario: Unreadable range
+
+- **WHEN** one entry's range cannot be parsed and another entry's range holds the version
+- **THEN** the target holds the patterns of the readable entry, lists the unreadable range with its reason, and the resolution still succeeds
+
 ### Requirement: Excluded components are told why
 
 The service SHALL exclude a component when any of these holds, checked in this order, and SHALL give the reason of the first that holds: archived (`Archived component`); internal, its distribution not external (`Internal component: its distribution is not external`); build system `WHISKEY` (`Built with WHISKEY`); flagged by the registry as a test component (`Test component`); name starting with `doc_` or `doc-` in any case (`Documentation component`); on the configured exclusion list (that entry's reason).

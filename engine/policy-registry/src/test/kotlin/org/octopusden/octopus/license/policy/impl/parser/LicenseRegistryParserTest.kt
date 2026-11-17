@@ -40,6 +40,30 @@ class LicenseRegistryParserTest {
         assertTrue(policy.problems.isEmpty())
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = ["thirdparty-licenses.properties", "licenses.properties"])
+    @DisplayName("a properties file with a malformed \\u escape cannot be read at all, so the registry is invalid")
+    fun malformedUnicodeEscape(file: String) {
+        val broken = registryFiles() + (file to "org.example--sample-lib--1.5=MIT\\u12zz")
+        assertThrows<InvalidLicenseRegistryException> { policy(broken) }
+    }
+
+    @Test
+    @DisplayName("a byte order mark at the start of a file is not part of its first name or key")
+    fun byteOrderMark() {
+        val policy =
+            policy(
+                registryFiles(
+                    whitelist = "\uFEFFApache-2.0|MIT",
+                    overrides = "\uFEFForg.example--sample-lib--1.5=MIT",
+                    texts = "\uFEFFApache-2.0=licenses/APACHE-2.0.txt",
+                ),
+            )
+        assertEquals(LicenseVerdict.ALLOWED, policy.judge(setOf("Apache-2.0")).verdict)
+        assertTrue(policy.judge(setOf("GPL-3.0"), MavenCoordinates("org.example", "sample-lib", "1.5")).overridden)
+        assertEquals(listOf("MIT"), policy.licensesWithoutText)
+    }
+
     @Test
     @DisplayName("a registry without licenses-hidden.txt allows the whitelist only")
     fun noHiddenList() {

@@ -9,8 +9,10 @@ import org.octopusden.octopus.license.core.exception.LicenseFilesNotAvailableExc
 import org.octopusden.octopus.license.core.exception.NotFoundException
 import org.octopusden.octopus.license.core.exception.ServiceBusyException
 import org.octopusden.octopus.license.core.exception.ServiceUnavailableException
+import org.octopusden.octopus.license.core.exception.ServiceUnreachableException
 import tools.jackson.core.JacksonException
 import tools.jackson.databind.json.JsonMapper
+import java.time.Duration
 
 internal class LicenseServiceErrorDecoder(
     private val jsonMapper: JsonMapper,
@@ -30,17 +32,37 @@ internal class LicenseServiceErrorDecoder(
             } catch (_: JacksonException) {
                 null
             }
-        } ?: return default.decode(methodKey, buffered)
-        return when (response.status()) {
-            HTTP_BAD_REQUEST -> InvalidRequestException(message)
-            HTTP_NOT_FOUND -> NotFoundException(message)
-            HTTP_CONFLICT -> LicenseFilesNotAvailableException(message)
+        }
+        val status = response.status()
+        return when {
+            message == null && status in GATEWAY_ERRORS ->
+                ServiceUnreachableException("$methodKey answered $status from a gateway, not from the license service")
+            message == null -> default.decode(methodKey, buffered)
+            status == HTTP_BAD_REQUEST -> InvalidRequestException(message)
+            status == HTTP_NOT_FOUND -> NotFoundException(message)
+            status == HTTP_CONFLICT -> LicenseFilesNotAvailableException(message)
             // Only a busy service says when to come back; any other 503 is a system it reads.
-            HTTP_SERVICE_UNAVAILABLE ->
-                if (response.headers().containsKey(RETRY_AFTER)) ServiceBusyException(message) else ServiceUnavailableException(message)
+            status == HTTP_SERVICE_UNAVAILABLE ->
+                if (hasRetryAfter(response)) ServiceBusyException(message, retryAfter(response)) else ServiceUnavailableException(message)
             else -> default.decode(methodKey, buffered)
         }
     }
+
+    private fun hasRetryAfter(response: Response) = retryAfterValues(response) != null
+
+    private fun retryAfter(response: Response) =
+        retryAfterValues(response)
+            ?.firstOrNull()
+            ?.trim()
+            ?.toLongOrNull()
+            ?.let(Duration::ofSeconds)
+
+    private fun retryAfterValues(response: Response) =
+        response
+            .headers()
+            .entries
+            .firstOrNull { it.key.equals(RETRY_AFTER, ignoreCase = true) }
+            ?.value
 
     private companion object {
         const val HTTP_BAD_REQUEST = 400
@@ -48,5 +70,6 @@ internal class LicenseServiceErrorDecoder(
         const val HTTP_CONFLICT = 409
         const val HTTP_SERVICE_UNAVAILABLE = 503
         const val RETRY_AFTER = "Retry-After"
+        val GATEWAY_ERRORS = setOf(502, HTTP_SERVICE_UNAVAILABLE, 504)
     }
 }

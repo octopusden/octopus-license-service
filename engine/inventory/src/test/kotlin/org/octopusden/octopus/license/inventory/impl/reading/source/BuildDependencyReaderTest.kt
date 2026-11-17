@@ -72,6 +72,25 @@ class BuildDependencyReaderTest {
     }
 
     @Test
+    @DisplayName("two missing sha1s are not a match: the producing module is found by name (D11)")
+    fun missingSha1sDoNotMatch() {
+        val record =
+            build(
+                modules =
+                    arrayOf(
+                        module(
+                            id = "$GROUP:other:1",
+                            files = listOf(builtFile("other.jar", sha1 = null)),
+                            dependencies = listOf(dependency("a:b:1", "runtime")),
+                        ),
+                        module(files = listOf(builtFile(zipName, sha1 = null)), dependencies = listOf(dependency("c:d:2", "runtime"))),
+                    ),
+            )
+
+        assertEquals(listOf(maven("c:d:2")), reader.read(record, zip.copy(sha1 = null), emptySet()).packages)
+    }
+
+    @Test
     @DisplayName("no module published the file: NO_PRODUCING_MODULE, and no dependency is read")
     fun noProducingModule() {
         val record =

@@ -51,7 +51,7 @@ This change ports that step, wires the scan and the evaluation into the server, 
 - **Behaviour change for callers:**
   - `DONE` reports now carry real `libraryCounts` and `violations`; before, they were always empty.
   - A report can now end `FAILED` because Artifactory or Xray is unreachable.
-  - A report takes as long as the scan: seconds to minutes, up to 5 minutes more while Xray finishes scanning.
+  - A report takes as long as the scan: seconds to minutes. A `FULL` report (RC and RELEASE) waits up to 5 minutes more while Xray finishes scanning; a `CHECK` (a regular build) does not wait.
   - The runner and the TeamCity step stay report-only, so no build fails on a verdict.
 - **Rollout:** before it starts, the service needs `bitbucket.token` and `artifactory.token` in Vault, and a `license-service.yml` in Spring Cloud Config with the license registry's project and repository and the ownership rules; the URLs come from the shared `application.yml`.
 

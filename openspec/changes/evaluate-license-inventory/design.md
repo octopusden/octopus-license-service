@@ -221,10 +221,13 @@ data class FoundLibrary(
 
 ### 9. The server
 
-- `EvaluatingLicenseReportGenerator(scanner, evaluator, clock, buildProperties, meterRegistry)` replaces `EmptyLicenseReportGenerator`:
-  1. `scanner.scan(target)`; `InventorySourceUnavailableException` is counted `unavailable` and rethrown, so the report ends `FAILED` with its message (the service's existing failure path);
-  2. `evaluator.evaluate(inventory, policy)`;
-  3. `SummaryMapper.map(assessment, inputs)`; the zip stays empty until the license files change.
+- `EvaluatingLicenseReportGenerator(scanner, evaluator, properties, clock, buildProperties, meterRegistry)` replaces `EmptyLicenseReportGenerator`:
+  1. `scanner.scan(target, xrayWait)`, the wait chosen per request by the report's mode (decision of 2026-11-12: a regular build gets an optimistic check with no wait, RC and RELEASE wait):
+     - `FULL` → `license-service.xray.scan-timeout` (5 min), for RC and RELEASE;
+     - `CHECK` → `Duration.ZERO`: Xray is not even asked for a file's status, the scan reads what Xray knows now;
+  2. `InventorySourceUnavailableException`, including build-info Artifactory cannot serve (`5xx`, `401`, `403`, no answer; only `404` is "no build"), is counted `unavailable` and rethrown, so the report ends `FAILED` through the service's failure path; its message stays in the log, the report's error points to it;
+  3. `evaluator.evaluate(inventory, policy)`;
+  4. `SummaryMapper.map(assessment, inputs)`; the zip stays empty until the license files change.
 - `SummaryMapper`:
   - `libraryCounts`: every `core` `Verdict` with the number of third-party libraries of that verdict, zero included, so a caller never tells "none" from "absent";
   - `violations`: every third-party library not `ALLOWED`, in the assessment's order: rendered id, verdict, canonical licenses, `foundIn` sorted;
@@ -241,7 +244,7 @@ data class FoundLibrary(
 - Only what is this service's own stays under `license-service`, in a `license-service.yml` of Spring Cloud Config:
   - `license-registry.project`, `license-registry.repository`, `exclusions`;
   - `ownership.internal-groups`, `ownership.own-repository-prefixes`: required, non-empty: company names stay out of this public repository;
-  - `xray.scan-timeout` (default `PT5M`), `xray.scan-poll-interval` (default `PT10S`).
+  - `xray.scan-timeout` (default `PT5M`): the wait of a `FULL` report only; a `CHECK` does not wait. `xray.scan-poll-interval` (default `PT10S`). Statuses waited for are the scan's: `PENDING`, `SCANNING` and `NOT_SCANNED`, which Xray answers for about 30 s after an upload before the scan starts (scan design, Decision 12).
 - Found on review: the earlier changes put every system under `license-service` (`components-registry-url`, `license-registry.bitbucket-url` and `token`), unlike every other service. Moved here, before anything was configured for the service in Spring Cloud Config.
 - Missing or blank: the service does not start, and the message names the property.
 - `application.yaml` holds the defaults and a comment saying where the rest comes from; `bootstrap-dev.yml` reads every required value from an environment variable, with the names the parity checks already use (`COMPONENTS_REGISTRY_URL`, `BITBUCKET_URL`, `BITBUCKET_TOKEN`, `JFROG_URL`, `JFROG_TOKEN`, …).
@@ -273,6 +276,6 @@ data class FoundLibrary(
 
 - **One verdict and four libraries' overrides differ from run 14 by design.** The parity check reports them under "policy rules". They come from matching override versions by their numbers, as the plugin does. Accepted for now: one judging rule for every caller; changing it is a change to the license policy.
 - **The inventory now answers "ours".** A later reader may expect it in evaluation, as the component design first drew it; the design and `docs/architecture.md` say where it is and why (Decision 2).
-- **A report now takes as long as a scan.** Up to 5 minutes more while Xray finishes, with 4 generation threads; queued reports wait. Accepted for the report-only rollout; threads and timeout are configuration (inventory, Decision 12).
+- **A report now takes as long as a scan.** A `FULL` report waits up to 5 minutes more while Xray finishes, with 4 generation threads; queued reports wait. A `CHECK` adds no wait, and a file Xray has not scanned yet reads from its build only. Accepted for the report-only rollout; threads and timeout are configuration (inventory, Decision 12).
 - **A report can now fail on Artifactory or Xray.** The runner already logs `FAILED` as a warning (`BuildLog`); the counter shows outages.
 - **Parity depends on a fresh prototype run.** Artifactory, Xray and the registry move; a stale run shows false differences. Mitigated as in phase 2: run the prototype locally right before.

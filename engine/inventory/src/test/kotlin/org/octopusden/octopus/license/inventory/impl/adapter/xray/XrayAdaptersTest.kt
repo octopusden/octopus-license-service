@@ -14,10 +14,12 @@ import org.octopusden.octopus.license.inventory.impl.adapter.noWaitCalls
 import org.octopusden.octopus.license.inventory.impl.port.data.StoredFile
 import org.octopusden.octopus.license.inventory.model.PackageId
 import java.time.Duration
+import java.time.Instant
 
 class XrayAdaptersTest {
     private val jfrog = StubJfrog()
     private val sleeps = mutableListOf<Duration>()
+    private var clock = Instant.parse("2026-11-17T00:00:00Z")
     private val zip =
         StoredFile("rnd-maven-release-local", "org/example/portal/sample-portal/2.4.0", "sample-portal-2.4.0.zip", "0a1b", "9f8e")
 
@@ -27,8 +29,13 @@ class XrayAdaptersTest {
                  {"name":"Apache-2.0","components":["gav://org.springframework:spring-core:6.1.4","gav://com.google.guava:guava:32.1.2-jre"]},
                  {"name":"MIT","components":["gav://com.google.guava:guava:32.1.2-jre"]}]}]}"""
 
-    private fun scanner(budget: Duration = Duration.ofMinutes(5)) =
-        XrayBinaryScanner(jfrog.xray, noWaitCalls(), budget, Duration.ofSeconds(10)) { sleeps += it }
+    private fun scanner(
+        budget: Duration = Duration.ofMinutes(5),
+        callTime: Duration = Duration.ZERO,
+    ) = XrayBinaryScanner(jfrog.xray, noWaitCalls(), budget, Duration.ofSeconds(10), { clock }) {
+        sleeps += it
+        clock += it + callTime
+    }
 
     private fun status(sca: String) = 200 to """{"overall":{"status":"$sca"},"details":{"sca":{"status":"$sca"}}}"""
 
@@ -95,13 +102,22 @@ class XrayAdaptersTest {
     }
 
     @Test
-    @DisplayName("not scanned: no wait, the summary is read as it is")
-    fun notScanned() {
-        jfrog.answer(STATUS, status("NOT_SCANNED"))
+    @DisplayName("a scan with no wait asked does not ask Xray for the status at all: the summary is read as it is")
+    fun noWaitAsked() {
+        jfrog.answer(SUMMARY, summary)
+
+        assertEquals(2, scanner(budget = Duration.ZERO).scan(zip)?.size)
+        assertEquals(emptyList<Any>(), jfrog.requests(STATUS))
+    }
+
+    @Test
+    @DisplayName("not scanned yet, as Xray answers for about half a minute after an upload: waited for like a pending scan (D12)")
+    fun notScannedYet() {
+        jfrog.answer(STATUS, status("NOT_SCANNED"), status("NOT_SCANNED"), status("DONE"))
         jfrog.answer(SUMMARY, summary)
 
         assertEquals(2, scanner().scan(zip)?.size)
-        assertEquals(emptyList<Duration>(), sleeps)
+        assertEquals(listOf(Duration.ofSeconds(10), Duration.ofSeconds(10)), sleeps)
     }
 
     @Test
@@ -127,6 +143,17 @@ class XrayAdaptersTest {
 
         scanner.scan(zip.copy(name = "other.zip"))
         assertEquals(3, sleeps.size)
+    }
+
+    @Test
+    @DisplayName("the time spent asking Xray for the status counts against the budget, not only the time slept")
+    fun callsSpendBudget() {
+        jfrog.answer(STATUS, status("PENDING"))
+        jfrog.answer(SUMMARY, summary)
+
+        scanner(budget = Duration.ofSeconds(25), callTime = Duration.ofSeconds(5)).scan(zip)
+
+        assertEquals(listOf(Duration.ofSeconds(10), Duration.ofSeconds(10)), sleeps)
     }
 
     @Test

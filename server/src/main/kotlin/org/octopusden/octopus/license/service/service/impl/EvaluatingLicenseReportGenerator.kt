@@ -2,10 +2,12 @@ package org.octopusden.octopus.license.service.service.impl
 
 import io.micrometer.core.instrument.MeterRegistry
 import org.octopusden.octopus.license.core.dto.GenerationInputs
+import org.octopusden.octopus.license.core.dto.LicenseReportMode
 import org.octopusden.octopus.license.evaluation.LicenseEvaluator
 import org.octopusden.octopus.license.inventory.LicenseInventoryScanner
 import org.octopusden.octopus.license.inventory.exception.InventorySourceUnavailableException
 import org.octopusden.octopus.license.policy.model.LicensePolicy
+import org.octopusden.octopus.license.service.configuration.LicenseServiceProperties
 import org.octopusden.octopus.license.service.service.GeneratedReport
 import org.octopusden.octopus.license.service.service.LicenseReportGenerator
 import org.octopusden.octopus.license.target.model.LicenseTarget
@@ -13,11 +15,15 @@ import org.springframework.boot.info.BuildProperties
 import org.springframework.stereotype.Component
 import java.io.ByteArrayOutputStream
 import java.time.Clock
+import java.time.Duration
 import java.util.zip.ZipOutputStream
 
 /**
  * Scans the target, evaluates the inventory with the policy the report started with, and maps the
  * assessment into the summary. The zip stays empty until the license files are written.
+ *
+ * A FULL report waits for Xray up to `license-service.xray.scan-timeout`; a CHECK, a regular
+ * build's optimistic check, does not wait at all (evaluation design, D10).
  *
  * A scan failure is counted and passed on, so the report ends FAILED; Artifactory and Xray are
  * per-request dependencies, never a health indicator (evaluation design, D9).
@@ -26,16 +32,23 @@ import java.util.zip.ZipOutputStream
 class EvaluatingLicenseReportGenerator(
     private val scanner: LicenseInventoryScanner,
     private val evaluator: LicenseEvaluator,
+    private val properties: LicenseServiceProperties,
     private val clock: Clock,
     private val buildProperties: BuildProperties,
     private val meterRegistry: MeterRegistry,
 ) : LicenseReportGenerator {
     override fun generate(
         target: LicenseTarget,
+        mode: LicenseReportMode,
         policy: LicensePolicy,
     ): GeneratedReport {
+        val xrayWait =
+            when (mode) {
+                LicenseReportMode.FULL -> properties.xray.scanTimeout
+                LicenseReportMode.CHECK -> Duration.ZERO
+            }
         val inventory =
-            runCatching { scanner.scan(target) }
+            runCatching { scanner.scan(target, xrayWait) }
                 .onSuccess { countScan("scanned") }
                 .onFailure { countScan(if (it is InventorySourceUnavailableException) "unavailable" else "failed") }
                 .getOrThrow()

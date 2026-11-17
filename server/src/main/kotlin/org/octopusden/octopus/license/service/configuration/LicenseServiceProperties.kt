@@ -49,7 +49,8 @@ data class LicenseRegistryProperties(
  * Xray is reached at [ArtifactoryProperties.url], the JFrog platform's; only the wait is this
  * service's own.
  *
- * @param scanTimeout how long one scan waits, in all, for Xray to finish scanning its files.
+ * @param scanTimeout how long a FULL report's scan waits, in all, for Xray to finish scanning its
+ * files; a CHECK report does not wait.
  * @param scanPollInterval how often a pending Xray scan is asked about again.
  */
 data class XrayProperties(

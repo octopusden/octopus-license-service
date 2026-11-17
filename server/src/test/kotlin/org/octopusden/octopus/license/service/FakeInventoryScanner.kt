@@ -5,6 +5,7 @@ import org.octopusden.octopus.license.inventory.exception.InventorySourceUnavail
 import org.octopusden.octopus.license.inventory.model.FoundLibrary
 import org.octopusden.octopus.license.inventory.model.LicenseInventory
 import org.octopusden.octopus.license.target.model.LicenseTarget
+import java.time.Duration
 
 /**
  * Stands in for Artifactory and Xray: every component holds [libraries], except
@@ -13,7 +14,10 @@ import org.octopusden.octopus.license.target.model.LicenseTarget
 class FakeInventoryScanner(
     private val libraries: List<FoundLibrary> = emptyList(),
 ) : LicenseInventoryScanner {
-    override fun scan(target: LicenseTarget): LicenseInventory {
+    override fun scan(
+        target: LicenseTarget,
+        xrayWait: Duration,
+    ): LicenseInventory {
         if (target.componentVersion.component == UNAVAILABLE_COMPONENT) {
             throw InventorySourceUnavailableException("Xray", "Xray answered 503 after 3 tries")
         }

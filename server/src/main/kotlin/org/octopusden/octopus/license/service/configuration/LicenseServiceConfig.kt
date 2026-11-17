@@ -71,7 +71,6 @@ class LicenseServiceConfig(
                 requiredList(properties.ownership.internalGroups, "license-service.ownership.internal-groups"),
                 requiredList(properties.ownership.ownRepositoryPrefixes, "license-service.ownership.own-repository-prefixes"),
             ),
-            properties.xray.scanTimeout,
             properties.xray.scanPollInterval,
         )
 

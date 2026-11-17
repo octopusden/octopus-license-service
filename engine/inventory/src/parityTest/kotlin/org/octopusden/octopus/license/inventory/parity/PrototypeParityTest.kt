@@ -9,6 +9,7 @@ import org.octopusden.octopus.license.inventory.model.OwnershipRules
 import org.octopusden.octopus.license.target.impl.RegistryLicenseTargetResolver
 import org.octopusden.octopus.license.target.model.TargetResolution
 import java.io.File
+import java.time.Duration
 
 /**
  * Scans every component of a prototype output directory against the real components registry,
@@ -57,7 +58,10 @@ class PrototypeParityTest {
                             when (val resolution = resolver.resolve(name, version)) {
                                 is TargetResolution.Excluded -> listOf("excluded by the service: ${resolution.reason}")
                                 is TargetResolution.Resolved ->
-                                    ParityDiff.diff(ParityView.ofPrototype(component), ParityView.of(scanner.scan(resolution.target)))
+                                    ParityDiff.diff(
+                                        ParityView.ofPrototype(component),
+                                        ParityView.of(scanner.scan(resolution.target, Duration.ofMinutes(5))),
+                                    )
                             }
                         }.getOrElse { listOf("failed: ${it.javaClass.simpleName}: ${it.message}") }
                 }

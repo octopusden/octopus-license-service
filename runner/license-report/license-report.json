@@ -1,0 +1,10 @@
+{
+  "id" : "report-1",
+  "component" : "some-component",
+  "version" : "1.2.3",
+  "status" : "DONE",
+  "mode" : "FULL",
+  "summary" : null,
+  "exclusionReason" : null,
+  "error" : null
+}

@@ -16,8 +16,12 @@ import java.time.Instant
  * reloads only when it moved. A failure is logged and keeps the policy the holder has.
  *
  * Every refresh that asks Bitbucket is counted in [REFRESHES_METRIC] by outcome: `loaded`,
- * `unchanged`, `unavailable` or `invalid`. Readiness cannot show a failing refresh once a policy
- * is loaded, so the counter is what an alert watches.
+ * `unchanged`, `unavailable`, `invalid`, or `failed` for an error nobody expected, so no refresh
+ * escapes the counter. Readiness cannot show a failing refresh once a policy is loaded, so the
+ * counter is what an alert watches.
+ *
+ * [PROBLEMS_METRIC] is the number of registry entries the loaded policy skipped. A skipped
+ * override loads as `loaded`, yet changes verdicts, so an alert watches this number too.
  */
 class LicensePolicyRefresher(
     private val source: LicensePolicySource,
@@ -29,6 +33,17 @@ class LicensePolicyRefresher(
     @Volatile
     private var lastCheck: Instant? = null
 
+    init {
+        meterRegistry.gauge(PROBLEMS_METRIC, holder) {
+            it
+                .current()
+                ?.policy
+                ?.problems
+                ?.size
+                ?.toDouble() ?: 0.0
+        }
+    }
+
     @Scheduled(fixedDelayString = "\${license-service.license-registry.retry-interval:PT1M}")
     fun refresh() {
         val current = holder.current()
@@ -37,20 +52,26 @@ class LicensePolicyRefresher(
             return
         }
         lastCheck = now
-        try {
-            if (current == null || source.headCommit() != current.policy.commit) {
-                load(now)
-                count("loaded")
-            } else {
-                count("unchanged")
+        val kept = current?.policy?.commit
+        val outcome =
+            runCatching {
+                if (current == null || source.headCommit() != current.policy.commit) {
+                    load(now)
+                    "loaded"
+                } else {
+                    "unchanged"
+                }
+            }.getOrElse { e ->
+                when (e) {
+                    is Error -> throw e
+                    is LicenseRegistryUnavailableException ->
+                        "unavailable".also { log.warn("Cannot read the license registry; keeping commit {}", kept, e) }
+                    is InvalidLicenseRegistryException ->
+                        "invalid".also { log.error("The license registry cannot make a policy; keeping commit {}", kept, e) }
+                    else -> "failed".also { log.error("Refreshing the license policy failed; keeping commit {}", kept, e) }
+                }
             }
-        } catch (e: LicenseRegistryUnavailableException) {
-            count("unavailable")
-            log.warn("Cannot read the license registry; keeping commit {}", current?.policy?.commit, e)
-        } catch (e: InvalidLicenseRegistryException) {
-            count("invalid")
-            log.error("The license registry cannot make a policy; keeping commit {}", current?.policy?.commit, e)
-        }
+        count(outcome)
     }
 
     private fun count(outcome: String) = meterRegistry.counter(REFRESHES_METRIC, "outcome", outcome).increment()
@@ -69,6 +90,7 @@ class LicensePolicyRefresher(
 
     companion object {
         const val REFRESHES_METRIC = "license.policy.refreshes"
+        const val PROBLEMS_METRIC = "license.policy.problems"
         private val log = LoggerFactory.getLogger(LicensePolicyRefresher::class.java)
     }
 }

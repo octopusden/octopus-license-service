@@ -5,6 +5,7 @@ import org.octopusden.octopus.license.policy.model.LicensePolicy
 import org.octopusden.octopus.license.policy.model.LicenseText
 import org.octopusden.octopus.license.policy.model.NameLookup
 import org.octopusden.octopus.license.policy.model.OverrideRule
+import org.octopusden.octopus.license.policy.model.OverrideVersions
 import org.octopusden.releng.versions.NumericVersionFactory
 import org.octopusden.releng.versions.VersionNames
 import org.octopusden.releng.versions.VersionRangeFactory
@@ -27,17 +28,23 @@ object LicenseRegistryParser {
     private const val TEXTS = "licenses.properties"
     private const val TEXTS_DIRECTORY = "licenses/"
     private val OPTIONAL_FILES = listOf(HIDDEN, MERGES, OVERRIDES, TEXTS)
+    private const val BYTE_ORDER_MARK = "\uFEFF"
 
     // The names the Maven plugin parses override versions with: none, so only plain numbers count (D6).
     private val versionNames = VersionNames("", "", "")
     private val rangeFactory = VersionRangeFactory(versionNames)
-    private val range = Regex("""^[\[(].*[])]$""")
 
     /**
      * @param files file contents by their path in the registry, `licenses/` texts included.
      * @throws InvalidLicenseRegistryException no whitelist, or one that names no license.
      */
     fun parse(
+        files: Map<String, String>,
+        commit: String,
+    ): LicensePolicy = parseText(files.mapValues { (_, content) -> content.removePrefix(BYTE_ORDER_MARK) }, commit)
+
+    // An editor that saves with a byte order mark would otherwise glue it to the file's first name or key.
+    private fun parseText(
         files: Map<String, String>,
         commit: String,
     ): LicensePolicy {
@@ -87,7 +94,7 @@ object LicenseRegistryParser {
         text: String,
         problems: MutableList<String>,
     ): List<OverrideRule> =
-        properties(text).mapNotNull { (key, value) ->
+        properties(OVERRIDES, text).mapNotNull { (key, value) ->
             val licenses = names(value)
             val parts = key.split("--")
             when {
@@ -95,7 +102,7 @@ object LicenseRegistryParser {
                 licenses.isEmpty() -> null
                 parts.size != GAV_PARTS -> null.also { problems += "$OVERRIDES: '$key' is not group--artifact--version" }
                 else ->
-                    runCatching { rangeFactory.create(asRange(parts[2])) }
+                    runCatching { overrideVersions(parts[2]) }
                         .map { OverrideRule(key, parts[0], parts[1], it, licenses.toSet()) }
                         .onFailure { problems += "$OVERRIDES: '$key' has a version range that cannot be read" }
                         .getOrNull()
@@ -112,7 +119,7 @@ object LicenseRegistryParser {
         canonicalNames: NameLookup<String>,
         problems: MutableList<String>,
     ): NameLookup<LicenseText> =
-        properties(files[TEXTS].orEmpty())
+        properties(TEXTS, files[TEXTS].orEmpty())
             .mapNotNull { (key, value) ->
                 val name = key.trim()
                 val location = value.trim()
@@ -147,11 +154,31 @@ object LicenseRegistryParser {
         val text: LicenseText,
     )
 
-    // The plugin's rule: a version that is not already a range means exactly that version.
-    private fun asRange(version: String) = if (range.matches(version)) version else "[$version]"
+    // A version opening with a bracket is meant as a range, even an unclosed one, which then fails
+    // here and becomes a problem; any other means exactly that version, compared as written (D6).
+    private fun overrideVersions(version: String) =
+        if (version.startsWith("[") || version.startsWith("(")) {
+            OverrideVersions.InRange(rangeFactory.create(version))
+        } else {
+            OverrideVersions.Exact(version)
+        }
 
-    private fun properties(text: String): List<Pair<String, String>> =
-        Properties().apply { load(StringReader(text)) }.map { (key, value) -> key.toString() to value.toString() }
+    /**
+     * Read as the license plugins read it. `Properties` gives up on the whole file at a malformed
+     * `\\u` escape, so the file is unreadable and the registry invalid, never silently empty.
+     */
+    private fun properties(
+        file: String,
+        text: String,
+    ): List<Pair<String, String>> {
+        val properties =
+            try {
+                Properties().apply { load(StringReader(text)) }
+            } catch (e: IllegalArgumentException) {
+                throw InvalidLicenseRegistryException("$file cannot be read: ${e.message}", e)
+            }
+        return properties.map { (key, value) -> key.toString() to value.toString() }
+    }
 
     private fun listedNames(text: String) = lines(text).flatMap { names(it) }.toSet()
 

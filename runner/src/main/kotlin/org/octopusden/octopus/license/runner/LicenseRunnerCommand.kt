@@ -1,15 +1,19 @@
 package org.octopusden.octopus.license.runner
 
 import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.core.CliktError
 import com.github.ajalt.clikt.core.Context
-import com.github.ajalt.clikt.core.main
+import com.github.ajalt.clikt.core.parse
+import com.github.ajalt.clikt.parameters.options.OptionCallTransformContext
 import com.github.ajalt.clikt.parameters.options.convert
 import com.github.ajalt.clikt.parameters.options.default
+import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.required
 import com.github.ajalt.clikt.parameters.types.path
 import org.octopusden.octopus.license.client.impl.ClassicLicenseServiceClient
 import org.octopusden.octopus.license.client.impl.LicenseServiceClientParametersProvider
+import org.octopusden.octopus.license.core.dto.LicenseReportMode
 import tools.jackson.databind.SerializationFeature
 import tools.jackson.databind.json.JsonMapper
 import tools.jackson.module.kotlin.KotlinModule
@@ -30,38 +34,65 @@ class LicenseRunnerCommand : CliktCommand(name = "license-runner") {
     private val outputDir by option("--output-dir", help = "Where the report and the license files go")
         .path()
         .default(Path.of("license-report"))
-    private val pollInterval by option("--poll-interval", help = "ISO-8601 duration between status checks")
-        .convert { Duration.parse(it) }
+    private val checkOnly by option(
+        "--check-only",
+        help = "Quick check on what Xray knows now, for regular builds: no wait for Xray, no license files",
+    ).flag()
+    private val pollInterval by option("--poll-interval", help = "Time between status checks, such as 5s or PT5S")
+        .convert { duration(it) }
         .default(Duration.ofSeconds(DEFAULT_POLL_INTERVAL_SECONDS))
-    private val timeout by option("--timeout", help = "ISO-8601 duration to wait for the report")
-        .convert { Duration.parse(it) }
+    private val timeout by option("--timeout", help = "How long to wait for the report, such as 45m or PT45M")
+        .convert { duration(it) }
         .default(Duration.ofMinutes(DEFAULT_TIMEOUT_MINUTES))
+
+    private fun OptionCallTransformContext.duration(text: String) =
+        Durations.parse(text) ?: fail("'$text' is not a duration; use 45m, 30s, 2h or ISO-8601 such as PT45M")
 
     override fun help(context: Context) = "Generate the third-party license files of a component version."
 
     override fun run() {
+        runCatching { report() }.onFailure {
+            echo(
+                BuildLog.render(
+                    LogLine("License runner failed for $component:$version: ${it.message ?: it.javaClass.name}", warning = true),
+                ),
+            )
+        }
+    }
+
+    private fun report() {
+        removePreviousOutput()
         val client = ClassicLicenseServiceClient(
             object : LicenseServiceClientParametersProvider {
                 override fun getApiUrl() = url
             },
         )
+        val mode = if (checkOnly) LicenseReportMode.CHECK else LicenseReportMode.FULL
         val outcome = LicenseReportRunner(client, pollInterval, timeout, Clock.systemUTC()) { Thread.sleep(it) }
-            .run(component, version)
-        write(outcome)
+            .run(component, version, mode)
         BuildLog.lines(component, version, outcome).forEach { echo(BuildLog.render(it)) }
+        write(outcome)
+    }
+
+    /** A reused output directory must not publish an earlier run's report as this run's result. */
+    private fun removePreviousOutput() {
+        if (!Files.isDirectory(outputDir)) return
+        Files.deleteIfExists(outputDir.resolve(REPORT_FILE))
+        Files.newDirectoryStream(outputDir, "*$ZIP_SUFFIX").use { zips -> zips.forEach(Files::delete) }
     }
 
     private fun write(outcome: RunOutcome) {
         if (outcome !is RunOutcome.Finished) return
         Files.createDirectories(outputDir)
         jsonMapper.writeValue(outputDir.resolve(REPORT_FILE).toFile(), outcome.report)
-        outcome.files?.let { Files.write(outputDir.resolve("$component-$version-licenses.zip"), it) }
+        outcome.files?.let { Files.write(outputDir.resolve("$component-$version$ZIP_SUFFIX"), it) }
     }
 
     private companion object {
         const val DEFAULT_POLL_INTERVAL_SECONDS = 5L
         const val DEFAULT_TIMEOUT_MINUTES = 30L
         const val REPORT_FILE = "license-report.json"
+        const val ZIP_SUFFIX = "-licenses.zip"
 
         val jsonMapper: JsonMapper = JsonMapper
             .builder()
@@ -71,4 +102,18 @@ class LicenseRunnerCommand : CliktCommand(name = "license-runner") {
     }
 }
 
-fun main(args: Array<String>) = LicenseRunnerCommand().main(args)
+/**
+ * Like Clikt's own `main`, but arguments it cannot read end in a warning and exit 0 too: a typo in
+ * the build settings must not fail the build any more than an unavailable service does.
+ */
+fun main(args: Array<String>) {
+    val command = LicenseRunnerCommand()
+    try {
+        command.parse(args)
+    } catch (e: CliktError) {
+        command.echoFormattedHelp(e)
+        if (e.statusCode != 0) {
+            command.echo(BuildLog.render(LogLine("License runner did not run: ${e.message ?: "invalid arguments"}", warning = true)))
+        }
+    }
+}

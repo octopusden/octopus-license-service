@@ -11,21 +11,24 @@ import org.octopusden.octopus.license.inventory.impl.port.BinaryScanner
 import org.octopusden.octopus.license.inventory.impl.port.data.StoredFile
 import org.octopusden.octopus.license.inventory.model.PackageId
 import java.time.Duration
+import java.time.Instant
 
 /**
  * Xray's scan of a stored file (D12). It first waits while Xray is still scanning the file, from one
  * budget per scan, then reads the summary whatever the status said, exactly as the prototype reads
  * it: a summary that answers an error for the path means "not indexed". A package Xray lists under
- * no license is not in the summary at all (D10.10). One instance per scan: the budget is the scan's.
+ * no license is not in the summary at all (D10.10). One instance per scan: the budget is the scan's,
+ * counted from its first status call, and the status calls themselves spend it too.
  */
 internal class XrayBinaryScanner(
     private val client: XrayClient,
     private val calls: JfrogCalls,
-    waitBudget: Duration,
+    private val waitBudget: Duration,
     private val pollInterval: Duration,
+    private val now: () -> Instant = Instant::now,
     private val sleep: (Duration) -> Unit = { Thread.sleep(it) },
 ) : BinaryScanner {
-    private var budgetLeft = waitBudget
+    private var deadline: Instant? = null
 
     override fun scan(file: StoredFile): Map<PackageId, Set<String>>? {
         waitWhilePending(file)
@@ -44,10 +47,12 @@ internal class XrayBinaryScanner(
     }
 
     private fun waitWhilePending(file: StoredFile) {
-        while (status(file) in PENDING && budgetLeft > Duration.ZERO) {
-            val pause = minOf(pollInterval, budgetLeft)
-            sleep(pause)
-            budgetLeft -= pause
+        if (waitBudget <= Duration.ZERO) return
+        val until = deadline ?: now().plus(waitBudget).also { deadline = it }
+        while (status(file) in PENDING) {
+            val left = Duration.between(now(), until)
+            if (left <= Duration.ZERO) return
+            sleep(minOf(pollInterval, left))
         }
     }
 
@@ -65,7 +70,9 @@ internal class XrayBinaryScanner(
 
     private companion object {
         const val DEFAULT_WATCH = "default"
-        val PENDING = setOf(ScanState.PENDING, ScanState.SCANNING)
+
+        // Xray answers NOT_SCANNED for about half a minute after an upload before it starts (D12).
+        val PENDING = setOf(ScanState.PENDING, ScanState.SCANNING, ScanState.NOT_SCANNED)
         val CLIENT_ERRORS = 400..499
     }
 }

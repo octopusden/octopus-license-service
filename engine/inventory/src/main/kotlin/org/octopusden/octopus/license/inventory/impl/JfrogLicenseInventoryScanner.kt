@@ -28,29 +28,30 @@ import java.time.Duration
  * checksum-only files and fills missing licenses. It decides nothing itself; every rule lives in a
  * class of its own. Keeps no state between scans, so one instance serves every generation thread.
  *
- * @param portsPerScan fresh ports for each scan: the Xray wait budget is one scan's (D12).
+ * @param portsPerScan fresh ports for each scan, waiting for Xray as long as that scan was asked to (D12).
  */
 class JfrogLicenseInventoryScanner internal constructor(
-    private val portsPerScan: () -> ScanPorts,
+    private val portsPerScan: (xrayWait: Duration) -> ScanPorts,
     ownership: OwnershipRules,
 ) : LicenseInventoryScanner {
     private val ownership = Ownership(ownership)
 
     /**
      * @param url the JFrog platform URL, under which both Artifactory and Xray are served.
-     * @param xrayWait how long one scan waits, in all, for Xray to finish scanning its files.
      * @param xrayPoll how often a pending Xray scan is asked about again.
      */
     constructor(
         url: String,
         token: String,
         ownership: OwnershipRules,
-        xrayWait: Duration = Duration.ofMinutes(5),
         xrayPoll: Duration = Duration.ofSeconds(10),
-    ) : this(JfrogPorts(url, token, xrayWait, xrayPoll)::create, ownership)
+    ) : this(JfrogPorts(url, token, xrayPoll)::create, ownership)
 
-    override fun scan(target: LicenseTarget): LicenseInventory {
-        val scan = portsPerScan().memoized()
+    override fun scan(
+        target: LicenseTarget,
+        xrayWait: Duration,
+    ): LicenseInventory {
+        val scan = portsPerScan(xrayWait).memoized()
         val locator = BuildLocator(scan.records)
         val listing = ReleasedFileLister(scan.records, scan.store, locator).list(target)
         val reader = FileContentReader(scan.scanner, scan.store, locator, BuildDependencyReader(ownership), SbomReader(scan.store))

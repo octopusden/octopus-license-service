@@ -3,6 +3,8 @@ package org.octopusden.octopus.license.policy.model
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.CsvSource
 import org.octopusden.octopus.license.policy.impl.parser.policy
 import org.octopusden.octopus.license.policy.impl.parser.registryFiles
 
@@ -84,6 +86,24 @@ class LicensePolicyOverrideTest {
     fun escapedKey() {
         val coordinates = MavenCoordinates("org.example", "sample lib", "1.5")
         assertEquals(true, overriding("org.example--sample\\ lib--1.5=MIT").judge(setOf("GPL-3.0"), coordinates).overridden)
+    }
+
+    @ParameterizedTest(name = "override for {0} does not apply to {1}")
+    @CsvSource("1.6R1, 1.7R2", "r872-jdk15, r872-jdk5", "1.5, 1.5.0")
+    @DisplayName("a single override version applies only to that version as written, never by its numbers alone")
+    fun singleVersionAsWritten(
+        written: String,
+        other: String,
+    ) {
+        val policy = overriding("org.example--sample-lib--$written=MIT")
+        assertEquals(true, policy.judge(setOf("GPL-3.0"), sampleLib(written)).overridden)
+        assertEquals(false, policy.judge(setOf("GPL-3.0"), sampleLib(other)).overridden)
+    }
+
+    @Test
+    @DisplayName("a version range still matches by numbers, as versions-api reads it")
+    fun rangeMatchesByNumbers() {
+        assertEquals(true, overriding("org.example--sample-lib--[1.0,2.0)=MIT").judge(setOf("GPL-3.0"), sampleLib("1.5.0")).overridden)
     }
 
     private companion object {

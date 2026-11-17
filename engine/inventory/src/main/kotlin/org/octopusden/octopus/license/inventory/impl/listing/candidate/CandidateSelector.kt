@@ -33,12 +33,14 @@ internal class CandidateSelector(
         val skip =
             when {
                 selectedBy.isEmpty() -> FileStatus.NOT_SELECTED
-                matched == null && (candidate.extension in METADATA_EXTENSIONS || candidate.classifier in METADATA_CLASSIFIERS) ->
-                    FileStatus.METADATA
+                matched == null && candidate.isMetadata() -> FileStatus.METADATA
                 else -> null
             }
         return Selection(selectedBy, skip = skip, matched = matched)
     }
+
+    // By the last extension: `lib-1.0.jar.asc` signs a jar and is a signature (D11).
+    private fun MavenCandidate.isMetadata() = extension.substringAfterLast('.') in METADATA_EXTENSIONS || classifier in METADATA_CLASSIFIERS
 
     // An image is read whether declared or not; a declared image matches by name, whatever its tag (D10.1, D10.9).
     private fun select(candidate: ImageCandidate): Selection {

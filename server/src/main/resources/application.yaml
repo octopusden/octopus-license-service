@@ -19,6 +19,12 @@ management:
         readiness:
           include: readinessState,licenseRegistry
 
+# The Bitbucket client logs requests at Feign's FULL level, Authorization header included, when its
+# logger is at DEBUG; pinned so that turning DEBUG on elsewhere never writes the token to the log.
+logging:
+  level:
+    org.octopusden.octopus.infrastructure.bitbucket.client: INFO
+
 license-service:
   report-ttl: PT1H
   generation-threads: 4

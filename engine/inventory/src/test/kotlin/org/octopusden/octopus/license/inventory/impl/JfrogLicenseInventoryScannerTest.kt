@@ -23,6 +23,7 @@ import org.octopusden.octopus.license.inventory.model.SelectionReason.PATTERN
 import org.octopusden.octopus.license.target.model.ArtifactPattern
 import org.octopusden.octopus.license.target.model.DeclaredArtifact.DockerImage
 import org.octopusden.octopus.license.target.model.DeclaredArtifact.MavenArtifact
+import java.time.Duration
 
 /** The worked example of the design, end to end over fakes. */
 class JfrogLicenseInventoryScannerTest {
@@ -36,7 +37,15 @@ class JfrogLicenseInventoryScannerTest {
                 "pkg:maven/io.netty/netty-common@4.1.107.Final" to setOf("Apache-2.0"),
             ),
         )
-    private val inventoryScanner = JfrogLicenseInventoryScanner({ ScanPorts(records, store, scanner, database) }, OWNERSHIP)
+    private val waits = mutableListOf<Duration>()
+    private val inventoryScanner =
+        JfrogLicenseInventoryScanner(
+            { wait ->
+                waits += wait
+                ScanPorts(records, store, scanner, database)
+            },
+            OWNERSHIP,
+        )
 
     private val zipName = "$COMPONENT-$BUILD_VERSION.zip"
     private val yamlName = "$COMPONENT-config-$BUILD_VERSION.yaml"
@@ -130,7 +139,7 @@ class JfrogLicenseInventoryScannerTest {
     fun files() {
         workedExample()
 
-        val files = inventoryScanner.scan(workedTarget).releasedFiles
+        val files = inventoryScanner.scan(workedTarget, FULL_WAIT).releasedFiles
 
         assertEquals(
             listOf(
@@ -196,7 +205,7 @@ class JfrogLicenseInventoryScannerTest {
     fun packages() {
         workedExample()
 
-        val packages = inventoryScanner.scan(workedTarget).libraries
+        val packages = inventoryScanner.scan(workedTarget, FULL_WAIT).libraries
 
         assertEquals(
             listOf(
@@ -246,7 +255,7 @@ class JfrogLicenseInventoryScannerTest {
 
         assertEquals(
             listOf(Finding(NOT_SCANNABLE, "$GROUP:$COMPONENT-config:yaml", "plain file, Xray does not index this type")),
-            inventoryScanner.scan(workedTarget).findings,
+            inventoryScanner.scan(workedTarget, FULL_WAIT).findings,
         )
     }
 
@@ -260,6 +269,7 @@ class JfrogLicenseInventoryScannerTest {
 
         val inventory = inventoryScanner.scan(
             target(listOf(MavenArtifact(GROUP, COMPONENT, "zip"), MavenArtifact(GROUP, COMPONENT, "zip"))),
+            FULL_WAIT,
         )
 
         assertEquals(listOf(Finding(NOT_IN_XRAY, zipEntry, "Xray has not indexed this file")), inventory.findings)
@@ -269,7 +279,7 @@ class JfrogLicenseInventoryScannerTest {
     @Test
     @DisplayName("nothing to read: NO_DISTRIBUTION, no packages, and the license database is not asked")
     fun noDistribution() {
-        val inventory = inventoryScanner.scan(target())
+        val inventory = inventoryScanner.scan(target(), FULL_WAIT)
 
         assertEquals(listOf(NO_DISTRIBUTION), inventory.findings.map { it.code })
         assertEquals(emptyList<FoundLibrary>(), inventory.libraries)
@@ -281,18 +291,33 @@ class JfrogLicenseInventoryScannerTest {
     fun memoized() {
         workedExample()
 
-        inventoryScanner.scan(workedTarget)
+        inventoryScanner.scan(workedTarget, FULL_WAIT)
 
         assertEquals(records.asked.distinct(), records.asked)
         assertEquals(store.asked.distinct(), store.asked)
         assertEquals(scanner.asked.distinct(), scanner.asked)
 
         val asked = scanner.asked.size
-        inventoryScanner.scan(workedTarget)
+        inventoryScanner.scan(workedTarget, FULL_WAIT)
         assertEquals(2 * asked, scanner.asked.size)
+    }
+
+    @Test
+    @DisplayName("each scan's ports wait for Xray as long as that scan's caller asked: none for a quick check")
+    fun waitPerScan() {
+        workedExample()
+
+        inventoryScanner.scan(workedTarget, Duration.ZERO)
+        inventoryScanner.scan(workedTarget, FULL_WAIT)
+
+        assertEquals(listOf(Duration.ZERO, FULL_WAIT), waits)
     }
 
     private fun pkg(nameAtVersion: String) =
         org.octopusden.octopus.license.inventory.model.PackageId
             .parse("pkg:maven/$nameAtVersion")
+
+    private companion object {
+        val FULL_WAIT: Duration = Duration.ofMinutes(5)
+    }
 }

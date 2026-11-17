@@ -26,6 +26,7 @@ class BitbucketLicensePolicySourceTest {
     private val files = mutableMapOf<String, String>()
     private var heads = ArrayDeque(listOf(COMMIT))
     private var failure: Pair<Int, String>? = null
+    private var filesPerPage = Int.MAX_VALUE
     private lateinit var server: HttpServer
 
     @BeforeEach
@@ -35,7 +36,7 @@ class BitbucketLicensePolicySourceTest {
             createContext("/") { exchange ->
                 val path = exchange.requestURI.path
                 requests += path
-                val (status, body, type) = answer(path)
+                val (status, body, type) = answer(path, exchange.requestURI.query.orEmpty())
                 val bytes = body.toByteArray()
                 exchange.responseHeaders.add("Content-Type", type)
                 exchange.sendResponseHeaders(status, bytes.size.toLong())
@@ -48,7 +49,10 @@ class BitbucketLicensePolicySourceTest {
     @AfterEach
     fun stopBitbucket() = server.stop(0)
 
-    private fun answer(path: String): Triple<Int, String, String> {
+    private fun answer(
+        path: String,
+        query: String,
+    ): Triple<Int, String, String> {
         failure?.let { (status, body) -> return Triple(status, body, JSON) }
         return when {
             path == "$REPO/commits" && heads.isEmpty() -> Triple(OK, page(""), JSON)
@@ -56,11 +60,26 @@ class BitbucketLicensePolicySourceTest {
                 val head = if (heads.size > 1) heads.removeFirst() else heads.first()
                 Triple(OK, page("""{"id":"$head","message":"m","author":{"name":"a"},"authorTimestamp":0,"parents":[]}"""), JSON)
             }
-            path == "$REPO/files" -> Triple(OK, page(files.keys.joinToString(",") { "\"$it\"" }), JSON)
+            path == "$REPO/files" -> Triple(OK, filesPage(query), JSON)
             path.startsWith("$REPO/raw/") ->
                 files[path.removePrefix("$REPO/raw/")]?.let { Triple(OK, it, TEXT) } ?: notFound(path)
             else -> notFound(path)
         }
+    }
+
+    /** Pages the file list the way Bitbucket does, `filesPerPage` paths at a time from `start`. */
+    private fun filesPage(query: String): String {
+        val start = Regex("(?:^|&)start=(\\d+)")
+            .find(query)
+            ?.groupValues
+            ?.get(1)
+            ?.toInt() ?: 0
+        val paths = files.keys.toList()
+        val end = minOf(start + filesPerPage, paths.size)
+        val values = paths.subList(start, end).joinToString(",") { "\"$it\"" }
+        val last = end >= paths.size
+        return """{"values":[$values],"size":${end - start},"isLastPage":$last,"start":$start,"limit":$filesPerPage,""" +
+            """"nextPageStart":${if (last) "null" else end}}"""
     }
 
     private fun notFound(path: String) =
@@ -80,6 +99,18 @@ class BitbucketLicensePolicySourceTest {
         assertEquals(LicenseVerdict.ALLOWED, policy.judge(setOf("The MIT License")).verdict)
         assertEquals(LicenseText.InRegistry("licenses/MIT.txt", "MIT text"), policy.text("MIT"))
         assertTrue(requests.contains("$REPO/raw/licenses/MIT.txt"))
+    }
+
+    @Test
+    @DisplayName("a file list longer than one page is read to its last page")
+    fun pagedFileList() {
+        filesPerPage = 2
+
+        val policy = source().load()
+
+        assertEquals(LicenseText.InRegistry("licenses/MIT.txt", "MIT text"), policy.text("MIT"))
+        assertEquals(LicenseVerdict.ALLOWED, policy.judge(setOf("The MIT License")).verdict)
+        assertTrue(policy.problems.isEmpty(), policy.problems.toString())
     }
 
     @Test

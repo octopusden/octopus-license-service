@@ -3,6 +3,8 @@ package org.octopusden.octopus.license.inventory.impl.adapter.artifactory
 import com.fasterxml.jackson.databind.ObjectMapper
 import org.octopusden.octopus.infrastructure.artifactory.client.ArtifactoryClient
 import org.octopusden.octopus.infrastructure.artifactory.client.dto.BuildInfo
+import org.octopusden.octopus.infrastructure.artifactory.client.exception.NotFoundException
+import org.octopusden.octopus.license.inventory.exception.InventorySourceUnavailableException
 import org.octopusden.octopus.license.inventory.impl.adapter.JfrogCalls
 import org.octopusden.octopus.license.inventory.impl.port.BuildRecords
 import org.octopusden.octopus.license.inventory.impl.port.data.BuildDependency
@@ -16,16 +18,16 @@ internal class ArtifactoryBuildRecords(
     private val client: ArtifactoryClient,
     private val calls: JfrogCalls,
 ) : BuildRecords {
-    // Missing and unreadable build-info both mean "no build", as the prototype reads them (D4).
-    @Suppress("TooGenericExceptionCaught", "SwallowedException")
+    // Only missing build-info is "no build"; one Artifactory cannot serve fails the scan (D13).
+    @Suppress("SwallowedException")
     override fun find(
         name: String,
         number: String,
     ): BuildRecord? =
         try {
             calls.call(JfrogCalls.ARTIFACTORY, "build $name/$number") { client.getBuildInfo(name, number, BUILD_REPO) }.buildInfo.toRecord()
-        } catch (_: RuntimeException) {
-            null
+        } catch (e: InventorySourceUnavailableException) {
+            if (e.cause is NotFoundException) null else throw e
         }
 
     override fun findByPublishedSha1(sha1: String): List<BuildRef> =

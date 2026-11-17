@@ -57,12 +57,17 @@ The summary's `trust` SHALL be null.
 
 ### Requirement: An unreachable Artifactory or Xray fails the report
 
-The service SHALL finish a report as `FAILED`, with the scan's message as its error, when Artifactory or Xray cannot be asked during the scan. No summary and no license files SHALL be kept for it.
+The service SHALL finish a report as `FAILED` when Artifactory or Xray cannot be asked during the scan, including build-info Artifactory cannot serve. As for any failed generation, the report's error SHALL point to the service log, which holds the scan's message; the message itself can carry internal URLs and is not served. No summary and no license files SHALL be kept for it.
 
 #### Scenario: Xray down
 
 - **WHEN** Xray answers every try with a server error during a scan
-- **THEN** the report is `FAILED` and its error names Xray
+- **THEN** the report is `FAILED`, its error names the report id to look up in the log, and the scan is counted `unavailable`
+
+#### Scenario: Build-info unreadable
+
+- **WHEN** Artifactory answers a build-info request with `503`, `401` or `403`
+- **THEN** the report is `FAILED` as for an unreachable Xray, not `DONE` with fewer libraries
 
 ### Requirement: Every scan is counted by its outcome
 

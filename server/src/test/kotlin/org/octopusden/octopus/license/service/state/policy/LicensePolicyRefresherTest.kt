@@ -119,6 +119,32 @@ class LicensePolicyRefresherTest {
         assertEquals(1.0, meterRegistry.find(LicensePolicyRefresher.REFRESHES_METRIC).counters().sumOf { it.count() })
     }
 
+    @Test
+    @DisplayName("an error nobody expected is counted as failed and keeps the policy, so no refresh escapes the counter")
+    fun unexpectedErrorIsCounted() {
+        refresher.refresh()
+        source.head = "c2"
+        source.broken = true
+        clock.advance(REFRESH_INTERVAL)
+        refresher.refresh()
+
+        assertEquals(1.0, refreshes("failed"))
+        assertEquals("c1", holder.current()?.policy?.commit)
+    }
+
+    @Test
+    @DisplayName("the loaded policy's problem count is published, so a skipped registry line is alertable")
+    fun problemsArePublished() {
+        assertEquals(0.0, problems())
+
+        source.malformedOverride = true
+        refresher.refresh()
+
+        assertEquals(1.0, problems())
+    }
+
+    private fun problems(): Double? = meterRegistry.find(LicensePolicyRefresher.PROBLEMS_METRIC).gauge()?.value()
+
     private fun refreshes(outcome: String): Double =
         meterRegistry
             .find(LicensePolicyRefresher.REFRESHES_METRIC)
@@ -132,6 +158,8 @@ class LicensePolicyRefresherTest {
     ) : LicensePolicySource {
         var down = false
         var invalid = false
+        var broken = false
+        var malformedOverride = false
         val calls = mutableListOf<String>()
 
         override fun headCommit(): String = answer("head") { head }
@@ -139,7 +167,8 @@ class LicensePolicyRefresherTest {
         override fun load(): LicensePolicy =
             answer("load") {
                 if (invalid) throw InvalidLicenseRegistryException("licenses-whitelist.txt names no license")
-                samplePolicy(head)
+                check(!broken) { "an error nobody expected" }
+                samplePolicy(head, overrides = if (malformedOverride) "org.example--sample-lib=MIT" else "")
             }
 
         private fun <T> answer(
@@ -169,13 +198,16 @@ class LicensePolicyRefresherTest {
     companion object {
         val REFRESH_INTERVAL: Duration = Duration.ofMinutes(15)
 
-        fun samplePolicy(commit: String): LicensePolicy =
+        fun samplePolicy(
+            commit: String,
+            overrides: String = "",
+        ): LicensePolicy =
             LicenseRegistryParser.parse(
                 mapOf(
                     "licenses-whitelist.txt" to "Apache-2.0|MIT",
                     "licenses-hidden.txt" to "",
                     "merges.txt" to "",
-                    "thirdparty-licenses.properties" to "",
+                    "thirdparty-licenses.properties" to overrides,
                     "licenses.properties" to "",
                 ),
                 commit,

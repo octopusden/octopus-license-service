@@ -13,6 +13,7 @@ import org.octopusden.octopus.license.policy.impl.BitbucketLicensePolicySource
 import org.octopusden.octopus.license.target.impl.RegistryLicenseTargetResolver
 import org.octopusden.octopus.license.target.model.TargetResolution
 import java.io.File
+import java.time.Duration
 
 /**
  * Resolves, scans and evaluates every component of a prototype output directory against the real
@@ -75,7 +76,8 @@ class PrototypeParityTest {
                         when (val resolution = resolver.resolve(name, version)) {
                             is TargetResolution.Excluded -> Result(name, listOf("excluded by the service: ${resolution.reason}"))
                             is TargetResolution.Resolved -> {
-                                val inventory = scanner.scan(resolution.target)
+                                // A FULL report's wait: the prototype reads Xray's scan as complete.
+                                val inventory = scanner.scan(resolution.target, Duration.ofMinutes(5))
                                 val evaluation =
                                     EvaluationParityDiff.diff(
                                         EvaluationParityView.ofPrototype(component),

@@ -77,6 +77,13 @@
 - [x] 5a.2 `ComponentsRegistryServiceProperties`, `BitbucketProperties`, `ArtifactoryProperties`; `LicenseServiceProperties` keeps only the service's own values (`xray` replaces `jfrog`); `application.yaml`, `bootstrap-dev.yml`, the API tests' properties, TD-001.
 - [x] 5a.3 Confirm `:license-service:test` green: 72; `ktlintCheck` and `detekt` clean.
 
+## 5b. Merged with the scan's review changes (added on review)
+
+- [x] 5b.1 `LicenseInventoryScanner.scan(target, xrayWait)`: the generator maps the report mode to the wait, `FULL` → `license-service.xray.scan-timeout`, `CHECK` → none. `EvaluatingLicenseReportGeneratorTest.xrayWaitByMode`. The scanner bean no longer takes a wait.
+- [x] 5b.2 A failed report's error points to the service log, as #4's failure path now does; `LicenseReportApiTest` and the spec say so. Unreadable build-info fails the report like an unreachable Xray (spec scenario).
+- [x] 5b.3 `Ownership` keeps `isOurs` and takes the scan's boundary rule for internal groups; no test here relied on a bare prefix.
+- [x] 5b.4 Docs: the Xray wait is chosen per request; `NOT_SCANNED` is waited for.
+
 ## 6. Parity, end to end (Decision 11)
 
 - [x] 6.1 `:license-inventory`: `java-test-fixtures`; move `ParityView` and `ParityDiff` into `testFixtures`, unchanged; its `test` and `parityTest` still compile and pass. The fixtures take the Artifactory client for Jackson, as `parityTest` does. `:license-inventory:test` 201 green.

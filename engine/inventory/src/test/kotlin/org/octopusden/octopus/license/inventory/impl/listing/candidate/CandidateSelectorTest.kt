@@ -79,6 +79,17 @@ class CandidateSelectorTest {
     }
 
     @Test
+    @DisplayName("a pattern-selected signature or checksum of another file is METADATA, by its last extension (D11)")
+    fun metadataOfAnotherFile() {
+        val selector = CandidateSelector(target(patterns = listOf(pattern)))
+
+        listOf("jar.asc", "zip.md5", "pom.sha1", "jar.sha256").forEach {
+            assertEquals(FileStatus.METADATA, selector.select(maven(extension = it)).skip, it)
+        }
+        assertEquals(null, selector.select(maven(extension = "tar.gz")).skip)
+    }
+
+    @Test
     @DisplayName("a pattern-selected sources, javadoc or test jar is METADATA")
     fun metadataByClassifier() {
         val selector = CandidateSelector(target(patterns = listOf(pattern)))
