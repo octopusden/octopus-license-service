@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.Timeout
 import org.octopusden.octopus.license.client.LicenseServiceClient
 import org.octopusden.octopus.license.core.dto.LicenseReport
 import org.octopusden.octopus.license.core.dto.LicenseReportMode
@@ -24,6 +25,7 @@ import java.time.Duration
 import java.time.Instant
 import java.time.ZoneId
 import java.time.ZoneOffset
+import java.util.concurrent.CountDownLatch
 
 class LicenseReportRunnerTest {
     private val clock = SteppingClock()
@@ -82,7 +84,8 @@ class LicenseReportRunnerTest {
         val client = ScriptedClient(pollAnswers = listOf(status(RUNNING)))
 
         assertInstanceOf(RunOutcome.Unavailable::class.java, runner(client).run(COMPONENT, VERSION))
-        assertEquals(TIMEOUT.dividedBy(POLL_INTERVAL).toInt(), client.polls)
+        // Polls at 5 s .. 55 s; the one that would start at 60 s is on the deadline and does not start.
+        assertEquals(TIMEOUT.dividedBy(POLL_INTERVAL).toInt() - 1, client.polls)
     }
 
     @Test
@@ -122,6 +125,72 @@ class LicenseReportRunnerTest {
 
         assertInstanceOf(RunOutcome.Finished::class.java, runner(client).run(COMPONENT, VERSION))
         assertEquals(2, client.starts)
+    }
+
+    @Test
+    @Timeout(5)
+    @DisplayName("a report the service keeps forgetting is started again only until --timeout, with a pause between starts")
+    fun repeatedRestartsStopAtTimeout() {
+        val client = ScriptedClient(pollAnswers = listOf(notFound()))
+
+        assertInstanceOf(RunOutcome.Unavailable::class.java, runner(client).run(COMPONENT, VERSION))
+        assertTrue(client.starts <= TIMEOUT.dividedBy(POLL_INTERVAL).toInt() + 1, "started ${client.starts} times")
+    }
+
+    @Test
+    @DisplayName("no call starts once --timeout is used up, however long the previous call took")
+    fun noCallAfterDeadline() {
+        val slowPoll: () -> LicenseReport = {
+            clock.advance(Duration.ofMinutes(2))
+            LicenseReport(REPORT_ID, COMPONENT, VERSION, RUNNING)
+        }
+        val client = ScriptedClient(pollAnswers = listOf(slowPoll))
+
+        assertInstanceOf(RunOutcome.Unavailable::class.java, runner(client).run(COMPONENT, VERSION))
+        assertEquals(1, client.polls)
+    }
+
+    @Test
+    @DisplayName("a 404 that arrives after --timeout starts no new report")
+    fun late404StartsNothing() {
+        val client = ScriptedClient(pollAnswers = listOf(afterTwoMinutes(notFound())))
+
+        assertInstanceOf(RunOutcome.Unavailable::class.java, runner(client).run(COMPONENT, VERSION))
+        assertEquals(1, client.starts)
+    }
+
+    @Test
+    @DisplayName("a DONE that arrives after --timeout downloads nothing")
+    fun lateDoneDownloadsNothing() {
+        val client = ScriptedClient(pollAnswers = listOf(afterTwoMinutes(status(DONE))))
+
+        assertInstanceOf(RunOutcome.Unavailable::class.java, runner(client).run(COMPONENT, VERSION))
+        assertEquals(0, client.downloads)
+    }
+
+    /** An answer that takes two minutes to arrive, longer than the one-minute [TIMEOUT]. */
+    private fun afterTwoMinutes(answer: () -> LicenseReport): () -> LicenseReport =
+        {
+            clock.advance(Duration.ofMinutes(2))
+            answer()
+        }
+
+    @Test
+    @Timeout(10)
+    @DisplayName("a call still under way at --timeout is abandoned: the run ends on time")
+    fun hangingCallIsAbandonedAtTimeout() {
+        val neverAnswers = CountDownLatch(1)
+        val client = ScriptedClient(
+            pollAnswers = listOf({
+                neverAnswers.await()
+                LicenseReport(REPORT_ID, COMPONENT, VERSION, DONE)
+            }),
+        )
+        val realTimeRunner = LicenseReportRunner(client, Duration.ZERO, Duration.ofSeconds(1), Clock.systemUTC()) {}
+        val started = System.nanoTime()
+
+        assertInstanceOf(RunOutcome.Unavailable::class.java, realTimeRunner.run(COMPONENT, VERSION))
+        assertTrue(Duration.ofNanos(System.nanoTime() - started) < Duration.ofSeconds(3), "the run waited for the hanging call")
     }
 
     @Test

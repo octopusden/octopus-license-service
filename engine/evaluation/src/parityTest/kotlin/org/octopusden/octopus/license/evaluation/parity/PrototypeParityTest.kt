@@ -47,7 +47,7 @@ class PrototypeParityTest {
             ?.map { it.trim() }
             ?.filter { it.isNotEmpty() }
             ?.toSet()
-        val resolver = RegistryLicenseTargetResolver(env("COMPONENTS_REGISTRY_URL"), emptyList())
+        val resolver = RegistryLicenseTargetResolver(env("COMPONENTS_REGISTRY_URL"), emptyList(), Duration.ofSeconds(45))
         val scanner =
             JfrogLicenseInventoryScanner(
                 env("JFROG_URL"),

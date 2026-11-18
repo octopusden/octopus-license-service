@@ -87,6 +87,14 @@ class LicenseRegistryParserTest {
     }
 
     @Test
+    @DisplayName("a name on two merges.txt lines is a problem even when both lines have the same canonical name")
+    fun nameOnTwoLinesOfTheSameCanonicalName() {
+        val policy = policy(registryFiles(merges = "MIT|one\nMIT|two"))
+        assertEquals(listOf("MIT"), policy.judge(setOf("two")).licenses)
+        assertEquals(1, policy.problems.size)
+    }
+
+    @Test
     @DisplayName("an override key without three -- parts is a problem, and the other overrides apply")
     fun overrideKeyWithoutVersion() {
         val policy = policy(registryFiles(overrides = "org.example--sample-lib=MIT\norg.example--other-lib--1.0=MIT"))

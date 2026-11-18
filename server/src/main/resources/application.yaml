@@ -30,6 +30,7 @@ license-service:
   generation-threads: 4
   max-queued-reports: 50
   max-stored-bytes: 512MB
+  components-registry-deadline: PT45S
   # The systems read are configured under the keys every service shares: components-registry-service.url,
   # bitbucket.host and artifactory.url in Spring Cloud Config's application.yml, bitbucket.token and
   # artifactory.token from Vault. Without any of them the service does not start.

@@ -29,9 +29,10 @@ internal object DistributionParser {
             return Unsupported(entry, "a file share or URL, not a Maven artifact")
         }
         val parts = entry.split(':')
-        return when (parts.size) {
-            3 -> MavenArtifact(parts[0], parts[1], parts[2])
-            4 -> MavenArtifact(parts[0], parts[1], parts[2], parts[3])
+        return when {
+            parts.any { it.isBlank() } -> Unsupported(entry, "a group, artifact, extension or classifier is empty")
+            parts.size == 3 -> MavenArtifact(parts[0], parts[1], parts[2])
+            parts.size == 4 -> MavenArtifact(parts[0], parts[1], parts[2], parts[3])
             else -> Unsupported(entry, "expected group:artifact:extension[:classifier]")
         }
     }
