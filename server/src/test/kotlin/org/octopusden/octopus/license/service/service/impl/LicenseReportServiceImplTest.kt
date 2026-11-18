@@ -11,8 +11,12 @@ import org.octopusden.octopus.license.core.dto.LicenseReportMode
 import org.octopusden.octopus.license.core.dto.LicenseReportRequest
 import org.octopusden.octopus.license.core.dto.LicenseReportSummary
 import org.octopusden.octopus.license.core.exception.ServiceBusyException
+import org.octopusden.octopus.license.policy.model.LicensePolicy
 import org.octopusden.octopus.license.service.service.GeneratedReport
 import org.octopusden.octopus.license.service.service.LicenseReportGenerator
+import org.octopusden.octopus.license.service.state.policy.LicensePolicyHolder
+import org.octopusden.octopus.license.service.state.policy.LicensePolicyRefresherTest
+import org.octopusden.octopus.license.service.state.policy.LoadedPolicy
 import org.octopusden.octopus.license.service.state.report.LicenseReportStore
 import org.octopusden.octopus.license.target.LicenseTargetResolver
 import org.octopusden.octopus.license.target.model.ComponentVersion
@@ -35,11 +39,17 @@ class LicenseReportServiceImplTest {
         override fun generate(
             target: LicenseTarget,
             mode: LicenseReportMode,
+            policy: LicensePolicy,
         ) = GeneratedReport(
             LicenseReportSummary(GenerationInputs(null, Instant.EPOCH, "test"), null, emptyMap(), emptyList()),
             byteArrayOf(),
         )
     }
+
+    private val policyHolder =
+        LicensePolicyHolder().apply {
+            replace(LoadedPolicy(LicensePolicyRefresherTest.samplePolicy("c1"), Instant.EPOCH))
+        }
 
     private val resolver = object : LicenseTargetResolver {
         override fun resolve(
@@ -70,7 +80,7 @@ class LicenseReportServiceImplTest {
             }
             throw TaskRejectedException("queue full")
         }
-        service = LicenseReportServiceImpl(store, generator, resolver, fullExecutor, clock, SimpleMeterRegistry())
+        service = LicenseReportServiceImpl(store, generator, resolver, policyHolder, fullExecutor, clock, SimpleMeterRegistry())
 
         assertThrows<ServiceBusyException> { service.start(REQUEST) }
 

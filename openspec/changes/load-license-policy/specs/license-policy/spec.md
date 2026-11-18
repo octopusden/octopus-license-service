@@ -18,6 +18,8 @@ The service SHALL read the license policy from the default branch of the license
 - **WHEN** the branch head changes between the start and the end of a load
 - **THEN** the load starts over, and the policy holds the files of a single commit
 
+A branch that moves away and is reset to the same commit inside one load is not detected: the head is the same at both checks. This is a known limit until the files are read at the commit (`TD-001`).
+
 #### Scenario: No whitelist
 
 - **WHEN** the registry has no `licenses-whitelist.txt`, or it names no license
