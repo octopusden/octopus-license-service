@@ -163,6 +163,12 @@
 - [x] 6a.3 `PackageDependencyTest`: `component` and `file` never import each other; `shared` imports neither.
 - [x] 6a.4 Confirm: `:license-trust:check` green, 100 tests; `parityTest` compiles; the server, which uses only `TrustGrader` and `model`, compiles unchanged.
 
+## 6b. Hold the seams with the scan and the evaluation (added on review)
+
+- [x] 6b.1 Checked against the scan's and the evaluation's changes: trust reads "third party", `UNIDENTIFIED`, the package types, `READ` and its evidence, and the findings exactly as they define them; nothing contradicts them.
+- [x] 6b.2 `EvaluatedTrustTest`: the real `LicenseEvaluator`, then `TrustGrader`, with a `python` label. Python only the image scan found is skipped, so `ECOSYSTEM_NOT_DETECTED`; Python declared in an SBOM or a build record is counted, so no reason. 2 green; recorded in design Decision 4.
+- [x] 6b.3 Design risk: a regular build's `CHECK` report does not wait for Xray, so a freshly uploaded file is often `BUILD_LIST_ONLY` (LOW). Accepted, with where the fix would go if it turns out to be noise.
+
 ## 7. Finalization
 
 - [x] 7.1 Run `./gradlew build qualityCheck` and confirm it is green. Green, every module.
