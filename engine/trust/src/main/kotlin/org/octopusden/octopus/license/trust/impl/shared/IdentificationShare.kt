@@ -1,4 +1,4 @@
-package org.octopusden.octopus.license.trust.impl
+package org.octopusden.octopus.license.trust.impl.shared
 
 /**
  * When a share of third-party libraries is too many to trust. One place, so the component and each file

@@ -1,7 +1,9 @@
-package org.octopusden.octopus.license.trust.impl
+package org.octopusden.octopus.license.trust.impl.component.rule
 
 import org.octopusden.octopus.license.inventory.model.Evidence
 import org.octopusden.octopus.license.inventory.model.ReleasedFile
+import org.octopusden.octopus.license.trust.impl.component.ComponentRule
+import org.octopusden.octopus.license.trust.impl.shared.GradingSubject
 import org.octopusden.octopus.license.trust.model.TrustReason
 import org.octopusden.octopus.license.trust.model.TrustReasonCode
 

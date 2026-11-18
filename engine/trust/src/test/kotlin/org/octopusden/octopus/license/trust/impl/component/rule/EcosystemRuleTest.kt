@@ -1,4 +1,4 @@
-package org.octopusden.octopus.license.trust.impl
+package org.octopusden.octopus.license.trust.impl.component.rule
 
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.DisplayName
@@ -10,6 +10,7 @@ import org.octopusden.octopus.license.inventory.model.FileStatus
 import org.octopusden.octopus.license.trust.CONFIG
 import org.octopusden.octopus.license.trust.assessment
 import org.octopusden.octopus.license.trust.file
+import org.octopusden.octopus.license.trust.impl.shared.GradingSubject
 import org.octopusden.octopus.license.trust.lib
 import org.octopusden.octopus.license.trust.libs
 import org.octopusden.octopus.license.trust.model.TrustReasonCode.ECOSYSTEM_NOT_DETECTED

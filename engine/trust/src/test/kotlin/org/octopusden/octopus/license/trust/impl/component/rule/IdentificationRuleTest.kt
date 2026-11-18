@@ -1,4 +1,4 @@
-package org.octopusden.octopus.license.trust.impl
+package org.octopusden.octopus.license.trust.impl.component.rule
 
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.DisplayName
@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test
 import org.octopusden.octopus.license.evaluation.model.AssessedLibrary
 import org.octopusden.octopus.license.evaluation.model.LibraryVerdict
 import org.octopusden.octopus.license.trust.assessment
+import org.octopusden.octopus.license.trust.impl.shared.GradingSubject
 import org.octopusden.octopus.license.trust.libs
 import org.octopusden.octopus.license.trust.model.TrustReasonCode.UNIDENTIFIED_BINARIES
 import org.octopusden.octopus.license.trust.model.TrustReasonCode.UNKNOWN_LICENSES

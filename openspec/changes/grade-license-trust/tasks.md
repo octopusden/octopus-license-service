@@ -156,6 +156,13 @@
   - [x] 6.4.2 Two components failed in the scan, not in trust. Artifactory's checksum lookup for seven of our jars in one component and one in another answered differently from one minute to the next. In the first run the prototype found a stored copy and named them while the service did not; in a rerun of those two a few minutes later it was the other way round; asked directly in between, Artifactory had no copy under either token. One of the two was the same on the rerun. Trust was the same in both runs regardless. The algorithms agree; the parity check reads a moving Artifactory, as the evaluation's 6.4.2a saw with Xray.
   - [ ] 6.4.3 The full run over every external component: optional, before rollout, as in the evaluation's 6.4.3.
 
+## 6a. Group the module by role (added on review)
+
+- [x] 6a.1 `impl/` grouped as the inventory's is: `shared/` (`GradingSubject`, `IdentificationShare`), `component/` (`ComponentRule`, the new `ComponentGrader`) with the five rules under `component/rule/`, and `file/` (`FileGrader`). Tests moved with their classes. `GradingSubject` and `ComponentRule` stay under `impl/` and `internal`: outside it is the module's public surface, and no caller needs them.
+- [x] 6a.2 `ComponentGrader` takes the rule order and the duplicate removal out of `TrustGrader`, which now only wires the subject and the two graders. `ComponentGraderTest`: the order and the duplicates; the duplicates test moved there from `TrustGraderTest`.
+- [x] 6a.3 `PackageDependencyTest`: `component` and `file` never import each other; `shared` imports neither.
+- [x] 6a.4 Confirm: `:license-trust:check` green, 100 tests; `parityTest` compiles; the server, which uses only `TrustGrader` and `model`, compiles unchanged.
+
 ## 7. Finalization
 
 - [x] 7.1 Run `./gradlew build qualityCheck` and confirm it is green. Green, every module.

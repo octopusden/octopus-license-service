@@ -1,9 +1,11 @@
-package org.octopusden.octopus.license.trust.impl
+package org.octopusden.octopus.license.trust.impl.file
 
 import org.octopusden.octopus.license.evaluation.model.LibraryVerdict
 import org.octopusden.octopus.license.inventory.model.Evidence
 import org.octopusden.octopus.license.inventory.model.FileStatus
 import org.octopusden.octopus.license.inventory.model.ReleasedFile
+import org.octopusden.octopus.license.trust.impl.shared.GradingSubject
+import org.octopusden.octopus.license.trust.impl.shared.IdentificationShare
 import org.octopusden.octopus.license.trust.model.FileTrust
 import org.octopusden.octopus.license.trust.model.TrustReasonCode
 

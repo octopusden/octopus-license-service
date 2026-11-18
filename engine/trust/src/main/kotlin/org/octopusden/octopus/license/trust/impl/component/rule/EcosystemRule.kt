@@ -1,5 +1,7 @@
-package org.octopusden.octopus.license.trust.impl
+package org.octopusden.octopus.license.trust.impl.component.rule
 
+import org.octopusden.octopus.license.trust.impl.component.ComponentRule
+import org.octopusden.octopus.license.trust.impl.shared.GradingSubject
 import org.octopusden.octopus.license.trust.model.TrustReason
 import org.octopusden.octopus.license.trust.model.TrustReasonCode
 

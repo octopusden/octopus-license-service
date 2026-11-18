@@ -37,6 +37,14 @@ class PackageDependencyTest {
     }
 
     @Test
+    @DisplayName("the component and the file grading meet only in shared: neither imports the other")
+    fun gradersApart() {
+        assertEquals(emptyList<String>(), forbiddenImports(sources("impl/component"), listOf("$base.impl.file")))
+        assertEquals(emptyList<String>(), forbiddenImports(sources("impl/file"), listOf("$base.impl.component")))
+        assertEquals(emptyList<String>(), forbiddenImports(sources("impl/shared"), listOf("$base.impl.component", "$base.impl.file")))
+    }
+
+    @Test
     @DisplayName("nothing reaches a system, the wire, Spring, or how the assessment is made")
     fun pure() {
         assertEquals(

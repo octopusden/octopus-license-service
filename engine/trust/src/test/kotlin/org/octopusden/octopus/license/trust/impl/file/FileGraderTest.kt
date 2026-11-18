@@ -1,4 +1,4 @@
-package org.octopusden.octopus.license.trust.impl
+package org.octopusden.octopus.license.trust.impl.file
 
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.DisplayName
@@ -16,6 +16,7 @@ import org.octopusden.octopus.license.trust.IMAGE
 import org.octopusden.octopus.license.trust.ZIP
 import org.octopusden.octopus.license.trust.assessment
 import org.octopusden.octopus.license.trust.file
+import org.octopusden.octopus.license.trust.impl.shared.GradingSubject
 import org.octopusden.octopus.license.trust.libs
 import org.octopusden.octopus.license.trust.model.TrustReasonCode
 import org.octopusden.octopus.license.trust.model.TrustReasonCode.BUILD_LIST_ONLY

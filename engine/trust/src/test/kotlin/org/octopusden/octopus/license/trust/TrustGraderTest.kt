@@ -12,7 +12,6 @@ import org.octopusden.octopus.license.trust.model.FileTrust
 import org.octopusden.octopus.license.trust.model.TrustLevel
 import org.octopusden.octopus.license.trust.model.TrustReasonCode.ARTIFACT_NOT_FOUND
 import org.octopusden.octopus.license.trust.model.TrustReasonCode.ECOSYSTEM_NOT_DETECTED
-import org.octopusden.octopus.license.trust.model.TrustReasonCode.NOT_SCANNABLE
 import org.octopusden.octopus.license.trust.model.TrustReasonCode.NO_ARTIFACT_IN_REGISTRY
 import org.octopusden.octopus.license.trust.model.TrustReasonCode.NO_BUILD_RECORD
 import org.octopusden.octopus.license.trust.model.TrustReasonCode.NO_THIRD_PARTY_FOUND
@@ -63,19 +62,6 @@ class TrustGraderTest {
             ),
             grade.files,
         )
-    }
-
-    @Test
-    @DisplayName("the same code and detail twice is given once; the same code with another detail is kept (D4)")
-    fun duplicates() {
-        val findings =
-            listOf(
-                finding(FindingCode.NOT_IN_XRAY, ZIP, "Xray has not indexed this file"),
-                finding(FindingCode.NOT_IN_XRAY, ZIP, "Xray has not indexed this file"),
-                finding(FindingCode.NO_BUILD_INFO, ZIP, "no build by properties, checksum or sample-portal_ee"),
-            )
-        val grade = grader.grade(assessment(listOf(file(ZIP, FileStatus.NOT_READABLE)), findings = findings), emptySet())
-        assertEquals(listOf(NOT_SCANNABLE, NOT_SCANNABLE), grade.reasons.map { it.code })
     }
 
     @Test

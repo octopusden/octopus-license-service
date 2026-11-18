@@ -1,13 +1,9 @@
 package org.octopusden.octopus.license.trust
 
 import org.octopusden.octopus.license.evaluation.model.LicenseAssessment
-import org.octopusden.octopus.license.trust.impl.CoverageRule
-import org.octopusden.octopus.license.trust.impl.EcosystemRule
-import org.octopusden.octopus.license.trust.impl.EmptyContentRule
-import org.octopusden.octopus.license.trust.impl.FileGrader
-import org.octopusden.octopus.license.trust.impl.GradingSubject
-import org.octopusden.octopus.license.trust.impl.IdentificationRule
-import org.octopusden.octopus.license.trust.impl.SourceRule
+import org.octopusden.octopus.license.trust.impl.component.ComponentGrader
+import org.octopusden.octopus.license.trust.impl.file.FileGrader
+import org.octopusden.octopus.license.trust.impl.shared.GradingSubject
 import org.octopusden.octopus.license.trust.model.TrustGrade
 
 /**
@@ -23,13 +19,8 @@ class TrustGrader {
     ): TrustGrade {
         val subject = GradingSubject.of(assessment, labels)
         return TrustGrade(
-            reasons = RULES.flatMap { it.reasons(subject) }.distinct(),
+            reasons = ComponentGrader.reasons(subject),
             files = subject.selected.map { FileGrader.grade(it, subject) },
         )
-    }
-
-    private companion object {
-        // The prototype's order; the reasons are listed in it (D4).
-        val RULES = listOf(CoverageRule, EmptyContentRule, EcosystemRule, SourceRule, IdentificationRule)
     }
 }

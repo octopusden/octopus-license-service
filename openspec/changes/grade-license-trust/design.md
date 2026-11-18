@@ -83,26 +83,32 @@ flowchart TD
 
 ## Classes and their responsibilities
 
-Everything is in package `org.octopusden.octopus.license.trust`, and everything under `impl/` is `internal`.
+Everything is in package `org.octopusden.octopus.license.trust`, and everything under `impl/` is `internal`: outside `impl/` is what the server may use. Inside, `impl/` is grouped by role, as the inventory's is: what both graders read, the component's grading, the file's grading.
 
 ```
-TrustGrader                  public · grade(assessment, labels): TrustGrade · orchestration only
-├─ model/                    public · TrustGrade, TrustReason, TrustReasonCode, TrustLevel, FileTrust
+TrustGrader                      public · grade(assessment, labels): TrustGrade · wiring only
+├─ model/                        public · TrustGrade, TrustReason, TrustReasonCode, TrustLevel, FileTrust
 └─ impl/
-   ├─ GradingSubject         pure · the facts every rule reads, computed once from the assessment
-   ├─ ComponentRule          fun interface · reasons(subject): List<TrustReason>
-   ├─ CoverageRule           was every selected file covered? (NOT_ANALYSED_TYPES, PARTIAL_ARTIFACTS)
-   ├─ EmptyContentRule       read, yet no third-party library? (NO_THIRD_PARTY_FOUND)
-   ├─ EcosystemRule          a labelled language missing, or a type only an SBOM lists? (ECOSYSTEM_NOT_DETECTED, FULL_LIST_UNAVAILABLE)
-   ├─ SourceRule             which sources saw inside the read files? (NO_BUILD_RECORD, BUILD_LIST_ONLY)
-   ├─ IdentificationRule     too many unnamed or unlicensed? (UNIDENTIFIED_BINARIES, UNKNOWN_LICENSES)
-   ├─ IdentificationShare    pure · the two thresholds, shared by IdentificationRule and FileGrader
-   └─ FileGrader             one released file's level and codes (assess_artifacts)
+   ├─ shared/                    what both graders read
+   │  ├─ GradingSubject          pure · the facts every rule reads, computed once from the assessment
+   │  └─ IdentificationShare     pure · the two thresholds, for the component and for each file
+   ├─ component/                 the component's reasons
+   │  ├─ ComponentGrader         runs the rules in the prototype's order, each reason once
+   │  ├─ ComponentRule           fun interface · reasons(subject): List<TrustReason>
+   │  └─ rule/
+   │     ├─ CoverageRule         was every selected file covered? (NOT_ANALYSED_TYPES, PARTIAL_ARTIFACTS)
+   │     ├─ EmptyContentRule     read, yet no third-party library? (NO_THIRD_PARTY_FOUND)
+   │     ├─ EcosystemRule        a labelled language missing, or a type only an SBOM lists? (ECOSYSTEM_NOT_DETECTED, FULL_LIST_UNAVAILABLE)
+   │     ├─ SourceRule           which sources saw inside the read files? (NO_BUILD_RECORD, BUILD_LIST_ONLY)
+   │     └─ IdentificationRule   too many unnamed or unlicensed? (UNIDENTIFIED_BINARIES, UNKNOWN_LICENSES)
+   └─ file/
+      └─ FileGrader              one released file's codes (assess_artifacts)
 ```
 
 | Class | Kind | One responsibility | Prototype |
 | --- | --- | --- | --- |
-| `TrustGrader` | orchestrator, pure | Builds the subject, runs the component rules in order, removes duplicate reasons, grades each file. Decides nothing itself | `assess_confidence` body, `assess_artifacts` call |
+| `TrustGrader` | orchestrator, pure | Builds the subject, asks `ComponentGrader` for the reasons and `FileGrader` for each file. Decides nothing itself | `assess_confidence` and `assess_artifacts` calls |
+| `ComponentGrader` | orchestrator, pure | Runs the component rules in order, removes duplicate reasons | `assess_confidence` body |
 | `GradingSubject` | pure value | Selected, read and covered files; third-party and counted libraries; types; whether any SBOM was seen; labels | `scanned`, `covered`, `third`, `types`, `has_sbom` |
 | `CoverageRule` | rule | Nothing covered: a reason per mapped scan finding, or `NOT_SCANNABLE`. Some covered: `PARTIAL_ARTIFACTS` | `NOT_ANALYSED_TYPES` loop, `PARTIAL_ARTIFACTS` |
 | `EmptyContentRule` | rule | Files read, no third-party library; adds the C/C++ note from the labels | `NO_THIRD_PARTY_FOUND`, `NATIVE_LABELS` |
@@ -204,7 +210,8 @@ internal fun interface ComponentRule {
 
 ### 4. Component rules: one class per question, in the prototype's order
 
-- `TrustGrader` holds `listOf(CoverageRule, EmptyContentRule, EcosystemRule, SourceRule, IdentificationRule)`. The concatenated reasons follow the prototype's order.
+- `ComponentGrader` holds `listOf(CoverageRule, EmptyContentRule, EcosystemRule, SourceRule, IdentificationRule)`. The concatenated reasons follow the prototype's order.
+- `ComponentGrader` and `FileGrader` are counterparts: one gives the component's reasons, the other a file's codes. They never import each other and meet only in `impl/shared`, so a file's codes cannot leak into the component's reasons (Decision 5).
 - Duplicate `(code, detail)` pairs are dropped, keeping the first, as the prototype's `reason()` does.
 - A rule returns reasons and never a level.
 - Each detail string is the prototype's, character for character, apart from the "license" spelling:
@@ -296,7 +303,8 @@ enum class TrustReasonCode { … }   // the engine's eleven, same names
 
 - A `PackageDependencyTest` in `:license-trust` checks that:
   - `model` imports nothing from `impl`;
-  - nothing imports a client, Spring, `core`, `java.io` or `java.net`, or the `impl` of the evaluation, the inventory or the policy.
+  - nothing imports a client, Spring, `core`, `java.io` or `java.net`, or the `impl` of the evaluation, the inventory or the policy;
+  - `impl/component` and `impl/file` never import each other, and `impl/shared` imports neither.
 
 ## Out of Scope
 

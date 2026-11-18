@@ -1,4 +1,4 @@
-package org.octopusden.octopus.license.trust.impl
+package org.octopusden.octopus.license.trust.impl.shared
 
 import org.octopusden.octopus.license.evaluation.model.AssessedLibrary
 import org.octopusden.octopus.license.evaluation.model.LibraryVerdict
