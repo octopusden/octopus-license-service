@@ -169,6 +169,12 @@
 - [x] 6b.2 `EvaluatedTrustTest`: the real `LicenseEvaluator`, then `TrustGrader`, with a `python` label. Python only the image scan found is skipped, so `ECOSYSTEM_NOT_DETECTED`; Python declared in an SBOM or a build record is counted, so no reason. 2 green; recorded in design Decision 4.
 - [x] 6b.3 Design risk: a regular build's `CHECK` report does not wait for Xray, so a freshly uploaded file is often `BUILD_LIST_ONLY` (LOW). Accepted, with where the fix would go if it turns out to be noise.
 
+## 6c. Merge the evaluation's review changes (added on review)
+
+- [x] 6c.1 Merged the latest evaluation branch, which brought the scan's and the evaluation's review fixes and `PARITY_ACCEPTED`. No textual conflict.
+- [x] 6c.2 Two follow-ups: the trust parity check reads `PARITY_ACCEPTED` as the evaluation's does, and passes the resolver its new lookup timeout; `LicenseReportServiceImplTest`, new on that branch, built a summary with `trust = null`, which the contract no longer allows, so it uses a `HIGH` trust with no reasons.
+- [x] 6c.3 Confirm: `./gradlew build qualityCheck` green on the merged branch, 661 tests, 0 skipped.
+
 ## 7. Finalization
 
 - [x] 7.1 Run `./gradlew build qualityCheck` and confirm it is green. Green, every module.

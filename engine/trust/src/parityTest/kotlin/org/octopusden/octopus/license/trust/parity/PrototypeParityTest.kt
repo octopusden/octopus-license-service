@@ -10,6 +10,7 @@ import org.octopusden.octopus.license.evaluation.parity.EvaluationParityDiff
 import org.octopusden.octopus.license.evaluation.parity.EvaluationParityView
 import org.octopusden.octopus.license.inventory.impl.JfrogLicenseInventoryScanner
 import org.octopusden.octopus.license.inventory.model.OwnershipRules
+import org.octopusden.octopus.license.inventory.parity.ParityAccepted
 import org.octopusden.octopus.license.inventory.parity.ParityDiff
 import org.octopusden.octopus.license.inventory.parity.ParityView
 import org.octopusden.octopus.license.policy.impl.BitbucketLicensePolicySource
@@ -28,7 +29,8 @@ import java.time.Duration
  *
  * Environment: the evaluation's (`PROTOTYPE_RUN_DIR`, `COMPONENTS_REGISTRY_URL`, `JFROG_URL`,
  * `JFROG_TOKEN`, `INTERNAL_GROUPS`, `OWN_REPOSITORY_PREFIXES`, `BITBUCKET_URL`, `BITBUCKET_TOKEN`,
- * `LICENSE_REGISTRY_PROJECT`, `LICENSE_REGISTRY_REPOSITORY`, optionally `PARITY_COMPONENTS`).
+ * `LICENSE_REGISTRY_PROJECT`, `LICENSE_REGISTRY_REPOSITORY`, optionally `PARITY_COMPONENTS` and
+ * `PARITY_ACCEPTED`, whose differences are reported as accepted and fail nothing).
  */
 class PrototypeParityTest {
     private fun env(name: String) = requireNotNull(System.getenv(name)?.takeIf { it.isNotBlank() }) { "$name is not set" }
@@ -41,14 +43,23 @@ class PrototypeParityTest {
      */
     private class Result(
         val component: String,
-        val differences: List<String>,
+        val differences: List<Pair<String, String?>>,
         val policyRules: List<String> = emptyList(),
         val deliberate: List<String> = emptyList(),
         val followsFromEvaluation: List<String> = emptyList(),
         val trust: String = "",
-    )
+    ) {
+        val unaccepted = differences.count { it.second == null }
 
-    private val resolver by lazy { RegistryLicenseTargetResolver(env("COMPONENTS_REGISTRY_URL"), emptyList()) }
+        fun summary() =
+            when {
+                differences.isEmpty() -> "same"
+                unaccepted == 0 -> "${differences.size} accepted"
+                else -> "$unaccepted difference(s), ${differences.size - unaccepted} accepted"
+            }
+    }
+
+    private val resolver by lazy { RegistryLicenseTargetResolver(env("COMPONENTS_REGISTRY_URL"), emptyList(), Duration.ofSeconds(45)) }
     private val scanner by lazy {
         JfrogLicenseInventoryScanner(
             env("JFROG_URL"),
@@ -76,6 +87,9 @@ class PrototypeParityTest {
                 env("LICENSE_REGISTRY_PROJECT"),
                 env("LICENSE_REGISTRY_REPOSITORY"),
             ).load()
+        val accepted =
+            System.getenv("PARITY_ACCEPTED")?.takeIf { it.isNotBlank() }?.let { ParityAccepted.parse(File(it).readLines()) }
+                ?: ParityAccepted.NONE
         val mapper = ObjectMapper()
 
         val components =
@@ -85,7 +99,7 @@ class PrototypeParityTest {
                 .filter { only == null || it.nameWithoutExtension in only }
                 .map { mapper.readTree(it) }
         val (gradable, ungradable) = components.partition(TrustParityView::gradable)
-        val results = gradable.map { compare(it, policy) }
+        val results = gradable.map { compare(it, policy, accepted) }
 
         val report = File("build/parity/report.md").apply { parentFile.mkdirs() }
         report.writeText(
@@ -95,8 +109,9 @@ class PrototypeParityTest {
                 appendLine("| Component | Result | Trust | Policy rules | Follows from evaluation |")
                 appendLine("| --- | --- | --- | --- | --- |")
                 results.forEach {
-                    val result = if (it.differences.isEmpty()) "same" else "${it.differences.size} difference(s)"
-                    appendLine("| ${it.component} | $result | ${it.trust} | ${it.policyRules.size} | ${it.followsFromEvaluation.size} |")
+                    appendLine(
+                        "| ${it.component} | ${it.summary()} | ${it.trust} | ${it.policyRules.size} | ${it.followsFromEvaluation.size} |",
+                    )
                 }
                 if (ungradable.isNotEmpty()) {
                     appendLine()
@@ -111,7 +126,9 @@ class PrototypeParityTest {
                         appendLine()
                         appendLine("## ${result.component}")
                         appendLine()
-                        result.differences.forEach { appendLine("- $it") }
+                        result.differences.forEach { (difference, reason) ->
+                            appendLine(if (reason == null) "- $difference" else "- accepted ($reason): $difference")
+                        }
                         result.policyRules.forEach { appendLine("- policy rules (evaluation D6): $it") }
                         result.deliberate.forEach { appendLine("- deliberate: $it") }
                         result.followsFromEvaluation.forEach { appendLine("- follows from evaluation: $it") }
@@ -120,19 +137,22 @@ class PrototypeParityTest {
         )
         assertEquals(
             emptyList<String>(),
-            results.filter { it.differences.isNotEmpty() }.map { it.component },
-            "components that differ, see ${report.absolutePath}",
+            results.filter { it.unaccepted > 0 }.map { it.component },
+            "components with differences not accepted, see ${report.absolutePath}",
         )
     }
 
     private fun compare(
         component: JsonNode,
         policy: LicensePolicy,
+        accepted: ParityAccepted,
     ): Result {
         val name = component.path("component").asText()
+
+        fun judged(differences: List<String>) = differences.map { it to accepted.reasonFor(name, it) }
         return runCatching {
             when (val resolution = resolver.resolve(name, component.path("version").asText())) {
-                is TargetResolution.Excluded -> Result(name, listOf("excluded by the service: ${resolution.reason}"))
+                is TargetResolution.Excluded -> Result(name, judged(listOf("excluded by the service: ${resolution.reason}")))
                 is TargetResolution.Resolved -> {
                     // A FULL report's wait: the prototype reads Xray's scan as complete.
                     val inventory = scanner.scan(resolution.target, Duration.ofMinutes(5))
@@ -146,8 +166,10 @@ class PrototypeParityTest {
                     val excused = evaluation.policyRules.isNotEmpty() || evaluation.deliberate.isNotEmpty()
                     Result(
                         name,
-                        ParityDiff.diff(ParityView.ofPrototype(component), ParityView.of(inventory)) + evaluation.others +
-                            trust.takeUnless { excused }.orEmpty(),
+                        judged(
+                            ParityDiff.diff(ParityView.ofPrototype(component), ParityView.of(inventory)) + evaluation.others +
+                                trust.takeUnless { excused }.orEmpty(),
+                        ),
                         evaluation.policyRules,
                         evaluation.deliberate,
                         trust.takeIf { excused }.orEmpty(),
@@ -155,6 +177,6 @@ class PrototypeParityTest {
                     )
                 }
             }
-        }.getOrElse { Result(name, listOf("failed: ${it.javaClass.simpleName}: ${it.message}")) }
+        }.getOrElse { Result(name, judged(listOf("failed: ${it.javaClass.simpleName}: ${it.message}"))) }
     }
 }
