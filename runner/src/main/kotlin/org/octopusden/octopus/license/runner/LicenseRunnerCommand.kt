@@ -43,7 +43,7 @@ class LicenseRunnerCommand : CliktCommand(name = "license-runner") {
         .default(Duration.ofSeconds(DEFAULT_POLL_INTERVAL_SECONDS))
     private val timeout by option(
         "--timeout",
-        help = "How long to wait for the report, such as 45m or PT45M; no call starts after it, one under way may take up to a minute more",
+        help = "How long to wait for the report, such as 45m or PT45M; a call still under way then is abandoned",
     ).convert { duration(it) }
         .default(Duration.ofMinutes(DEFAULT_TIMEOUT_MINUTES))
 
@@ -106,11 +106,19 @@ class LicenseRunnerCommand : CliktCommand(name = "license-runner") {
             Files.newDirectoryStream(outputDir, "*$ZIP_SUFFIX").use { zips -> zips.forEach(Files::delete) }
         }
 
-        /** The output directory named in [args], read without Clikt: for when Clikt could not parse them. */
+        /**
+         * The output directory named in [args], read without Clikt: for when Clikt could not parse
+         * them. The last one given wins, as it does for Clikt.
+         */
         fun outputDirIn(args: Array<String>): Path {
-            val index = args.indexOf(OUTPUT_DIR_OPTION)
-            val value = args.getOrNull(index + 1)?.takeIf { index >= 0 }
-                ?: args.firstOrNull { it.startsWith("$OUTPUT_DIR_OPTION=") }?.substringAfter("=")
+            val value = args.indices
+                .mapNotNull { i ->
+                    when {
+                        args[i] == OUTPUT_DIR_OPTION -> args.getOrNull(i + 1)
+                        args[i].startsWith("$OUTPUT_DIR_OPTION=") -> args[i].substringAfter("=")
+                        else -> null
+                    }
+                }.lastOrNull()
             return Path.of(value ?: DEFAULT_OUTPUT_DIR)
         }
     }
