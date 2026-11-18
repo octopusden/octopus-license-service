@@ -82,11 +82,42 @@ class LicenseRunnerCommandTest {
         serveDoneReportWithoutSummary()
 
         val result = LicenseRunnerCommand().test(
-            listOf("--url", serverUrl(), "--component", COMPONENT, "--version", VERSION, "--timeout", "45m", "--poll-interval", "0s"),
+            listOf(
+                "--url",
+                serverUrl(),
+                "--component",
+                COMPONENT,
+                "--version",
+                VERSION,
+                "--output-dir",
+                workDir.resolve("out").toString(),
+                "--timeout",
+                "45m",
+                "--poll-interval",
+                "0s",
+            ),
         )
 
         assertEquals(0, result.statusCode, result.stderr)
         assertTrue(result.stdout.contains("License report for $COMPONENT:$VERSION"), result.stdout)
+    }
+
+    @Test
+    @DisplayName("arguments the runner cannot read still remove the previous run's output, so it is not published again")
+    fun badArgumentsRemovePreviousOutput() {
+        val outputDir = Files.createDirectories(workDir.resolve("report-dir"))
+        val oldReport = Files.writeString(outputDir.resolve("license-report.json"), "{}")
+        val oldZip = Files.write(outputDir.resolve("$COMPONENT-0.9-licenses.zip"), byteArrayOf(1))
+        val originalOut = System.out
+        System.setOut(PrintStream(ByteArrayOutputStream(), true))
+        try {
+            main(arrayOf("--component", COMPONENT, "--version", VERSION, "--output-dir", outputDir.toString(), "--timeout", "forever"))
+        } finally {
+            System.setOut(originalOut)
+        }
+
+        assertFalse(Files.exists(oldReport))
+        assertFalse(Files.exists(oldZip))
     }
 
     @Test
@@ -96,7 +127,9 @@ class LicenseRunnerCommandTest {
         val originalOut = System.out
         System.setOut(PrintStream(output, true))
         try {
-            assertDoesNotThrow { main(arrayOf("--component", COMPONENT, "--version", VERSION, "--timeout", "forever")) }
+            assertDoesNotThrow {
+                main(arrayOf("--component", COMPONENT, "--version", VERSION, "--output-dir", workDir.toString(), "--timeout", "forever"))
+            }
         } finally {
             System.setOut(originalOut)
         }

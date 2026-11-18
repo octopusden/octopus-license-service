@@ -10,11 +10,15 @@ object Durations {
     fun parse(text: String): Duration? {
         val trimmed = text.trim()
         shortForm.matchEntire(trimmed)?.let { match ->
-            val amount = match.groupValues[1].toLong()
-            return when (match.groupValues[2]) {
-                "s" -> Duration.ofSeconds(amount)
-                "m" -> Duration.ofMinutes(amount)
-                else -> Duration.ofHours(amount)
+            val amount = match.groupValues[1].toLongOrNull() ?: return null
+            return try {
+                when (match.groupValues[2]) {
+                    "s" -> Duration.ofSeconds(amount)
+                    "m" -> Duration.ofMinutes(amount)
+                    else -> Duration.ofHours(amount)
+                }
+            } catch (_: ArithmeticException) {
+                null
             }
         }
         if (!trimmed.startsWith("P", ignoreCase = true)) return null

@@ -35,15 +35,16 @@ internal class LicenseServiceErrorDecoder(
         }
         val status = response.status()
         return when {
-            message == null && status in GATEWAY_ERRORS ->
-                ServiceUnreachableException("$methodKey answered $status from a gateway, not from the license service")
+            // The license service answers 503 always with its envelope: with Retry-After when it is busy,
+            // without when a system it reads is unavailable. Any other 502/503/504 comes from something
+            // in front of it, whatever its body.
+            status == HTTP_SERVICE_UNAVAILABLE && message != null ->
+                if (hasRetryAfter(response)) ServiceBusyException(message, retryAfter(response)) else ServiceUnavailableException(message)
+            status in GATEWAY_ERRORS -> ServiceUnreachableException("$methodKey answered $status, not from the license service")
             message == null -> default.decode(methodKey, buffered)
             status == HTTP_BAD_REQUEST -> InvalidRequestException(message)
             status == HTTP_NOT_FOUND -> NotFoundException(message)
             status == HTTP_CONFLICT -> LicenseFilesNotAvailableException(message)
-            // Only a busy service says when to come back; any other 503 is a system it reads.
-            status == HTTP_SERVICE_UNAVAILABLE ->
-                if (hasRetryAfter(response)) ServiceBusyException(message, retryAfter(response)) else ServiceUnavailableException(message)
             else -> default.decode(methodKey, buffered)
         }
     }

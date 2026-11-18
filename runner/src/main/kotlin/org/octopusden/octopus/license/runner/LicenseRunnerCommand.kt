@@ -33,7 +33,7 @@ class LicenseRunnerCommand : CliktCommand(name = "license-runner") {
     private val version by option("--version", help = "Component version").required()
     private val outputDir by option("--output-dir", help = "Where the report and the license files go")
         .path()
-        .default(Path.of("license-report"))
+        .default(Path.of(DEFAULT_OUTPUT_DIR))
     private val checkOnly by option(
         "--check-only",
         help = "Quick check on what Xray knows now, for regular builds: no wait for Xray, no license files",
@@ -41,8 +41,10 @@ class LicenseRunnerCommand : CliktCommand(name = "license-runner") {
     private val pollInterval by option("--poll-interval", help = "Time between status checks, such as 5s or PT5S")
         .convert { duration(it) }
         .default(Duration.ofSeconds(DEFAULT_POLL_INTERVAL_SECONDS))
-    private val timeout by option("--timeout", help = "How long to wait for the report, such as 45m or PT45M")
-        .convert { duration(it) }
+    private val timeout by option(
+        "--timeout",
+        help = "How long to wait for the report, such as 45m or PT45M; no call starts after it, one under way may take up to a minute more",
+    ).convert { duration(it) }
         .default(Duration.ofMinutes(DEFAULT_TIMEOUT_MINUTES))
 
     private fun OptionCallTransformContext.duration(text: String) =
@@ -74,12 +76,7 @@ class LicenseRunnerCommand : CliktCommand(name = "license-runner") {
         write(outcome)
     }
 
-    /** A reused output directory must not publish an earlier run's report as this run's result. */
-    private fun removePreviousOutput() {
-        if (!Files.isDirectory(outputDir)) return
-        Files.deleteIfExists(outputDir.resolve(REPORT_FILE))
-        Files.newDirectoryStream(outputDir, "*$ZIP_SUFFIX").use { zips -> zips.forEach(Files::delete) }
-    }
+    private fun removePreviousOutput() = removePreviousOutput(outputDir)
 
     private fun write(outcome: RunOutcome) {
         if (outcome !is RunOutcome.Finished) return
@@ -88,17 +85,34 @@ class LicenseRunnerCommand : CliktCommand(name = "license-runner") {
         outcome.files?.let { Files.write(outputDir.resolve("$component-$version$ZIP_SUFFIX"), it) }
     }
 
-    private companion object {
-        const val DEFAULT_POLL_INTERVAL_SECONDS = 5L
-        const val DEFAULT_TIMEOUT_MINUTES = 30L
-        const val REPORT_FILE = "license-report.json"
-        const val ZIP_SUFFIX = "-licenses.zip"
+    companion object {
+        const val DEFAULT_OUTPUT_DIR = "license-report"
+        private const val OUTPUT_DIR_OPTION = "--output-dir"
+        private const val DEFAULT_POLL_INTERVAL_SECONDS = 5L
+        private const val DEFAULT_TIMEOUT_MINUTES = 30L
+        private const val REPORT_FILE = "license-report.json"
+        private const val ZIP_SUFFIX = "-licenses.zip"
 
-        val jsonMapper: JsonMapper = JsonMapper
+        private val jsonMapper: JsonMapper = JsonMapper
             .builder()
             .addModule(KotlinModule.Builder().build())
             .enable(SerializationFeature.INDENT_OUTPUT)
             .build()
+
+        /** A reused output directory must not publish an earlier run's report as this run's result. */
+        fun removePreviousOutput(outputDir: Path) {
+            if (!Files.isDirectory(outputDir)) return
+            Files.deleteIfExists(outputDir.resolve(REPORT_FILE))
+            Files.newDirectoryStream(outputDir, "*$ZIP_SUFFIX").use { zips -> zips.forEach(Files::delete) }
+        }
+
+        /** The output directory named in [args], read without Clikt: for when Clikt could not parse them. */
+        fun outputDirIn(args: Array<String>): Path {
+            val index = args.indexOf(OUTPUT_DIR_OPTION)
+            val value = args.getOrNull(index + 1)?.takeIf { index >= 0 }
+                ?: args.firstOrNull { it.startsWith("$OUTPUT_DIR_OPTION=") }?.substringAfter("=")
+            return Path.of(value ?: DEFAULT_OUTPUT_DIR)
+        }
     }
 }
 
@@ -113,6 +127,7 @@ fun main(args: Array<String>) {
     } catch (e: CliktError) {
         command.echoFormattedHelp(e)
         if (e.statusCode != 0) {
+            runCatching { LicenseRunnerCommand.removePreviousOutput(LicenseRunnerCommand.outputDirIn(args)) }
             command.echo(BuildLog.render(LogLine("License runner did not run: ${e.message ?: "invalid arguments"}", warning = true)))
         }
     }
