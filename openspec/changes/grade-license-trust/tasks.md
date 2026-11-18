@@ -111,28 +111,28 @@
 
 ## 5. Wire contract, server and runner (Decisions 8, 9)
 
-- [ ] 5.1 `core`:
+- [x] 5.1 `core`:
   - `Trust(level, reasons, files)`;
   - `TrustReason(code, level, title, detail, meaning, fix)`;
   - `FileTrust(file, level, reasons)`;
   - `TrustReasonCode`;
   - `LicenseReportSummary.trust` non-null.
 
-  Update the JSON serialization tests in `core` and `client`, if any exist.
-- [ ] 5.2 Failing tests for `SummaryMapper`:
-  - [ ] 5.2.1 The grade is mapped one to one, texts included.
-  - [ ] 5.2.2 Every engine `TrustReasonCode` has a `core` counterpart of the same name, tested over `entries`.
-  - [ ] 5.2.3 Counts and violations are unchanged.
-- [ ] 5.3 Failing tests for `EvaluatingLicenseReportGenerator`: the target's labels reach the grader; the summary carries the grade.
-- [ ] 5.4 Implement:
-  - [ ] 5.4.1 The `TrustGrader` bean in `LicenseServiceConfig`.
-  - [ ] 5.4.2 `EvaluatingLicenseReportGenerator`: grade after evaluate.
-  - [ ] 5.4.3 `SummaryMapper`: map the grade.
-- [ ] 5.5 Failing tests for `BuildLog`, then implement:
-  - [ ] 5.5.1 `LOW`: the level, each reason line, files below `HIGH`, all warnings.
-  - [ ] 5.5.2 `HIGH` with no reasons: one line, not a warning.
-  - [ ] 5.5.3 `MEDIUM`: lines are not warnings. The "not computed" line is removed.
-- [ ] 5.6 Confirm `:core`, `:client`, `:license-service` and `:license-runner` tests are green.
+  Update the JSON serialization tests in `core` and `client`, if any exist. `ClassicLicenseServiceClientTest` decoded `"trust":null`, which the non-null contract now rejects; it decodes a full trust object instead.
+- [x] 5.2 Failing tests for `SummaryMapper`:
+  - [x] 5.2.1 The grade is mapped one to one, texts included.
+  - [x] 5.2.2 Every engine `TrustReasonCode` has a `core` counterpart of the same name, tested over `entries`.
+  - [x] 5.2.3 Counts and violations are unchanged.
+- [x] 5.3 Failing tests for `EvaluatingLicenseReportGenerator`: the target's labels reach the grader; the summary carries the grade.
+- [x] 5.4 Implement:
+  - [x] 5.4.1 The `TrustGrader` bean. detekt's `TooManyFunctions` stopped it joining `LicenseServiceConfig`; it and `LicenseEvaluator` moved to a new `AssessmentConfig`: the steps that read no system and take no setting, so neither can fail the start (added on review).
+  - [x] 5.4.2 `EvaluatingLicenseReportGenerator`: grade after evaluate.
+  - [x] 5.4.3 `SummaryMapper`: map the grade.
+- [x] 5.5 Failing tests for `BuildLog`, then implement:
+  - [x] 5.5.1 `LOW`: the level, each reason line, files below `HIGH`, all warnings.
+  - [x] 5.5.2 `HIGH` with no reasons: one line, not a warning.
+  - [x] 5.5.3 `MEDIUM`: lines are not warnings. The "not computed" line is removed.
+- [x] 5.6 Confirm `:core`, `:client`, `:license-service` and `:license-runner` tests are green. `:client:test` 9, `:license-service:test` 96, `:license-runner:test` 40, all green; `:core:build`, `:client:build`, `ktlintCheck` and `detekt` of the server and runner clean. The runner's exit code reads neither `trust` nor `violations`.
 
 ## 6. Parity (Decision 10)
 

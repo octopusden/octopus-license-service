@@ -3,6 +3,7 @@ package org.octopusden.octopus.license.runner
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
+import org.octopusden.octopus.license.core.dto.FileTrust
 import org.octopusden.octopus.license.core.dto.GenerationInputs
 import org.octopusden.octopus.license.core.dto.LicenseReport
 import org.octopusden.octopus.license.core.dto.LicenseReportMode
@@ -11,6 +12,7 @@ import org.octopusden.octopus.license.core.dto.LicenseReportSummary
 import org.octopusden.octopus.license.core.dto.Trust
 import org.octopusden.octopus.license.core.dto.TrustLevel
 import org.octopusden.octopus.license.core.dto.TrustReason
+import org.octopusden.octopus.license.core.dto.TrustReasonCode
 import org.octopusden.octopus.license.core.dto.Verdict
 import org.octopusden.octopus.license.core.dto.Violation
 import java.time.Instant
@@ -25,7 +27,7 @@ class BuildLogTest {
             listOf(
                 LogLine("License report for some-component:1.2.3: DONE"),
                 LogLine("Generated 2026-11-04T10:00:00Z by license service 1.0.0, license registry commit unknown"),
-                LogLine("Trust: not computed"),
+                LogLine("Trust: HIGH"),
                 LogLine("Libraries: none"),
             ),
             lines,
@@ -49,15 +51,66 @@ class BuildLogTest {
     }
 
     @Test
-    @DisplayName("Build outcome: trust LOW is a warning with its reasons and fixes")
+    @DisplayName("Build outcome: trust LOW is a warning: each reason with its detail and fix, then each file below HIGH")
     fun lowTrustIsWarning() {
-        val summary = summary(trust = Trust(TrustLevel.LOW, listOf(TrustReason("app.jar has no build-info", "publish build-info"))))
+        val trust =
+            Trust(
+                TrustLevel.LOW,
+                listOf(
+                    reason(
+                        TrustReasonCode.PARTIAL_ARTIFACTS,
+                        TrustLevel.LOW,
+                        "Only some files checked",
+                        "1 of 2 registered artifacts checked",
+                    ),
+                ),
+                listOf(
+                    FileTrust("app.jar", TrustLevel.HIGH, emptyList()),
+                    FileTrust("app.war", TrustLevel.NONE, listOf(TrustReasonCode.ARTIFACT_NOT_FOUND)),
+                ),
+            )
 
-        val lines = BuildLog.lines(COMPONENT, VERSION, finished(summary))
+        val lines = BuildLog.lines(COMPONENT, VERSION, finished(summary(trust = trust)))
 
-        assertEquals(LogLine("Trust: LOW", warning = true), lines[2])
-        assertEquals(LogLine("  app.jar has no build-info; fix: publish build-info", warning = true), lines[3])
+        assertEquals(
+            listOf(
+                LogLine("Trust: LOW", warning = true),
+                LogLine("  LOW Only some files checked: 1 of 2 registered artifacts checked. Fix: fix it.", warning = true),
+                LogLine("  app.war: NONE (ARTIFACT_NOT_FOUND)", warning = true),
+                LogLine("Libraries: none"),
+            ),
+            lines.subList(2, 6),
+        )
     }
+
+    @Test
+    @DisplayName("trust MEDIUM is shown, but not as a warning")
+    fun mediumTrustIsNoWarning() {
+        val trust =
+            Trust(
+                TrustLevel.MEDIUM,
+                listOf(reason(TrustReasonCode.NO_BUILD_RECORD, TrustLevel.MEDIUM, "No build record", "no build for: app.jar")),
+                listOf(FileTrust("app.jar", TrustLevel.MEDIUM, listOf(TrustReasonCode.NO_BUILD_RECORD))),
+            )
+
+        val lines = BuildLog.lines(COMPONENT, VERSION, finished(summary(trust = trust)))
+
+        assertEquals(
+            listOf(
+                LogLine("Trust: MEDIUM"),
+                LogLine("  MEDIUM No build record: no build for: app.jar. Fix: fix it."),
+                LogLine("  app.jar: MEDIUM (NO_BUILD_RECORD)"),
+            ),
+            lines.subList(2, 5),
+        )
+    }
+
+    private fun reason(
+        code: TrustReasonCode,
+        level: TrustLevel,
+        title: String,
+        detail: String,
+    ) = TrustReason(code, level, title, detail, "what it means", "fix it.")
 
     @Test
     @DisplayName("a quick check says it is preliminary: it judged only what Xray knew at that moment")
@@ -127,7 +180,7 @@ class BuildLogTest {
         RunOutcome.Finished(LicenseReport(REPORT_ID, COMPONENT, VERSION, LicenseReportStatus.DONE, summary = summary), byteArrayOf())
 
     private fun summary(
-        trust: Trust? = null,
+        trust: Trust = Trust(TrustLevel.HIGH, emptyList(), emptyList()),
         libraryCounts: Map<Verdict, Int> = emptyMap(),
         violations: List<Violation> = emptyList(),
     ) = LicenseReportSummary(

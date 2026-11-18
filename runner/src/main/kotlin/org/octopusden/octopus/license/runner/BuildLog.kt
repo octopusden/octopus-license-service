@@ -50,11 +50,14 @@ object BuildLog {
             "Generated ${inputs.generatedAt} by license service ${inputs.serviceVersion}, " +
                 "license registry commit ${inputs.licenseRegistryCommit ?: "unknown"}",
         )
-        val trust = summary.trust?.let { trust ->
-            val warning = trust.level in warnedTrustLevels
+        val trust = summary.trust
+        val warning = trust.level in warnedTrustLevels
+        val trustLines =
             listOf(LogLine("Trust: ${trust.level}", warning)) +
-                trust.reasons.map { LogLine("  ${it.reason}; fix: ${it.fix}", warning) }
-        } ?: listOf(LogLine("Trust: not computed"))
+                trust.reasons.map { LogLine("  ${it.level} ${it.title}: ${it.detail}. Fix: ${it.fix}", warning) } +
+                trust.files
+                    .filter { it.level != TrustLevel.HIGH }
+                    .map { LogLine("  ${it.file}: ${it.level} (${it.reasons.joinToString(", ")})", warning) }
         val libraries = summary.libraryCounts.entries
             .sortedBy { it.key }
             .joinToString(", ") { "${it.key} ${it.value}" }
@@ -62,7 +65,7 @@ object BuildLog {
         val violations = summary.violations.map {
             LogLine("${it.library} is ${it.verdict} (${it.licenses.joinToString(", ")}) in ${it.files.joinToString(", ")}", warning = true)
         }
-        return listOf(generated) + trust + LogLine("Libraries: $libraries") + violations
+        return listOf(generated) + trustLines + LogLine("Libraries: $libraries") + violations
     }
 }
 
