@@ -146,6 +146,20 @@ class XrayAdaptersTest {
     }
 
     @Test
+    @DisplayName("once the budget is spent no status is asked for: neither after the last pause nor for the scan's later files")
+    fun noStatusAfterBudget() {
+        jfrog.answer(STATUS, status("PENDING"))
+        jfrog.answer(SUMMARY, summary)
+        val scanner = scanner(budget = Duration.ofSeconds(25))
+
+        scanner.scan(zip)
+        assertEquals(3, jfrog.requests.count { "${it.method} ${it.path}" == STATUS })
+
+        scanner.scan(zip.copy(name = "other.zip"))
+        assertEquals(3, jfrog.requests.count { "${it.method} ${it.path}" == STATUS })
+    }
+
+    @Test
     @DisplayName("the time spent asking Xray for the status counts against the budget, not only the time slept")
     fun callsSpendBudget() {
         jfrog.answer(STATUS, status("PENDING"))
