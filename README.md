@@ -43,7 +43,7 @@ The `dev` profile switches Spring Cloud Config off, so the service starts with n
 java -jar runner/build/libs/license-runner-*-all.jar --url http://localhost:8080 --component my-component --version 1.0.0
 ```
 
-With `--check-only` it asks for a quick `CHECK` and downloads no license files, for regular builds; RC and RELEASE leave it out. Durations take `45m`, `30s`, `2h` or ISO-8601. It waits out what can pass: a network or gateway error is asked again after a wait that doubles up to a minute, a busy service after the `Retry-After` it gave, and a report the service no longer knows is started again; no call starts after `--timeout`, and one already under way may take up to about a minute more. The runner writes `license-report.json` and the zip to `--output-dir` (`license-report` by default), prints the summary and always exits 0: it only reports. Problems are printed with a `WARNING:` prefix. Publishing the output directory, as TeamCity artifacts for example, is the caller's job.
+With `--check-only` it asks for a quick `CHECK` and downloads no license files, for regular builds; RC and RELEASE leave it out. Durations take `45m`, `30s`, `2h` or ISO-8601. It waits out what can pass: a network or gateway error is asked again after a wait that doubles up to a minute, a busy service after the `Retry-After` it gave, and a report the service no longer knows is started again; everything stops at `--timeout`, including a call still under way. The runner writes `license-report.json` and the zip to `--output-dir` (`license-report` by default), prints the summary and always exits 0: it only reports. Problems are printed with a `WARNING:` prefix. Publishing the output directory, as TeamCity artifacts for example, is the caller's job.
 
 ## Building
 

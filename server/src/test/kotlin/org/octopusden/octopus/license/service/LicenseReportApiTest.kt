@@ -121,7 +121,8 @@ class LicenseReportApiTest {
     @DisplayName("D7: a reload during a generation does not change the commit that generation records")
     fun reloadDuringGeneration() {
         val loaded = requireNotNull(policyHolder.current())
-        val started = client.startReport(LicenseReportRequest(SLOW_COMPONENT, VERSION))
+        val started = client.startReport(LicenseReportRequest(SLOW_COMPONENT, RELOAD_VERSION))
+        awaitGenerationStarted("$SLOW_COMPONENT:$RELOAD_VERSION")
         try {
             policyHolder.replace(LoadedPolicy(samplePolicy("newer-commit"), Instant.now()))
             generator.release()
@@ -370,6 +371,7 @@ class LicenseReportApiTest {
     fun runningComponentVersionIsJoined() {
         val first = client.startReport(LicenseReportRequest(SLOW_COMPONENT, JOINED_VERSION))
         val second = client.startReport(LicenseReportRequest(SLOW_COMPONENT, JOINED_VERSION))
+        awaitGenerationStarted("$SLOW_COMPONENT:$JOINED_VERSION")
         generator.release()
 
         awaitFinished(first.id)
@@ -415,6 +417,15 @@ class LicenseReportApiTest {
     private fun send(request: HttpRequest.Builder): HttpResponse<String> =
         HttpClient.newHttpClient().send(request.build(), HttpResponse.BodyHandlers.ofString())
 
+    /** [ControllableGenerator.release] swaps the gate, so a generation not yet waiting on it would wait on the next one. */
+    private fun awaitGenerationStarted(componentVersion: String) {
+        val deadline = Instant.now().plus(AWAIT_TIMEOUT)
+        while (generator.generations(componentVersion) == 0 && Instant.now().isBefore(deadline)) {
+            TimeUnit.MILLISECONDS.sleep(POLL_INTERVAL_MS)
+        }
+        check(generator.generations(componentVersion) > 0) { "$componentVersion was not generated within $AWAIT_TIMEOUT" }
+    }
+
     private fun awaitFinished(id: String): LicenseReport {
         val deadline = Instant.now().plus(AWAIT_TIMEOUT)
         while (Instant.now().isBefore(deadline)) {
@@ -450,10 +461,11 @@ class LicenseReportApiTest {
         ): GeneratedReport {
             targets += target
             val (component, version) = target.componentVersion
+            val gate = slowGate
             generationCounts.computeIfAbsent("$component:$version") { AtomicInteger() }.incrementAndGet()
             return when (component) {
                 SLOW_COMPONENT ->
-                    slowGate.await(AWAIT_TIMEOUT.seconds, TimeUnit.SECONDS).let { delegate.generate(target, mode, policy) }
+                    gate.await(AWAIT_TIMEOUT.seconds, TimeUnit.SECONDS).let { delegate.generate(target, mode, policy) }
                 BROKEN_COMPONENT -> error("Xray is unreachable")
                 else -> delegate.generate(target, mode, policy)
             }
@@ -515,6 +527,7 @@ class LicenseReportApiTest {
         const val REGISTRY_FORBIDDEN_COMPONENT = "registry-forbidden-component"
         const val UPSTREAM_DETAIL = "secret-upstream-detail"
         const val VERSION = "1.2.3"
+        const val RELOAD_VERSION = "1.2.9"
         const val REGISTRY_COMMIT = "a1b2c3d"
         const val JOINED_VERSION = "2.0.0-joined"
         const val CHECK_VERSION = "3.0.0-check"

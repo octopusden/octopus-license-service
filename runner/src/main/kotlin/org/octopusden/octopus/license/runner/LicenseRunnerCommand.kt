@@ -43,7 +43,7 @@ class LicenseRunnerCommand : CliktCommand(name = "license-runner") {
         .default(Duration.ofSeconds(DEFAULT_POLL_INTERVAL_SECONDS))
     private val timeout by option(
         "--timeout",
-        help = "How long to wait for the report, such as 45m or PT45M; no call starts after it, one under way may take up to a minute more",
+        help = "How long to wait for the report, such as 45m or PT45M; a call still under way then is abandoned",
     ).convert { duration(it) }
         .default(Duration.ofMinutes(DEFAULT_TIMEOUT_MINUTES))
 
@@ -88,6 +88,9 @@ class LicenseRunnerCommand : CliktCommand(name = "license-runner") {
     companion object {
         const val DEFAULT_OUTPUT_DIR = "license-report"
         private const val OUTPUT_DIR_OPTION = "--output-dir"
+        private const val END_OF_OPTIONS = "--"
+        private val VALUE_OPTIONS =
+            setOf("--url", "--component", "--version", OUTPUT_DIR_OPTION, "--poll-interval", "--timeout")
         private const val DEFAULT_POLL_INTERVAL_SECONDS = 5L
         private const val DEFAULT_TIMEOUT_MINUTES = 30L
         private const val REPORT_FILE = "license-report.json"
@@ -106,12 +109,24 @@ class LicenseRunnerCommand : CliktCommand(name = "license-runner") {
             Files.newDirectoryStream(outputDir, "*$ZIP_SUFFIX").use { zips -> zips.forEach(Files::delete) }
         }
 
-        /** The output directory named in [args], read without Clikt: for when Clikt could not parse them. */
+        /**
+         * The output directory named in [args], read without Clikt: for when Clikt could not parse
+         * them. Read the way Clikt reads them: the last `--output-dir` with a value wins, the token after an option
+         * that takes a value is that value even when it starts with `--`, and nothing after `--` is
+         * an option.
+         */
         fun outputDirIn(args: Array<String>): Path {
-            val index = args.indexOf(OUTPUT_DIR_OPTION)
-            val value = args.getOrNull(index + 1)?.takeIf { index >= 0 }
-                ?: args.firstOrNull { it.startsWith("$OUTPUT_DIR_OPTION=") }?.substringAfter("=")
-            return Path.of(value ?: DEFAULT_OUTPUT_DIR)
+            var outputDir: String? = null
+            var i = 0
+            while (i < args.size && args[i] != END_OF_OPTIONS) {
+                val token = args[i]
+                when {
+                    token == OUTPUT_DIR_OPTION -> args.getOrNull(i + 1)?.let { outputDir = it }
+                    token.startsWith("$OUTPUT_DIR_OPTION=") -> outputDir = token.substringAfter("=")
+                }
+                i += if (token in VALUE_OPTIONS) 2 else 1
+            }
+            return Path.of(outputDir ?: DEFAULT_OUTPUT_DIR)
         }
     }
 }
