@@ -14,7 +14,9 @@ import java.time.Instant
 
 /**
  * Starts a report, polls it until it finishes and downloads its files when it is DONE, all within
- * [timeout].
+ * [timeout]: no call starts once it has passed. A call already under way is not cut short, so a run
+ * can end up to one call's length (the client waits at most about a minute) after it, and an answer
+ * that arrives then is still used: it is a real result.
  *
  * What can pass is waited out: an unreachable service or a gateway error is asked again after a
  * wait that doubles up to a minute, a busy service after the wait it asked for, and a report the

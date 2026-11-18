@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.Timeout
 import org.octopusden.octopus.license.client.LicenseServiceClient
 import org.octopusden.octopus.license.core.dto.LicenseReport
 import org.octopusden.octopus.license.core.dto.LicenseReportMode
@@ -111,6 +112,29 @@ class LicenseReportRunnerTest {
 
         assertInstanceOf(RunOutcome.Finished::class.java, runner(client).run(COMPONENT, VERSION))
         assertEquals(2, client.starts)
+    }
+
+    @Test
+    @Timeout(5)
+    @DisplayName("a report the service keeps forgetting is started again only until --timeout, with a pause between starts")
+    fun repeatedRestartsStopAtTimeout() {
+        val client = ScriptedClient(pollAnswers = listOf(notFound()))
+
+        assertInstanceOf(RunOutcome.Unavailable::class.java, runner(client).run(COMPONENT, VERSION))
+        assertTrue(client.starts <= TIMEOUT.dividedBy(POLL_INTERVAL).toInt() + 1, "started ${client.starts} times")
+    }
+
+    @Test
+    @DisplayName("no call starts once --timeout is used up, however long the previous call took")
+    fun noCallAfterDeadline() {
+        val slowPoll: () -> LicenseReport = {
+            clock.advance(Duration.ofMinutes(2))
+            LicenseReport(REPORT_ID, COMPONENT, VERSION, RUNNING)
+        }
+        val client = ScriptedClient(pollAnswers = listOf(slowPoll))
+
+        assertInstanceOf(RunOutcome.Unavailable::class.java, runner(client).run(COMPONENT, VERSION))
+        assertEquals(1, client.polls)
     }
 
     @Test
