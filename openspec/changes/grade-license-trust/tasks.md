@@ -148,14 +148,17 @@
   - [x] 6.2.4 A prototype component with `error`, or without `version`, is skipped and named.
   - [x] 6.2.5 Confirm: `TrustParityTest` 4 green; the view and diff live in `:license-trust`'s test sources, as nothing else reads them.
 - [x] 6.3 `:license-trust`: `parityTest` source set and task, outside `check`, with Kover disabled for it. `PrototypeParityTest` runs resolve, scan, evaluate, grade, and reports the trust column and "follows from evaluation".
-- [ ] 6.4 Run the prototype locally, then `./gradlew :license-trust:parityTest`. Record:
+- [x] 6.4 Run the prototype locally, then `./gradlew :license-trust:parityTest`. Record:
   - the run directory, the registry commit and the component count;
   - the components that differ, and why;
   - the reference components named in the ticket, explicitly.
+  - [x] 6.4.1 The six components of the evaluation's targeted run, prototype at `e380518` run just before, license registry `32f0966`. Trust is the same on all six: level, every reason and every file's level and codes. No "follows from evaluation" line: none of the six has a policy-rule or deliberate difference. Both reference components are `HIGH` on both sides.
+  - [x] 6.4.2 Two components failed in the scan, not in trust. Artifactory's checksum lookup for seven of our jars in one component and one in another answered differently from one minute to the next. In the first run the prototype found a stored copy and named them while the service did not; in a rerun of those two a few minutes later it was the other way round; asked directly in between, Artifactory had no copy under either token. One of the two was the same on the rerun. Trust was the same in both runs regardless. The algorithms agree; the parity check reads a moving Artifactory, as the evaluation's 6.4.2a saw with Xray.
+  - [ ] 6.4.3 The full run over every external component: optional, before rollout, as in the evaluation's 6.4.3.
 
 ## 7. Finalization
 
-- [ ] 7.1 Run `./gradlew build qualityCheck` and confirm it is green.
+- [x] 7.1 Run `./gradlew build qualityCheck` and confirm it is green. Green, every module.
 - [x] 7.2 Update `docs/architecture.md`:
   - the trust module in the diagram and the table, with its rule;
   - the request flow (grade after evaluate);
@@ -169,4 +172,4 @@
   - no `native-builds` setting and no build name in the code.
 
   Confirmed by grep over `engine/trust`, `core`, `server` and `runner`: none of the five found.
-- [ ] 7.5 Check that the risks in `design.md` still hold. Any rule found odd during parity goes to TD-002 or a new `TD-NNN`, never a `TODO`.
+- [x] 7.5 Check that the risks in `design.md` still hold. Any rule found odd during parity goes to TD-002 or a new `TD-NNN`, never a `TODO`. All five risks stand as written. Parity found no odd trust rule; the moving checksum lookup of 6.4.2 is the parity check's own risk ("parity depends on a fresh prototype run", evaluation design), not a rule to revisit.
