@@ -38,52 +38,52 @@
 
 ## 3. Component rules (Decisions 4, 6, 7)
 
-- [ ] 3.1 Failing tests for `CoverageRule`, one per scenario of "Nothing covered…" and "Partly covered…":
-  - [ ] 3.1.1 `NO_DISTRIBUTION`, nothing selected: `NO_ARTIFACT_IN_REGISTRY` with `"{subject}: {detail}"`.
-  - [ ] 3.1.2 `UNSUPPORTED_DISTRIBUTION_ENTRY`: `NO_ARTIFACT_IN_REGISTRY`. `ARTIFACT_NOT_FOUND`: `ARTIFACT_NOT_FOUND`.
-  - [ ] 3.1.3 `NOT_READABLE` with `NOT_IN_XRAY` and `NO_BUILD_INFO`: two `NOT_SCANNABLE` reasons, in the order found.
-  - [ ] 3.1.4 Nothing covered and no mapped finding: `NOT_SCANNABLE`, "no registered artifact could be scanned".
-  - [ ] 3.1.5 Notes (`NOT_SCANNABLE` from a plain file, `BUILD_NAME_DIFFERS`) are never mapped.
-  - [ ] 3.1.6 3 of 4 covered: `PARTIAL_ARTIFACTS`, "3 of 4 registered artifacts checked".
-  - [ ] 3.1.7 All covered, with a plain file among them: no reason.
-- [ ] 3.2 Failing tests for `EmptyContentRule`:
-  - [ ] 3.2.1 Read files with only `INTERNAL` libraries: "2 file(s) checked, 0 outside libraries".
-  - [ ] 3.2.2 Label `c` or `cpp`: the C/C++ note. Neither: no note, whatever the build name.
-  - [ ] 3.2.3 Nothing read (only plain files): no reason.
-  - [ ] 3.2.4 One third-party library: no reason.
-- [ ] 3.3 Failing tests for `EcosystemRule`:
-  - [ ] 3.3.1 `javascript` with no `npm`: the worked example's detail, character for character.
-  - [ ] 3.3.2 `objective_c` and `swift` in one group; `c` and `go` in two groups, in sorted label order.
-  - [ ] 3.3.3 Detected list:
+- [x] 3.1 Failing tests for `CoverageRule`, one per scenario of "Nothing covered…" and "Partly covered…":
+  - [x] 3.1.1 `NO_DISTRIBUTION`, nothing selected: `NO_ARTIFACT_IN_REGISTRY` with `"{subject}: {detail}"`.
+  - [x] 3.1.2 `UNSUPPORTED_DISTRIBUTION_ENTRY`: `NO_ARTIFACT_IN_REGISTRY`. `ARTIFACT_NOT_FOUND`: `ARTIFACT_NOT_FOUND`.
+  - [x] 3.1.3 `NOT_READABLE` with `NOT_IN_XRAY` and `NO_BUILD_INFO`: two `NOT_SCANNABLE` reasons, in the order found.
+  - [x] 3.1.4 Nothing covered and no mapped finding: `NOT_SCANNABLE`, "no registered artifact could be scanned".
+  - [x] 3.1.5 Notes (`NOT_SCANNABLE` from a plain file, `BUILD_NAME_DIFFERS`) are never mapped.
+  - [x] 3.1.6 3 of 4 covered: `PARTIAL_ARTIFACTS`, "3 of 4 registered artifacts checked".
+  - [x] 3.1.7 All covered, with a plain file among them: no reason.
+- [x] 3.2 Failing tests for `EmptyContentRule`:
+  - [x] 3.2.1 Read files with only `INTERNAL` libraries: "2 file(s) checked, 0 outside libraries".
+  - [x] 3.2.2 Label `c` or `cpp`: the C/C++ note. Neither: no note, whatever the build name.
+  - [x] 3.2.3 Nothing read (only plain files): no reason.
+  - [x] 3.2.4 One third-party library: no reason.
+- [x] 3.3 Failing tests for `EcosystemRule`:
+  - [x] 3.3.1 `javascript` with no `npm`: the worked example's detail, character for character.
+  - [x] 3.3.2 `objective_c` and `swift` in one group; `c` and `go` in two groups, in sorted label order.
+  - [x] 3.3.3 Detected list:
     - count descending;
     - a tie keeps the order of first appearance, by rendered id;
     - "detected nothing" when there is no third-party library.
-  - [ ] 3.3.4 The label `java`, and an unknown label: no reason. Nothing read: no reason.
-  - [ ] 3.3.5 `pub` and `cocoapods` without an SBOM: `FULL_LIST_UNAVAILABLE`, "found cocoapods, pub libraries, but no SBOM". With an SBOM on any counted library: no reason.
-  - [ ] 3.3.6 Only `maven`, `npm`, `generic`: no `FULL_LIST_UNAVAILABLE`.
-- [ ] 3.4 Failing tests for `SourceRule`:
-  - [ ] 3.4.1 A read file without `BUILD_RECORD`: `NO_BUILD_RECORD`, its entry.
-  - [ ] 3.4.2 A read file without `BINARY_SCAN`: `BUILD_LIST_ONLY`.
-  - [ ] 3.4.3 Two such files: one reason, entries space-separated, in listing order.
-  - [ ] 3.4.4 Unread files never count.
-- [ ] 3.5 Failing tests for `IdentificationShare` and `IdentificationRule`:
-  - [ ] 3.5.1 Unknown thresholds:
+  - [x] 3.3.4 The label `java`, and an unknown label: no reason. Nothing read: no reason.
+  - [x] 3.3.5 `pub` and `cocoapods` without an SBOM: `FULL_LIST_UNAVAILABLE`, "found cocoapods, pub libraries, but no SBOM". With an SBOM on any counted library: no reason.
+  - [x] 3.3.6 Only `maven`, `npm`, `generic`: no `FULL_LIST_UNAVAILABLE`.
+- [x] 3.4 Failing tests for `SourceRule`:
+  - [x] 3.4.1 A read file without `BUILD_RECORD`: `NO_BUILD_RECORD`, its entry.
+  - [x] 3.4.2 A read file without `BINARY_SCAN`: `BUILD_LIST_ONLY`.
+  - [x] 3.4.3 Two such files: one reason, entries space-separated, in listing order.
+  - [x] 3.4.4 Unread files never count.
+- [x] 3.5 Failing tests for `IdentificationShare` and `IdentificationRule`:
+  - [x] 3.5.1 Unknown thresholds:
     - 5 of 50 crosses;
     - 4 of 10 does not (count);
     - 5 of 51 does not (share).
-  - [ ] 3.5.2 Unidentified thresholds:
+  - [x] 3.5.2 Unidentified thresholds:
     - 10 of 100 crosses;
     - 9 of 20 does not;
     - 12 of 200 does not.
-  - [ ] 3.5.3 Details: "6 of 42 outside libraries have no known license" and "{n} of {third} outside files identified by checksum only".
-- [ ] 3.6 Implement, as separate units, under `impl/`:
-  - [ ] 3.6.1 `ComponentRule.kt`: the fun interface.
-  - [ ] 3.6.2 `CoverageRule.kt`: owns the finding-to-reason mapping (the prototype's `NOT_ANALYSED_TYPES`).
-  - [ ] 3.6.3 `EmptyContentRule.kt`: owns `NATIVE_LABELS`.
-  - [ ] 3.6.4 `EcosystemRule.kt`: owns `LABEL_ECOSYSTEMS` and `COMPLETE_TYPES`.
-  - [ ] 3.6.5 `SourceRule.kt`.
-  - [ ] 3.6.6 `IdentificationShare.kt` and `IdentificationRule.kt`.
-- [ ] 3.7 Confirm the tests are green. Record the suite and the count.
+  - [x] 3.5.3 Details: "6 of 42 outside libraries have no known license" and "{n} of {third} outside files identified by checksum only".
+- [x] 3.6 Implement, as separate units, under `impl/`:
+  - [x] 3.6.1 `ComponentRule.kt`: the fun interface.
+  - [x] 3.6.2 `CoverageRule.kt`: owns the finding-to-reason mapping (the prototype's `NOT_ANALYSED_TYPES`).
+  - [x] 3.6.3 `EmptyContentRule.kt`: owns `NATIVE_LABELS`.
+  - [x] 3.6.4 `EcosystemRule.kt`: owns `LABEL_ECOSYSTEMS` and `COMPLETE_TYPES`.
+  - [x] 3.6.5 `SourceRule.kt`.
+  - [x] 3.6.6 `IdentificationShare.kt` and `IdentificationRule.kt`.
+- [x] 3.7 Confirm the tests are green. Record the suite and the count. `:license-trust:test` 76 green: `CoverageRuleTest` 7, `EmptyContentRuleTest` 6, `EcosystemRuleTest` 10, `SourceRuleTest` 4, `IdentificationShareTest` 9, `IdentificationRuleTest` 4; `ktlintCheck` and `detekt` clean. The rules are stateless, so each is an `object` the grader lists, not a class it builds. `EcosystemRuleTest`'s tie order was checked against Python's `Counter.most_common` on the same ids.
 
 ## 4. File grading and the grader (Decisions 4, 5)
 
@@ -150,7 +150,7 @@
 - [ ] 6.4 Run the prototype locally, then `./gradlew :license-trust:parityTest`. Record:
   - the run directory, the registry commit and the component count;
   - the components that differ, and why;
-  - `w4web3` and `dmp-bundle` explicitly.
+  - the reference components named in the ticket, explicitly.
 
 ## 7. Finalization
 
@@ -165,5 +165,5 @@
   - no per-file counts in `core`;
   - no trust metric;
   - the runner's exit code reads neither `trust` nor `violations`: report only;
-  - no `native-builds` setting and no `PMSTDLIB` in the code.
+  - no `native-builds` setting and no build name in the code.
 - [ ] 7.5 Check that the risks in `design.md` still hold. Any rule found odd during parity goes to TD-002 or a new `TD-NNN`, never a `TODO`.

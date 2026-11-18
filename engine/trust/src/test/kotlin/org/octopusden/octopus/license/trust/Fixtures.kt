@@ -80,3 +80,9 @@ fun assessment(
     libraries.sortedBy { it.library.id.toString() },
     SkippedPackages(0, 0, emptyMap()),
 )
+
+fun reasons(vararg pairs: Pair<org.octopusden.octopus.license.trust.model.TrustReasonCode, String>) =
+    pairs.map { (code, detail) ->
+        org.octopusden.octopus.license.trust.model
+            .TrustReason(code, detail)
+    }
