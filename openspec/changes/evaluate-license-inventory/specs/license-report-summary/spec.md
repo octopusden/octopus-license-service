@@ -59,7 +59,7 @@ The summary's `trust` SHALL be null.
 
 The service SHALL finish a report as `FAILED` when Artifactory or Xray cannot be asked during the scan, including build-info Artifactory cannot serve. As for any failed generation, the report's error SHALL point to the service log, which holds the scan's message; the message itself can carry internal URLs and is not served. No summary and no license files SHALL be kept for it.
 
-A license lookup Xray fails for some libraries, after the scan found them, SHALL NOT fail the report: those libraries have no licenses found and are judged `UNKNOWN`, a violation, as in the prototype.
+A license lookup Xray fails for some libraries, after the scan found them, SHALL NOT fail the report: those libraries have no licenses found and are judged as in the prototype: `UNKNOWN`, a violation, unless the license registry overrides the library. An override replaces Xray's licenses whether the lookup answered or not, so such a library gets the verdict a successful lookup would give it.
 
 #### Scenario: Xray down
 
@@ -74,7 +74,12 @@ A license lookup Xray fails for some libraries, after the scan found them, SHALL
 #### Scenario: License lookup fails for some libraries
 
 - **WHEN** Xray answers every try of one license lookup with a server error, and the rest of the scan succeeds
-- **THEN** the report is `DONE`, the libraries of that lookup are `UNKNOWN` violations with no licenses, and the scan is counted `scanned`
+- **THEN** the report is `DONE`, the libraries of that lookup the license registry does not override are `UNKNOWN` violations with no licenses, and the scan is counted `scanned`
+
+#### Scenario: License lookup fails for an overridden library
+
+- **WHEN** a license lookup fails for a Maven library the license registry overrides with an allowed license
+- **THEN** the library is `ALLOWED` with the override's licenses, as it would be had the lookup answered
 
 ### Requirement: Every scan is counted by its outcome
 

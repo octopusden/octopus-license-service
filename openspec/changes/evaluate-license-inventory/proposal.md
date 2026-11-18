@@ -28,7 +28,7 @@ This change ports that step, wires the scan and the evaluation into the server, 
 
 - `EvaluatingLicenseReportGenerator` replaces `EmptyLicenseReportGenerator`: scan, evaluate, map into the `core` summary.
 - The summary counts third-party libraries per verdict and lists every third-party library that is not `ALLOWED`, with its licenses and the released files it ships in. Trust stays `null` until grading.
-- Artifactory or Xray unreachable fails the report (`FAILED`), as the prototype's component ended in `ERROR`. A license lookup failing for some libraries does not: those are `UNKNOWN` violations, as in the prototype, so an outage never gives a clean summary. Each scan is counted in `license.inventory.scans{outcome}`.
+- Artifactory or Xray unreachable fails the report (`FAILED`), as the prototype's component ended in `ERROR`. A license lookup failing for some libraries does not: those are `UNKNOWN` violations unless the registry overrides them, as in the prototype, so an outage never gives a verdict a successful lookup would not. Each scan is counted in `license.inventory.scans{outcome}`.
 - Settings follow the other services: the systems under their shared keys (`components-registry-service.url`, `bitbucket.host` and `bitbucket.token`, `artifactory.url` and `artifactory.token`), only the service's own values under `license-service` (the license registry's project and repository, exclusions, ownership, the Xray wait). This moves the settings the earlier changes put under `license-service`.
 
 **Part D: parity, end to end**

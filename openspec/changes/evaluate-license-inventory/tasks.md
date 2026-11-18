@@ -81,7 +81,7 @@
 
 - [x] 5b.1 `LicenseInventoryScanner.scan(target, xrayWait)`: the generator maps the report mode to the wait, `FULL` → `license-service.xray.scan-timeout`, `CHECK` → none. `EvaluatingLicenseReportGeneratorTest.xrayWaitByMode`. The scanner bean no longer takes a wait.
 - [x] 5b.2 A failed report's error points to the service log, as #4's failure path now does; `LicenseReportApiTest` and the spec say so. Unreadable build-info fails the report like an unreachable Xray (spec scenario).
-- [x] 5b.3 A failed license lookup for some libraries leaves them `UNKNOWN` and the report `DONE`, as in the prototype; spec and Decision 9 say so (review: a clean summary is never the result).
+- [x] 5b.3 A failed license lookup for some libraries leaves them `UNKNOWN` and the report `DONE`, as in the prototype; spec and Decision 9 say so; an overridden library keeps its override's verdict, as with an answered lookup (`LibraryJudgeTest.overrideWithoutLicenses`).
 - [x] 5b.3 `Ownership` keeps `isOurs` and takes the scan's boundary rule for internal groups; no test here relied on a bare prefix.
 - [x] 5b.4 Docs: the Xray wait is chosen per request; `NOT_SCANNED` is waited for.
 
