@@ -61,6 +61,7 @@ class LicenseReportServiceImplTest {
                 artifactVersions = listOf(version),
                 buildSystem = "GRADLE",
                 labels = emptySet(),
+                explicit = false,
                 distribution = DistributionSpec(emptyList(), emptyList()),
             ),
         )
