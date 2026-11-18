@@ -111,7 +111,7 @@ class LicenseRunnerCommand : CliktCommand(name = "license-runner") {
 
         /**
          * The output directory named in [args], read without Clikt: for when Clikt could not parse
-         * them. Read the way Clikt reads them: the last `--output-dir` wins, the token after an option
+         * them. Read the way Clikt reads them: the last `--output-dir` with a value wins, the token after an option
          * that takes a value is that value even when it starts with `--`, and nothing after `--` is
          * an option.
          */
@@ -121,7 +121,7 @@ class LicenseRunnerCommand : CliktCommand(name = "license-runner") {
             while (i < args.size && args[i] != END_OF_OPTIONS) {
                 val token = args[i]
                 when {
-                    token == OUTPUT_DIR_OPTION -> outputDir = args.getOrNull(i + 1)
+                    token == OUTPUT_DIR_OPTION -> args.getOrNull(i + 1)?.let { outputDir = it }
                     token.startsWith("$OUTPUT_DIR_OPTION=") -> outputDir = token.substringAfter("=")
                 }
                 i += if (token in VALUE_OPTIONS) 2 else 1

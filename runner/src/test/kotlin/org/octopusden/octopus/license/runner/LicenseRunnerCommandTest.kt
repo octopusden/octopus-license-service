@@ -135,6 +135,7 @@ class LicenseRunnerCommandTest {
             "--output-dir a -- --output-dir b",
             "--output-dir a --component --output-dir=b --version 1",
             "--output-dir a --component --output-dir b",
+            "--output-dir a --output-dir",
         ],
     )
     @DisplayName("tokens Clikt does not read as options are not read as the output directory either")
