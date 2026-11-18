@@ -1,26 +1,27 @@
 ## 1. The `license-trust` module and its model (Decisions 1, 2, 11)
 
-- [ ] 1.1 Set up the module:
+- [x] 1.1 Set up the module:
   - `settings.gradle.kts`: `:license-trust` at `engine/trust`;
   - build file: `api(project(":license-evaluation"))` and JUnit.
 
-  Confirm with `dependencies` that no Spring, no `:core` and no client is on the compile classpath.
-- [ ] 1.2 Failing tests for the model:
-  - [ ] 1.2.1 `TrustLevel.lowest`:
+  Confirm with `dependencies` that no Spring, no `:core` and no client is on the compile classpath. Confirmed: `:license-evaluation`, `:license-inventory`, `:license-target-registry`, `:license-policy-registry` and the Kotlin stdlib only.
+- [x] 1.2 Failing tests for the model:
+  - [x] 1.2.1 `TrustLevel.lowest`:
     - empty gives `HIGH`;
     - `[MEDIUM, LOW]` gives `LOW`;
     - `[NONE, HIGH]` gives `NONE`.
-  - [ ] 1.2.2 `TrustReasonCode`: each code's level matches the prototype's `REASONS` table (eleven codes).
-  - [ ] 1.2.3 `TrustGrade.level` and `FileTrust.level` are derived from the codes.
-- [ ] 1.3 Implement the model:
+  - [x] 1.2.2 `TrustReasonCode`: each code's level matches the prototype's `REASONS` table (eleven codes).
+  - [x] 1.2.3 `TrustGrade.level` and `FileTrust.level` are derived from the codes.
+- [x] 1.3 Implement the model:
   - `model/TrustLevel.kt`;
   - `model/TrustReasonCode.kt`: the level, title, meaning and fix texts from the prototype, with Decision 2's spelling and wording changes;
   - `model/TrustReason.kt`, `model/FileTrust.kt`, `model/TrustGrade.kt`;
-  - the `TrustGrader` signature.
-- [ ] 1.4 `PackageDependencyTest`:
+  - the `TrustGrader` signature: moved to 4.3, written with its body, so no stub lands without one (added on review).
+- [x] 1.4 `PackageDependencyTest`:
   - `model` imports nothing from `impl`;
   - nothing imports a client, Spring, `core`, `java.io` or `java.net`;
   - nothing imports the `impl` of the evaluation, the inventory or the policy.
+- [x] 1.5 Confirm: `:license-trust:test` 31 green (`TrustReasonCodeTest` 24, `PackageDependencyTest` 2, `TrustLevelTest` 2, `DerivedLevelTest` 3); `ktlintCheck` and `detekt` clean.
 
 ## 2. The facts every rule reads (Decision 3)
 
