@@ -36,6 +36,7 @@ class LicenseServiceConfig(
         RegistryLicenseTargetResolver(
             requiredSetting(componentsRegistryService.url, "components-registry-service.url"),
             properties.exclusions,
+            properties.componentsRegistryDeadline,
         )
 
     @Bean

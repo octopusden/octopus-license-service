@@ -10,6 +10,8 @@ import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertDoesNotThrow
 import org.junit.jupiter.api.io.TempDir
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 import java.io.ByteArrayOutputStream
 import java.io.PrintStream
 import java.net.InetSocketAddress
@@ -82,11 +84,63 @@ class LicenseRunnerCommandTest {
         serveDoneReportWithoutSummary()
 
         val result = LicenseRunnerCommand().test(
-            listOf("--url", serverUrl(), "--component", COMPONENT, "--version", VERSION, "--timeout", "45m", "--poll-interval", "0s"),
+            listOf(
+                "--url",
+                serverUrl(),
+                "--component",
+                COMPONENT,
+                "--version",
+                VERSION,
+                "--output-dir",
+                workDir.resolve("out").toString(),
+                "--timeout",
+                "45m",
+                "--poll-interval",
+                "0s",
+            ),
         )
 
         assertEquals(0, result.statusCode, result.stderr)
         assertTrue(result.stdout.contains("License report for $COMPONENT:$VERSION"), result.stdout)
+    }
+
+    @Test
+    @DisplayName("arguments the runner cannot read still remove the previous run's output, so it is not published again")
+    fun badArgumentsRemovePreviousOutput() {
+        val outputDir = Files.createDirectories(workDir.resolve("report-dir"))
+        val oldReport = Files.writeString(outputDir.resolve("license-report.json"), "{}")
+        val oldZip = Files.write(outputDir.resolve("$COMPONENT-0.9-licenses.zip"), byteArrayOf(1))
+        val originalOut = System.out
+        System.setOut(PrintStream(ByteArrayOutputStream(), true))
+        try {
+            main(arrayOf("--component", COMPONENT, "--version", VERSION, "--output-dir", outputDir.toString(), "--timeout", "forever"))
+        } finally {
+            System.setOut(originalOut)
+        }
+
+        assertFalse(Files.exists(oldReport))
+        assertFalse(Files.exists(oldZip))
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @ValueSource(strings = ["--output-dir a --output-dir b", "--output-dir=a --output-dir b", "--output-dir a --output-dir=b"])
+    @DisplayName("the output directory read without Clikt is the last one given, as Clikt reads it")
+    fun lastOutputDirWins(arguments: String) {
+        assertEquals(Path.of("b"), LicenseRunnerCommand.outputDirIn(arguments.split(" ").toTypedArray()))
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @ValueSource(
+        strings = [
+            "--output-dir a -- --output-dir b",
+            "--output-dir a --component --output-dir=b --version 1",
+            "--output-dir a --component --output-dir b",
+            "--output-dir a --output-dir",
+        ],
+    )
+    @DisplayName("tokens Clikt does not read as options are not read as the output directory either")
+    fun onlyRealOptionsCount(arguments: String) {
+        assertEquals(Path.of("a"), LicenseRunnerCommand.outputDirIn(arguments.split(" ").toTypedArray()))
     }
 
     @Test
@@ -96,7 +150,9 @@ class LicenseRunnerCommandTest {
         val originalOut = System.out
         System.setOut(PrintStream(output, true))
         try {
-            assertDoesNotThrow { main(arrayOf("--component", COMPONENT, "--version", VERSION, "--timeout", "forever")) }
+            assertDoesNotThrow {
+                main(arrayOf("--component", COMPONENT, "--version", VERSION, "--output-dir", workDir.toString(), "--timeout", "forever"))
+            }
         } finally {
             System.setOut(originalOut)
         }

@@ -81,12 +81,13 @@
 
 - [x] 5b.1 `LicenseInventoryScanner.scan(target, xrayWait)`: the generator maps the report mode to the wait, `FULL` → `license-service.xray.scan-timeout`, `CHECK` → none. `EvaluatingLicenseReportGeneratorTest.xrayWaitByMode`. The scanner bean no longer takes a wait.
 - [x] 5b.2 A failed report's error points to the service log, as #4's failure path now does; `LicenseReportApiTest` and the spec say so. Unreadable build-info fails the report like an unreachable Xray (spec scenario).
+- [x] 5b.3 A failed license lookup for some libraries leaves them `UNKNOWN` and the report `DONE`, as in the prototype; spec and Decision 9 say so; an overridden library keeps its override's verdict, as with an answered lookup (`LibraryJudgeTest.overrideWithoutLicenses`).
 - [x] 5b.3 `Ownership` keeps `isOurs` and takes the scan's boundary rule for internal groups; no test here relied on a bare prefix.
 - [x] 5b.4 Docs: the Xray wait is chosen per request; `NOT_SCANNED` is waited for.
 
 ## 5c. Review of the evaluation (added on review)
 
-- [x] 5c.1 Python only in images is skipped only when the image scan is its only evidence; Python the build declared (SBOM, build record) is judged (Decision 3.3). `PackageScopeTest.declaredPythonInImage`, `LicenseEvaluatorTest.declaredPythonInImageOnlyComponent`.
+- [x] 5c.1 Python only in images is skipped only when the image scan is its only evidence; Python the build declared is judged (Decision 3.3); today only an SBOM declares Python, the build record gives Maven and npm alone. `PackageScopeTest.declaredPythonInImage`, `LicenseEvaluatorTest.declaredPythonInImageOnlyComponent`.
 - [x] 5c.2 The parity view reads such a package back as skipped and lists it as deliberate (`EvaluationParityTest.declaredImagePython`); the parity report has a "deliberate" line for it.
 - [x] 5c.3 `AssessedLibrary.thirdParty` removed: nothing read it, `SummaryMapper` decides third party itself.
 - [x] 5c.4 Test: licenses from two sources are judged together, one allowed name wins, as the license plugins do (`LibraryJudgeTest.sourcesDisagree`). Kept on purpose.
@@ -99,6 +100,7 @@
   - [x] 6.1.1 (added on review) detekt's `ClassOrdering` on `OwnershipTest` from section 1, which ran tests but not detekt: the two properties moved above the tests.
 - [x] 6.2 Failing tests for the evaluation parity view and diff (unit, no systems): prototype `REVIEW_HASH_ONLY` reads as `UNIDENTIFIED`; `LICENCE_NOT_ALLOWED` derived from `UNKNOWN` and `NOT_ALLOWED`; a verdict difference with equal found licenses and override is filed under "policy rules"; skipped totals and per-artifact `os_skipped` compared. Also: a library on one side only is left to the inventory's diff, which already reports it; a `LICENCE_NOT_ALLOWED` subject is compared only where both sides agree on the verdict, so a verdict difference is reported once. `EvaluationParityTest` 7 green; `:license-evaluation:test` 33.
 - [x] 6.3 `:license-evaluation` `parityTest` source set and task, outside `check`, Kover disabled for it; `PrototypeParityTest` with the environment of Decision 11. The report has a policy-rules column per component; only differences outside it fail the run. Compiles; not run here (6.4).
+  - [x] 6.3.1 (added after merging #4's accepted differences) It reads `PARITY_ACCEPTED` as the inventory's parity does: a difference listed there, inventory or evaluation, is reported as accepted and fails nothing. `ParityAccepted` moved to the inventory's test fixtures to be shared.
 - [x] 6.4 Run: a fresh local prototype run over the components of run 14, then `./gradlew :license-evaluation:parityTest`. Record the result here: components compared, differences outside "policy rules" (expected 0), the "policy rules" list.
   - [x] 6.4.1 Targeted run on six explicit external components, each at its latest RELEASE, chosen for what they exercise: nested archives and npm modules, docker images with OS packages and Python, SBOM-only ecosystems, an image with copyleft modules, and many checksum-only files of ours. The prototype ran just before, license registry `50085de`: all six `same`, no difference in the inventory or the evaluation.
   - [x] 6.4.2 Policy rules: one, in three of the six: `pkg:maven/xalan/xalan@2.7.3-atlassian-hosted` overridden by `xalan--xalan--2.7.3` in the service, not in the prototype (`versions-api` reads the version as 2.7.3; the prototype compares the string). Same verdict and license, `ALLOWED` `Apache-2.0`, on both sides.

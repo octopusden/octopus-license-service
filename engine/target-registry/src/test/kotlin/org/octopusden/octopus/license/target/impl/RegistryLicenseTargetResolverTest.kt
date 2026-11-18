@@ -4,6 +4,7 @@ import com.sun.net.httpserver.HttpServer
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
@@ -21,7 +22,9 @@ import org.octopusden.octopus.license.target.model.LicenseTarget
 import org.octopusden.octopus.license.target.model.TargetResolution
 import java.net.InetSocketAddress
 import java.net.ServerSocket
+import java.time.Duration
 import java.util.concurrent.CopyOnWriteArrayList
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * Drives the published registry client over HTTP against answers recorded from the components
@@ -30,6 +33,7 @@ import java.util.concurrent.CopyOnWriteArrayList
 class RegistryLicenseTargetResolverTest {
     private val requests = CopyOnWriteArrayList<String>()
     private val answers = mutableMapOf<String, Pair<Int, String>>()
+    private val hanging = AtomicBoolean(false)
     private lateinit var server: HttpServer
 
     @BeforeEach
@@ -38,6 +42,7 @@ class RegistryLicenseTargetResolverTest {
             createContext("/") { exchange ->
                 val path = exchange.requestURI.path
                 requests += path
+                if (hanging.get()) Thread.sleep(HANG_MS)
                 val (status, body) = answers[path] ?: (NOT_FOUND to """{"errorMessage":"$path is not found"}""")
                 val bytes = body.toByteArray()
                 exchange.responseHeaders.add("Content-Type", "application/json")
@@ -51,8 +56,10 @@ class RegistryLicenseTargetResolverTest {
     @AfterEach
     fun stopRegistry() = server.stop(0)
 
-    private fun resolver(url: String = "http://localhost:${server.address.port}") =
-        RegistryLicenseTargetResolver(url, listOf(ConfiguredExclusion(listOf("test_user_guides"), "Documentation component")))
+    private fun resolver(
+        url: String = "http://localhost:${server.address.port}",
+        deadline: Duration = Duration.ofSeconds(DEADLINE_SECONDS),
+    ) = RegistryLicenseTargetResolver(url, listOf(ConfiguredExclusion(listOf("test_user_guides"), "Documentation component")), deadline)
 
     private fun answer(
         path: String,
@@ -129,8 +136,9 @@ class RegistryLicenseTargetResolverTest {
     @DisplayName("a 503 from the registry is retried once, then an unavailable error")
     fun serviceUnavailable() {
         answers["$API/components/sample-app/versions/1.4.12"] = SERVICE_UNAVAILABLE to """{"errorMessage":"down"}"""
-        assertThrows<ComponentsRegistryUnavailableException> { resolver().resolve("sample-app", "1.4.12") }
+        val error = assertThrows<ComponentsRegistryUnavailableException> { resolver().resolve("sample-app", "1.4.12") }
         assertEquals(2, requests.size)
+        assertFalse(error.message.orEmpty().contains("localhost"), error.message)
     }
 
     @Test
@@ -162,15 +170,30 @@ class RegistryLicenseTargetResolverTest {
     }
 
     @Test
-    @DisplayName("a registry nobody listens on is an unavailable error")
+    @DisplayName("a registry nobody listens on is an unavailable error that does not name the registry's address")
     fun unreachable() {
         val closedPort = ServerSocket(0).use { it.localPort }
-        assertThrows<ComponentsRegistryUnavailableException> {
+        val error = assertThrows<ComponentsRegistryUnavailableException> {
             resolver("http://localhost:$closedPort").resolve("sample-app", "1.4.12")
         }
+        assertFalse(error.message.orEmpty().contains("localhost"), error.message)
+    }
+
+    @Test
+    @DisplayName("a registry that answers too slowly is an unavailable error once the deadline passes, not when it answers")
+    fun pastDeadline() {
+        hanging.set(true)
+        val started = System.nanoTime()
+        assertThrows<ComponentsRegistryUnavailableException> {
+            resolver(deadline = Duration.ofMillis(SHORT_DEADLINE_MS)).resolve("sample-app", "1.4.12")
+        }
+        assertTrue(Duration.ofNanos(System.nanoTime() - started) < Duration.ofMillis(HANG_MS))
     }
 
     private companion object {
+        const val DEADLINE_SECONDS = 30L
+        const val SHORT_DEADLINE_MS = 200L
+        const val HANG_MS = 3_000L
         const val API = "/rest/api/2"
         const val OK = 200
         const val NOT_FOUND = 404

@@ -14,6 +14,9 @@ import java.time.Duration
  * @param maxStoredBytes how much license files the finished reports hold in memory; past it, the
  * oldest finished reports go before their TTL ends.
  * @param exclusions components out of scope that no registry fact identifies, grouped by reason.
+ * @param componentsRegistryDeadline how long starting a report waits for the components registry;
+ * past it, the start answers unavailable. Below the published client's 60 s read timeout, so the
+ * caller gets that answer instead of giving up on a start that may still register a report.
  * @param licenseRegistry where the license policy is read from (D9).
  * @param xray how long a scan waits for Xray to finish scanning.
  * @param ownership what is ours, so the scan follows our archives and evaluation calls them internal.
@@ -25,6 +28,7 @@ data class LicenseServiceProperties(
     val maxQueuedReports: Int = 50,
     val maxStoredBytes: DataSize = DataSize.ofMegabytes(512),
     val exclusions: List<ConfiguredExclusion> = emptyList(),
+    val componentsRegistryDeadline: Duration = Duration.ofSeconds(45),
     val licenseRegistry: LicenseRegistryProperties = LicenseRegistryProperties(),
     val xray: XrayProperties = XrayProperties(),
     val ownership: OwnershipProperties = OwnershipProperties(),

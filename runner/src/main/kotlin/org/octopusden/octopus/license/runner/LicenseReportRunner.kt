@@ -12,10 +12,19 @@ import org.octopusden.octopus.license.core.exception.ServiceUnreachableException
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
+import java.util.concurrent.Callable
+import java.util.concurrent.ExecutionException
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeoutException
 
 /**
  * Starts a report, polls it until it finishes and downloads its files when it is DONE, all within
- * [timeout].
+ * [timeout]: no call starts once it has passed, and a call still under way then is abandoned. Each
+ * call runs on a daemon thread for that reason: the client's read timeout limits each wait for
+ * data, not the whole answer, so only the runner can hold the deadline. An abandoned call ends on
+ * its own and never keeps the process alive.
  *
  * What can pass is waited out: an unreachable service or a gateway error is asked again after a
  * wait that doubles up to a minute, a busy service after the wait it asked for, and a report the
@@ -77,8 +86,9 @@ class LicenseReportRunner(
 
         private fun <T> call(action: () -> T): T {
             while (true) {
+                if (!clock.instant().isBefore(deadline)) throw RunnerTimeoutException("No license report within $timeout")
                 try {
-                    return action().also { backoff = FIRST_BACKOFF }
+                    return withinDeadline(action).also { backoff = FIRST_BACKOFF }
                 } catch (e: ServiceBusyException) {
                     pause(e.retryAfter ?: MAX_BACKOFF, e)
                 } catch (e: ServiceUnavailableException) {
@@ -92,6 +102,18 @@ class LicenseReportRunner(
         private fun waitOut(cause: Exception) {
             pause(backoff, cause)
             backoff = minOf(backoff.multipliedBy(2), MAX_BACKOFF)
+        }
+
+        private fun <T> withinDeadline(action: () -> T): T {
+            val future = callExecutor.submit(Callable(action))
+            return try {
+                future.get(Duration.between(clock.instant(), deadline).toMillis(), TimeUnit.MILLISECONDS)
+            } catch (_: TimeoutException) {
+                future.cancel(true)
+                throw RunnerTimeoutException("No license report within $timeout: the last call was still under way")
+            } catch (e: ExecutionException) {
+                throw e.cause ?: e
+            }
         }
 
         private fun pause(
@@ -114,6 +136,10 @@ class LicenseReportRunner(
     private companion object {
         val FIRST_BACKOFF: Duration = Duration.ofSeconds(5)
         val MAX_BACKOFF: Duration = Duration.ofMinutes(1)
+
+        val callExecutor: ExecutorService = Executors.newCachedThreadPool { task ->
+            Thread(task, "license-runner-call").apply { isDaemon = true }
+        }
     }
 }
 

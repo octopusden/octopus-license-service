@@ -69,6 +69,15 @@ class LibraryJudgeTest {
     }
 
     @Test
+    @DisplayName(
+        "a Maven library with no licenses found, as after a failed lookup, still takes the override's licenses",
+    )
+    fun overrideWithoutLicenses() {
+        assertEquals(Triple(ALLOWED, listOf("MIT"), true), judged(library("pkg:maven/org.example/sample-lib@1.5", emptySet())))
+        assertEquals(Triple(UNKNOWN, emptyList<String>(), false), judged(library("pkg:maven/org.example/sample-lib@2.1", emptySet())))
+    }
+
+    @Test
     @DisplayName("an override never applies to a package that is not Maven, whatever its name")
     fun overrideMavenOnly() {
         assertEquals(

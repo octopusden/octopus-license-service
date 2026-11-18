@@ -172,7 +172,7 @@ data class FoundLibrary(
 
 1. Type `docker` (an image layer): dropped. Not counted, not listed, not in any total.
 2. Type `rpm`, `deb` or `alpine`: skipped as an OS package.
-3. Type `pypi`, every released file it was found in is an image (`FileKind.DOCKER`), and the image scan is its only evidence (`BINARY_SCAN` alone): skipped as base-image Python. Xray cannot tell base-image Python (yum, subscription-manager) from an application's; Python the build itself declared (its SBOM or build record) is the application's and is counted.
+3. Type `pypi`, every released file it was found in is an image (`FileKind.DOCKER`), and the image scan is its only evidence (`BINARY_SCAN` alone): skipped as base-image Python. Xray cannot tell base-image Python (yum, subscription-manager) from an application's; Python the build itself declared is the application's and is counted. Today only an SBOM can declare it: the build record gives Maven and npm libraries alone (inventory D6, D7).
    - Decided on review, a deliberate difference from the prototype, which skips every `pypi` package found only in images: skipping what the build declared lets a Python service released only as an image report clean. The parity check reads such a package back as skipped and lists it as deliberate, so the rest still compares (Decision 11).
 4. Anything else: counted.
 
@@ -224,7 +224,7 @@ data class FoundLibrary(
   1. `scanner.scan(target, xrayWait)`, the wait chosen per request by the report's mode (decision of 2026-11-12: a regular build gets an optimistic check with no wait, RC and RELEASE wait):
      - `FULL` → `license-service.xray.scan-timeout` (5 min), for RC and RELEASE;
      - `CHECK` → `Duration.ZERO`: Xray is not even asked for a file's status, the scan reads what Xray knows now;
-  2. `InventorySourceUnavailableException`, including build-info Artifactory cannot serve (`5xx`, `401`, `403`, no answer; only `404` is "no build"), is counted `unavailable` and rethrown, so the report ends `FAILED` through the service's failure path; its message stays in the log, the report's error points to it;
+  2. `InventorySourceUnavailableException`, including build-info Artifactory cannot serve (`5xx`, `401`, `403`, no answer; only `404` is "no build"), is counted `unavailable` and rethrown, so the report ends `FAILED` through the service's failure path; its message stays in the log, the report's error points to it. A license lookup that fails for one batch of libraries is not this: the inventory leaves that batch without licenses, as the prototype does (inventory D9), the scan finishes, and those libraries are `UNKNOWN`, a violation, unless the license registry overrides them: an override replaces Xray's licenses whether the lookup answered or not. An outage during the lookup therefore can only add violations: a library not overridden may be `UNKNOWN` where an answered lookup would allow it, an overridden one keeps its verdict, and none is allowed that an answered lookup would not allow;
   3. `evaluator.evaluate(inventory, policy)`;
   4. `SummaryMapper.map(assessment, inputs)`; the zip stays empty until the license files change.
 - `SummaryMapper`:

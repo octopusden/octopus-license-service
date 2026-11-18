@@ -404,6 +404,7 @@ Kept because the prototype's results are the baseline; each may be revisited aft
   - packages: id, licenses (`xray_licences`), sources, files;
   - findings: code, subject, detail.
 - Output: `build/parity/report.md` with a line per component (`same` or the count of differences) and every difference listed. Done means no difference other than those in Decision 11.
+- Accepted differences: an optional file (`PARITY_ACCEPTED`) of differences a person checked, one per line with the component and the Decision 11 row that explains it. The report marks them `accepted (<row>)`; only the rest fail the task. The file belongs to the prototype run, not the repository: its lines name that run's files and packages.
 
 ### 17. Packages depend one way, and a test holds it
 

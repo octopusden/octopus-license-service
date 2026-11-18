@@ -125,6 +125,16 @@ class ClassicLicenseServiceClientTest {
     }
 
     @Test
+    @DisplayName("a 502 or 504 is ServiceUnreachableException even with an error envelope: the body does not change what it means")
+    fun gatewayErrorWithEnvelopeIsUnreachable() {
+        answerError("/rest/api/1/license-reports/$REPORT_ID", HTTP_BAD_GATEWAY)
+        answerError("/rest/api/1/license-reports/$REPORT_ID/files", HTTP_GATEWAY_TIMEOUT)
+
+        assertThrows<ServiceUnreachableException> { client.getReport(REPORT_ID) }
+        assertThrows<ServiceUnreachableException> { client.downloadFiles(REPORT_ID) }
+    }
+
+    @Test
     @DisplayName("a refused connection is ServiceUnreachableException, after one attempt: the caller decides on retries")
     fun refusedConnectionIsUnreachable() {
         val closedPort = ServerSocket(0).use { it.localPort }
@@ -195,6 +205,7 @@ class ClassicLicenseServiceClientTest {
         const val HTTP_CONFLICT = 409
         const val HTTP_INTERNAL_SERVER_ERROR = 500
         const val HTTP_BAD_GATEWAY = 502
+        const val HTTP_GATEWAY_TIMEOUT = 504
         const val HTTP_SERVICE_UNAVAILABLE = 503
         const val RETRY_AFTER_SECONDS = 60L
     }
