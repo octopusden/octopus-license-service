@@ -136,17 +136,18 @@
 
 ## 6. Parity (Decision 10)
 
-- [ ] 6.1 `:license-evaluation`:
+- [x] 6.1 `:license-evaluation`:
   - add `java-test-fixtures`;
   - move `EvaluationParityView` and `EvaluationParityDiff` into `testFixtures`, unchanged.
 
-  Its `parityTest` and unit tests still compile and pass.
-- [ ] 6.2 Failing tests for `TrustParityView` and `TrustParityDiff` (unit, prototype JSON fixtures):
-  - [ ] 6.2.1 `UNKNOWN_LICENCES` and "licence" read in the service's spelling.
-  - [ ] 6.2.2 Reasons compared as a set; levels and file maps exactly.
-  - [ ] 6.2.3 Files with an empty prototype `level` (not selected) are left out on both sides.
-  - [ ] 6.2.4 A prototype component with `error`, or without `version`, is skipped and named.
-- [ ] 6.3 `:license-trust`: `parityTest` source set and task, outside `check`, with Kover disabled for it. `PrototypeParityTest` runs resolve, scan, evaluate, grade, and reports the trust column and "follows from evaluation".
+  Its `parityTest` and unit tests still compile and pass. Confirmed: `:license-evaluation:check` green, 41 tests, `parityTest` compiles.
+- [x] 6.2 Failing tests for `TrustParityView` and `TrustParityDiff` (unit, prototype JSON fixtures):
+  - [x] 6.2.1 `UNKNOWN_LICENCES` and "licence" read in the service's spelling.
+  - [x] 6.2.2 Reasons compared as a set; levels and file maps exactly.
+  - [x] 6.2.3 Files with an empty prototype `level` (not selected) are left out on both sides.
+  - [x] 6.2.4 A prototype component with `error`, or without `version`, is skipped and named.
+  - [x] 6.2.5 Confirm: `TrustParityTest` 4 green; the view and diff live in `:license-trust`'s test sources, as nothing else reads them.
+- [x] 6.3 `:license-trust`: `parityTest` source set and task, outside `check`, with Kover disabled for it. `PrototypeParityTest` runs resolve, scan, evaluate, grade, and reports the trust column and "follows from evaluation".
 - [ ] 6.4 Run the prototype locally, then `./gradlew :license-trust:parityTest`. Record:
   - the run directory, the registry commit and the component count;
   - the components that differ, and why;
