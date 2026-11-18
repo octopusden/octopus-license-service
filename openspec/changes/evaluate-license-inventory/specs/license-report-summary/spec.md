@@ -59,6 +59,8 @@ The summary's `trust` SHALL be null.
 
 The service SHALL finish a report as `FAILED` when Artifactory or Xray cannot be asked during the scan, including build-info Artifactory cannot serve. As for any failed generation, the report's error SHALL point to the service log, which holds the scan's message; the message itself can carry internal URLs and is not served. No summary and no license files SHALL be kept for it.
 
+A license lookup Xray fails for some libraries, after the scan found them, SHALL NOT fail the report: those libraries have no licenses found and are judged `UNKNOWN`, a violation, as in the prototype.
+
 #### Scenario: Xray down
 
 - **WHEN** Xray answers every try with a server error during a scan
@@ -68,6 +70,11 @@ The service SHALL finish a report as `FAILED` when Artifactory or Xray cannot be
 
 - **WHEN** Artifactory answers a build-info request with `503`, `401` or `403`
 - **THEN** the report is `FAILED` as for an unreachable Xray, not `DONE` with fewer libraries
+
+#### Scenario: License lookup fails for some libraries
+
+- **WHEN** Xray answers every try of one license lookup with a server error, and the rest of the scan succeeds
+- **THEN** the report is `DONE`, the libraries of that lookup are `UNKNOWN` violations with no licenses, and the scan is counted `scanned`
 
 ### Requirement: Every scan is counted by its outcome
 

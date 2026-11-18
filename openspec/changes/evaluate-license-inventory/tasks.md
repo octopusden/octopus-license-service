@@ -81,12 +81,13 @@
 
 - [x] 5b.1 `LicenseInventoryScanner.scan(target, xrayWait)`: the generator maps the report mode to the wait, `FULL` → `license-service.xray.scan-timeout`, `CHECK` → none. `EvaluatingLicenseReportGeneratorTest.xrayWaitByMode`. The scanner bean no longer takes a wait.
 - [x] 5b.2 A failed report's error points to the service log, as #4's failure path now does; `LicenseReportApiTest` and the spec say so. Unreadable build-info fails the report like an unreachable Xray (spec scenario).
+- [x] 5b.3 A failed license lookup for some libraries leaves them `UNKNOWN` and the report `DONE`, as in the prototype; spec and Decision 9 say so (review: a clean summary is never the result).
 - [x] 5b.3 `Ownership` keeps `isOurs` and takes the scan's boundary rule for internal groups; no test here relied on a bare prefix.
 - [x] 5b.4 Docs: the Xray wait is chosen per request; `NOT_SCANNED` is waited for.
 
 ## 5c. Review of the evaluation (added on review)
 
-- [x] 5c.1 Python only in images is skipped only when the image scan is its only evidence; Python the build declared (SBOM, build record) is judged (Decision 3.3). `PackageScopeTest.declaredPythonInImage`, `LicenseEvaluatorTest.declaredPythonInImageOnlyComponent`.
+- [x] 5c.1 Python only in images is skipped only when the image scan is its only evidence; Python the build declared is judged (Decision 3.3); today only an SBOM declares Python, the build record gives Maven and npm alone. `PackageScopeTest.declaredPythonInImage`, `LicenseEvaluatorTest.declaredPythonInImageOnlyComponent`.
 - [x] 5c.2 The parity view reads such a package back as skipped and lists it as deliberate (`EvaluationParityTest.declaredImagePython`); the parity report has a "deliberate" line for it.
 - [x] 5c.3 `AssessedLibrary.thirdParty` removed: nothing read it, `SummaryMapper` decides third party itself.
 - [x] 5c.4 Test: licenses from two sources are judged together, one allowed name wins, as the license plugins do (`LibraryJudgeTest.sourcesDisagree`). Kept on purpose.
