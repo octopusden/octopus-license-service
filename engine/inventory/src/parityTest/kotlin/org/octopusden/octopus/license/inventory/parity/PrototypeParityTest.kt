@@ -18,7 +18,8 @@ import java.time.Duration
  *
  * Environment: `PROTOTYPE_RUN_DIR` (holding `components/`), `COMPONENTS_REGISTRY_URL`, `JFROG_URL`,
  * `JFROG_TOKEN`, `INTERNAL_GROUPS` and `OWN_REPOSITORY_PREFIXES` (comma-separated), and optionally
- * `PARITY_COMPONENTS` to limit the run.
+ * `PARITY_COMPONENTS` to limit the run and `PARITY_ACCEPTED`, a file of differences checked against
+ * Decision 11 (see [ParityAccepted]): those are reported as accepted, and only the rest fail the test.
  */
 class PrototypeParityTest {
     private fun env(name: String) = requireNotNull(System.getenv(name)?.takeIf { it.isNotBlank() }) { "$name is not set" }
@@ -42,6 +43,9 @@ class PrototypeParityTest {
                 env("JFROG_TOKEN"),
                 OwnershipRules(list("INTERNAL_GROUPS"), list("OWN_REPOSITORY_PREFIXES")),
             )
+        val accepted =
+            System.getenv("PARITY_ACCEPTED")?.takeIf { it.isNotBlank() }?.let { ParityAccepted.parse(File(it).readLines()) }
+                ?: ParityAccepted.NONE
         val mapper = ObjectMapper()
 
         val results =
@@ -64,7 +68,7 @@ class PrototypeParityTest {
                                     )
                             }
                         }.getOrElse { listOf("failed: ${it.javaClass.simpleName}: ${it.message}") }
-                }
+                }.map { (name, diffs) -> Checked(name, diffs.map { it to accepted.reasonFor(name, it) }) }
 
         val report = File("build/parity/report.md").apply { parentFile.mkdirs() }
         report.writeText(
@@ -73,21 +77,35 @@ class PrototypeParityTest {
                 appendLine()
                 appendLine("| Component | Result |")
                 appendLine("| --- | --- |")
-                results.forEach { (name, diffs) ->
-                    appendLine("| $name | ${if (diffs.isEmpty()) "same" else "${diffs.size} difference(s)"} |")
-                }
-                results.filter { it.second.isNotEmpty() }.forEach { (name, diffs) ->
+                results.forEach { appendLine("| ${it.name} | ${it.summary()} |") }
+                results.filter { it.diffs.isNotEmpty() }.forEach { result ->
                     appendLine()
-                    appendLine("## $name")
+                    appendLine("## ${result.name}")
                     appendLine()
-                    diffs.forEach { appendLine("- $it") }
+                    result.diffs.forEach { (diff, reason) ->
+                        appendLine(if (reason == null) "- $diff" else "- accepted ($reason): $diff")
+                    }
                 }
             },
         )
         assertEquals(
             emptyList<String>(),
-            results.filter { it.second.isNotEmpty() }.map { it.first },
-            "components that differ, see ${report.absolutePath}",
+            results.filter { it.unaccepted > 0 }.map { it.name },
+            "components with differences not accepted, see ${report.absolutePath}",
         )
+    }
+
+    private class Checked(
+        val name: String,
+        val diffs: List<Pair<String, String?>>,
+    ) {
+        val unaccepted = diffs.count { it.second == null }
+
+        fun summary() =
+            when {
+                diffs.isEmpty() -> "same"
+                unaccepted == 0 -> "${diffs.size} accepted"
+                else -> "$unaccepted difference(s), ${diffs.size - unaccepted} accepted"
+            }
     }
 }
