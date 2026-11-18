@@ -246,5 +246,5 @@ The prototype's `UNKNOWN_LICENCES` is read as `UNKNOWN_LICENSES`, and "licence" 
 
 #### Scenario: Reference components
 
-- **WHEN** the parity run includes `w4web3` and `dmp-bundle`
-- **THEN** both have the prototype's level, reasons and per-file levels
+- **WHEN** the parity run includes the reference components named in the ticket
+- **THEN** they have the prototype's level, reasons and per-file levels

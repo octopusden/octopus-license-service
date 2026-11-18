@@ -237,11 +237,11 @@ internal fun interface ComponentRule {
 
 ### 6. The C/C++ note comes from the labels only
 
-- The prototype adds "(C/C++ build)" when the labels hold `c` or `cpp`, **or** a read file was built by `PMSTDLIB`. The service keeps the label check and drops the build-name check.
-- Every component built by `PMSTDLIB` carries the `c` label in the components registry, so the label alone gives the same note.
+- The prototype adds "(C/C++ build)" when the labels hold `c` or `cpp`, **or** a read file was built by one particular internal C/C++ build. The service keeps the label check and drops the build-name check.
+- Every component built by that build carries the `c` label in the components registry, so the label alone gives the same note.
 - **Rejected: a `native-builds` setting.** It was a setting for one sentence of text.
-- **Rejected: hard-coding `PMSTDLIB`.** It is an internal build name in a public repository.
-- The note never changes a level. If a component is built by `PMSTDLIB` without the `c` label, parity shows it as a detail difference, and the fix is the label.
+- **Rejected: hard-coding the build name.** It is an internal name in a public repository.
+- The note never changes a level. If a component is built by it without the `c` label, parity shows it as a detail difference, and the fix is the label.
 
 ### 7. One owner for the identification thresholds
 
@@ -290,7 +290,7 @@ enum class TrustReasonCode { … }   // the engine's eleven, same names
 - **Reasons are compared as a set, not a list.** The inventory compares findings as a set, because the scan's lookups can find them in a different order. `CoverageRule` follows the findings' order, so the order can differ while the content is the same.
 - **When a component already has a "policy rules" or "deliberate" evaluation difference,** its trust differences are listed as "follows from evaluation" and do not fail. Either difference changes a count grading reads (third-party libraries, unknown licenses, types, SBOM seen).
 - Prototype components with `error` or with no `version` are skipped and named in the report. The service has no grade to compare for them (Decision 2).
-- Output: `build/parity/report.md`, adding a trust column. Done means no difference outside those listed, and `w4web3` and `dmp-bundle` the same.
+- Output: `build/parity/report.md`, adding a trust column. Done means no difference outside those listed, and the reference components named in the ticket the same.
 
 ### 11. Package rules, held by a test
 
