@@ -15,6 +15,9 @@ import java.time.Duration
  * oldest finished reports go before their TTL ends.
  * @param componentsRegistryUrl required; nullable only so its absence is reported by name at startup.
  * @param exclusions components out of scope that no registry fact identifies, grouped by reason.
+ * @param componentsRegistryDeadline how long starting a report waits for the components registry;
+ * past it, the start answers unavailable. Below the published client's 60 s read timeout, so the
+ * caller gets that answer instead of giving up on a start that may still register a report.
  * @param licenseRegistry where the license policy is read from (D9).
  */
 @ConfigurationProperties("license-service")
@@ -25,6 +28,7 @@ data class LicenseServiceProperties(
     val maxStoredBytes: DataSize = DataSize.ofMegabytes(512),
     val componentsRegistryUrl: String? = null,
     val exclusions: List<ConfiguredExclusion> = emptyList(),
+    val componentsRegistryDeadline: Duration = Duration.ofSeconds(45),
     val licenseRegistry: LicenseRegistryProperties = LicenseRegistryProperties(),
 )
 

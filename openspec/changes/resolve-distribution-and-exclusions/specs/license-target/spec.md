@@ -61,6 +61,11 @@ The service SHALL keep a `GAV` entry that is not `group:artifact:extension[:clas
 - **WHEN** the `GAV` field holds `org.example.sample:sample-app`
 - **THEN** the target declares an unsupported artifact for that entry, and the other entries are declared as usual
 
+#### Scenario: GAV entry with an empty part
+
+- **WHEN** the `GAV` field holds `:sample-app:jar`
+- **THEN** the target declares an unsupported artifact for that entry
+
 #### Scenario: GAV entry that is a file share
 
 - **WHEN** the `GAV` field holds `file:///share/sample/bundle.zip`
@@ -155,7 +160,7 @@ The service SHALL decide exclusion from the component-version call alone, and SH
 
 ### Requirement: Unknown and unreachable are errors, not results
 
-The service SHALL report an unknown component, or a version the registry does not know, as not found, and a registry that cannot be reached, answers with a server error, or is still loading its repository as unavailable; neither SHALL produce a license target or an exclusion.
+The service SHALL report an unknown component, or a version the registry does not know, as not found, and a registry that cannot be reached, answers with a server error, is still loading its repository, or does not answer within the configured deadline as unavailable; neither SHALL produce a license target or an exclusion. An unavailable error SHALL NOT name the registry's address.
 
 #### Scenario: Unknown component version
 
@@ -166,6 +171,11 @@ The service SHALL report an unknown component, or a version the registry does no
 
 - **WHEN** the registry cannot be reached
 - **THEN** the resolution fails as unavailable
+
+#### Scenario: Registry slower than the deadline
+
+- **WHEN** the registry has not answered when `license-service.components-registry-deadline` (default 45 s) passes
+- **THEN** the resolution fails as unavailable at the deadline, without waiting for the registry
 
 #### Scenario: Registry answers 503
 

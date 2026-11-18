@@ -88,6 +88,7 @@ It fills the `engine/` slot the architecture page reserves for the license regis
 
 - The raw-file endpoint of the published client reads the default branch's head; it takes no commit.
 - The adapter reads the head commit, then every file, then the head commit again. When the two differ, it starts over, at most three times, then fails the load.
+- The two head checks cannot see a branch that moves to another commit and is reset to the first inside one load: the files read in between may then come from both commits, and the policy is still labelled with the first. Accepted, since it needs a force-push undone within seconds; `TD-001` removes it by reading at the commit.
 - So the service reads the default branch only, and has no branch setting; it is the branch the license plugins clone.
 - `TD-001` (must do): read the registry through octopus-vcs-facade instead of Bitbucket, pinned to one commit, which drops the re-check and the service's own token. It needs file listing and reading in vcs-facade and its clients first; see `docs/tech-debt/001-read-license-registry-through-vcs-facade.md`.
 

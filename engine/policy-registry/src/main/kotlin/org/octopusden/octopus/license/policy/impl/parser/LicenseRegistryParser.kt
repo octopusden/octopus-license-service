@@ -80,9 +80,9 @@ object LicenseRegistryParser {
         val merged = mutableMapOf<String, String>()
         lines(merges).forEach { line ->
             val group = names(line)
-            group.forEach { name ->
+            group.distinct().forEach { name ->
                 val earlier = merged.putIfAbsent(name, group.first())
-                if (earlier != null && earlier != group.first()) {
+                if (earlier != null) {
                     problems += "$MERGES: '$name' is merged into '$earlier' already; its line for '${group.first()}' is ignored for it"
                 }
             }
