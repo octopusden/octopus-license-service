@@ -3,6 +3,7 @@ package org.octopusden.octopus.license.service.service.impl
 import org.octopusden.octopus.license.core.dto.GenerationInputs
 import org.octopusden.octopus.license.core.dto.LicenseReportMode
 import org.octopusden.octopus.license.core.dto.LicenseReportSummary
+import org.octopusden.octopus.license.policy.model.LicensePolicy
 import org.octopusden.octopus.license.service.service.GeneratedReport
 import org.octopusden.octopus.license.service.service.LicenseReportGenerator
 import org.octopusden.octopus.license.target.model.LicenseTarget
@@ -12,7 +13,10 @@ import java.io.ByteArrayOutputStream
 import java.time.Clock
 import java.util.zip.ZipOutputStream
 
-/** Answers every component version with no libraries and an empty zip, until real sources are read. */
+/**
+ * Answers every component version with no libraries and an empty zip, until real sources are read;
+ * the summary still records which license registry commit the report would have been judged with.
+ */
 @Component
 class EmptyLicenseReportGenerator(
     private val clock: Clock,
@@ -21,10 +25,11 @@ class EmptyLicenseReportGenerator(
     override fun generate(
         target: LicenseTarget,
         mode: LicenseReportMode,
+        policy: LicensePolicy,
     ) = GeneratedReport(
         LicenseReportSummary(
             inputs = GenerationInputs(
-                licenseRegistryCommit = null,
+                licenseRegistryCommit = policy.commit,
                 generatedAt = clock.instant(),
                 serviceVersion = requireNotNull(buildProperties.version) { "build-info carries no version" },
             ),
