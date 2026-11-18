@@ -1,5 +1,6 @@
 package org.octopusden.octopus.license.service.service.impl
 
+import io.micrometer.core.instrument.MeterRegistry
 import org.octopusden.octopus.license.core.dto.LicenseReport
 import org.octopusden.octopus.license.core.dto.LicenseReportRequest
 import org.octopusden.octopus.license.core.dto.LicenseReportStatus
@@ -7,11 +8,18 @@ import org.octopusden.octopus.license.core.exception.InvalidRequestException
 import org.octopusden.octopus.license.core.exception.LicenseFilesNotAvailableException
 import org.octopusden.octopus.license.core.exception.NotFoundException
 import org.octopusden.octopus.license.core.exception.ServiceBusyException
+import org.octopusden.octopus.license.core.exception.ServiceUnavailableException
 import org.octopusden.octopus.license.service.service.LicenseFiles
 import org.octopusden.octopus.license.service.service.LicenseReportGenerator
 import org.octopusden.octopus.license.service.service.LicenseReportService
 import org.octopusden.octopus.license.service.state.report.LicenseReportStore
 import org.octopusden.octopus.license.service.state.report.StoredReport
+import org.octopusden.octopus.license.target.LicenseTargetResolver
+import org.octopusden.octopus.license.target.exception.ComponentVersionNotFoundException
+import org.octopusden.octopus.license.target.exception.ComponentsRegistryUnavailableException
+import org.octopusden.octopus.license.target.exception.UnexpectedRegistryAnswerException
+import org.octopusden.octopus.license.target.model.LicenseTarget
+import org.octopusden.octopus.license.target.model.TargetResolution
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.core.task.TaskExecutor
@@ -25,8 +33,10 @@ import java.util.UUID
 class LicenseReportServiceImpl(
     private val licenseReportStore: LicenseReportStore,
     private val licenseReportGenerator: LicenseReportGenerator,
+    private val licenseTargetResolver: LicenseTargetResolver,
     @Qualifier("licenseReportExecutor") private val licenseReportExecutor: TaskExecutor,
     private val clock: Clock,
+    private val meterRegistry: MeterRegistry,
 ) : LicenseReportService {
     private val startLock = Any()
 
@@ -39,19 +49,26 @@ class LicenseReportServiceImpl(
             status = LicenseReportStatus.RUNNING,
             mode = request.mode,
         )
-        // Registering and queuing are one step: a concurrent start must not join a report whose
-        // queuing is then refused and removed.
-        synchronized(startLock) {
-            val current = licenseReportStore.addUnlessRunning(report)
-            if (current.id != report.id) return current
-            try {
-                licenseReportExecutor.execute { generate(report) }
-            } catch (_: TaskRejectedException) {
-                licenseReportStore.remove(report.id)
-                throw ServiceBusyException("Every license report generation is busy; start the report again later")
+        return when (val resolution = resolve(request)) {
+            is TargetResolution.Excluded ->
+                report.copy(status = LicenseReportStatus.EXCLUDED, exclusionReason = resolution.reason).also {
+                    licenseReportStore.finish(it, null)
+                    log.info("License report {} for {}:{} excluded: {}", it.id, it.component, it.version, resolution.reason)
+                }
+            // Registering and queuing are one step: a concurrent start must not join a report whose
+            // queuing is then refused and removed.
+            is TargetResolution.Resolved -> synchronized(startLock) {
+                val current = licenseReportStore.addUnlessRunning(report)
+                if (current.id != report.id) return current
+                try {
+                    licenseReportExecutor.execute { generate(report, resolution.target) }
+                } catch (_: TaskRejectedException) {
+                    licenseReportStore.remove(report.id)
+                    throw ServiceBusyException("Every license report generation is busy; start the report again later")
+                }
+                report
             }
         }
-        return report
     }
 
     override fun get(id: String) = find(id).report
@@ -73,9 +90,33 @@ class LicenseReportServiceImpl(
     private fun find(id: String): StoredReport =
         licenseReportStore.find(id) ?: throw NotFoundException("License report '$id' is not found or has expired")
 
-    private fun generate(report: LicenseReport) {
+    private fun resolve(request: LicenseReportRequest): TargetResolution =
+        try {
+            licenseTargetResolver.resolve(request.component, request.version).also {
+                countResolution(if (it is TargetResolution.Excluded) "excluded" else "resolved")
+            }
+        } catch (e: ComponentVersionNotFoundException) {
+            countResolution("not_found")
+            throw NotFoundException(e.message ?: "Component version ${request.component}:${request.version} is not found", e)
+        } catch (e: ComponentsRegistryUnavailableException) {
+            countResolution("unavailable")
+            log.warn("Cannot start a license report for {}:{}", request.component, request.version, e)
+            throw ServiceUnavailableException(e.message ?: "Components registry is unavailable", e)
+        } catch (e: UnexpectedRegistryAnswerException) {
+            countResolution("error")
+            throw e
+        }
+
+    // A registry outage is a metric, not a health indicator: the registry is called per request
+    // and shared by every pod, so turning pods unready would only take the whole service down.
+    private fun countResolution(outcome: String) = meterRegistry.counter(RESOLUTIONS_METRIC, "outcome", outcome).increment()
+
+    private fun generate(
+        report: LicenseReport,
+        target: LicenseTarget,
+    ) {
         val startedAt = clock.instant()
-        val finished = runCatching { licenseReportGenerator.generate(report.component, report.version, report.mode) }.fold(
+        val finished = runCatching { licenseReportGenerator.generate(target, report.mode) }.fold(
             onSuccess = { generated ->
                 report.copy(status = LicenseReportStatus.DONE, summary = generated.summary).also {
                     licenseReportStore.finish(it, generated.files)
@@ -105,5 +146,6 @@ class LicenseReportServiceImpl(
 
     private companion object {
         val log = LoggerFactory.getLogger(LicenseReportServiceImpl::class.java)
+        const val RESOLUTIONS_METRIC = "license.target.resolutions"
     }
 }

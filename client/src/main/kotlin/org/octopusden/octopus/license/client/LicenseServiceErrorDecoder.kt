@@ -8,6 +8,7 @@ import org.octopusden.octopus.license.core.exception.InvalidRequestException
 import org.octopusden.octopus.license.core.exception.LicenseFilesNotAvailableException
 import org.octopusden.octopus.license.core.exception.NotFoundException
 import org.octopusden.octopus.license.core.exception.ServiceBusyException
+import org.octopusden.octopus.license.core.exception.ServiceUnavailableException
 import org.octopusden.octopus.license.core.exception.ServiceUnreachableException
 import tools.jackson.core.JacksonException
 import tools.jackson.databind.json.JsonMapper
@@ -34,9 +35,11 @@ internal class LicenseServiceErrorDecoder(
         }
         val status = response.status()
         return when {
-            // The license service answers 503 only when it is busy, always with its envelope; any other
-            // 502/503/504 comes from something in front of it, whatever its body.
-            status == HTTP_SERVICE_UNAVAILABLE && message != null -> ServiceBusyException(message, retryAfter(response))
+            // The license service answers 503 always with its envelope: with Retry-After when it is busy,
+            // without when a system it reads is unavailable. Any other 502/503/504 comes from something
+            // in front of it, whatever its body.
+            status == HTTP_SERVICE_UNAVAILABLE && message != null ->
+                if (hasRetryAfter(response)) ServiceBusyException(message, retryAfter(response)) else ServiceUnavailableException(message)
             status in GATEWAY_ERRORS -> ServiceUnreachableException("$methodKey answered $status, not from the license service")
             message == null -> default.decode(methodKey, buffered)
             status == HTTP_BAD_REQUEST -> InvalidRequestException(message)
@@ -46,16 +49,21 @@ internal class LicenseServiceErrorDecoder(
         }
     }
 
+    private fun hasRetryAfter(response: Response) = retryAfterValues(response) != null
+
     private fun retryAfter(response: Response) =
+        retryAfterValues(response)
+            ?.firstOrNull()
+            ?.trim()
+            ?.toLongOrNull()
+            ?.let(Duration::ofSeconds)
+
+    private fun retryAfterValues(response: Response) =
         response
             .headers()
             .entries
             .firstOrNull { it.key.equals(RETRY_AFTER, ignoreCase = true) }
             ?.value
-            ?.firstOrNull()
-            ?.trim()
-            ?.toLongOrNull()
-            ?.let(Duration::ofSeconds)
 
     private companion object {
         const val HTTP_BAD_REQUEST = 400

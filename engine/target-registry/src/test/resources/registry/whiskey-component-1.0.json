@@ -1,0 +1,120 @@
+{
+  "id": "whiskey-component",
+  "name": "Sample App",
+  "componentOwner": "owner",
+  "buildSystem": "WHISKEY",
+  "vcsSettings": {
+    "versionControlSystemRoots": [
+      {
+        "name": "main",
+        "vcsPath": "ssh://git@vcs.example/sample/sample-app.git",
+        "type": "GIT",
+        "tag": "sample-app-1.4.12",
+        "branch": "master"
+      }
+    ],
+    "externalRegistry": null
+  },
+  "jiraComponentVersion": {
+    "name": "sample-app",
+    "version": "1.4.12",
+    "component": {
+      "projectKey": "SAMPLE",
+      "displayName": "Sample App",
+      "componentVersionFormat": {
+        "majorVersionFormat": "$major.$minor",
+        "releaseVersionFormat": "$major.$minor.$service",
+        "buildVersionFormat": "$major.$minor.$service",
+        "lineVersionFormat": "$major.$minor",
+        "hotfixVersionFormat": "$major.$minor.$service-$fix"
+      },
+      "componentInfo": {
+        "versionPrefix": "sample-app",
+        "versionFormat": "$versionPrefix-$baseVersionFormat"
+      },
+      "technical": false
+    }
+  },
+  "detailedComponentVersion": {
+    "component": "Sample App",
+    "minorVersion": {
+      "type": "MINOR",
+      "version": "1.4",
+      "jiraVersion": "sample-app-1.4"
+    },
+    "lineVersion": {
+      "type": "LINE",
+      "version": "1.4",
+      "jiraVersion": "sample-app-1.4"
+    },
+    "buildVersion": {
+      "type": "BUILD",
+      "version": "1.4.12-0034",
+      "jiraVersion": "sample-app-1.4.12"
+    },
+    "rcVersion": {
+      "type": "RC",
+      "version": "1.4.12_RC",
+      "jiraVersion": "sample-app-1.4.12_RC"
+    },
+    "releaseVersion": {
+      "type": "RELEASE",
+      "version": "1.4.12",
+      "jiraVersion": "sample-app-1.4.12"
+    }
+  },
+  "deprecated": false,
+  "buildFilePath": null,
+  "system": [
+    "CLASSIC"
+  ],
+  "clientCode": "",
+  "releasesInDefaultBranch": true,
+  "solution": true,
+  "parentComponent": null,
+  "securityChampion": "owner",
+  "releaseManager": "owner",
+  "distribution": {
+    "explicit": true,
+    "external": true,
+    "GAV": "org.example.sample:sample-app:zip,org.example.sample:sample-app-config:yaml",
+    "securityGroups": {
+      "read": [
+        "Example Group"
+      ]
+    },
+    "docker": "sample/sample-app"
+  },
+  "archived": false,
+  "testComponent": false,
+  "doc": null,
+  "escrow": {
+    "buildTask": null,
+    "providedDependencies": [],
+    "diskSpaceRequirement": null,
+    "additionalSources": [],
+    "isReusable": true,
+    "generation": "UNSUPPORTED"
+  },
+  "copyright": null,
+  "labels": [],
+  "buildParameters": {
+    "javaVersion": "17",
+    "mavenVersion": "3.6.3",
+    "gradleVersion": "LATEST",
+    "requiredProject": false,
+    "projectVersion": null,
+    "systemProperties": null,
+    "buildTasks": null,
+    "tools": [
+      {
+        "name": "BuildEnv",
+        "escrowEnvironmentVariable": "BUILD_ENV",
+        "sourceLocation": "$env.BUILD_ENV",
+        "targetLocation": "tools/BUILD_ENV",
+        "installScript": null
+      }
+    ],
+    "buildTools": []
+  }
+}

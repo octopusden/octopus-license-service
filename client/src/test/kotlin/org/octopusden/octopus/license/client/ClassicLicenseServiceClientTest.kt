@@ -17,6 +17,7 @@ import org.octopusden.octopus.license.core.exception.InvalidRequestException
 import org.octopusden.octopus.license.core.exception.LicenseFilesNotAvailableException
 import org.octopusden.octopus.license.core.exception.NotFoundException
 import org.octopusden.octopus.license.core.exception.ServiceBusyException
+import org.octopusden.octopus.license.core.exception.ServiceUnavailableException
 import org.octopusden.octopus.license.core.exception.ServiceUnreachableException
 import java.net.InetSocketAddress
 import java.net.ServerSocket
@@ -73,17 +74,25 @@ class ClassicLicenseServiceClientTest {
     }
 
     @Test
-    @DisplayName("the error envelope maps 400, 404, 409 and 503 to the shared exception types")
+    @DisplayName("the error envelope maps 400, 404, 409 and a 503 with Retry-After to the shared exception types")
     fun mapsErrorEnvelope() {
         answerError("/rest/api/1/license-reports", HTTP_BAD_REQUEST)
         answerError("/rest/api/1/license-reports/missing", HTTP_NOT_FOUND)
         answerError("/rest/api/1/license-reports/running/files", HTTP_CONFLICT)
-        answerError("/rest/api/1/license-reports/busy", HTTP_SERVICE_UNAVAILABLE)
+        answerError("/rest/api/1/license-reports/busy", HTTP_SERVICE_UNAVAILABLE, mapOf("Retry-After" to "60"))
 
         assertThrows<InvalidRequestException> { client.startReport(LicenseReportRequest("c", "1")) }
         assertThrows<NotFoundException> { client.getReport("missing") }
         assertThrows<LicenseFilesNotAvailableException> { client.downloadFiles("running") }
         assertThrows<ServiceBusyException> { client.getReport("busy") }
+    }
+
+    @Test
+    @DisplayName("a 503 without Retry-After means a system the service reads is unavailable, not that it is busy")
+    fun mapsServiceUnavailable() {
+        answerError("/rest/api/1/license-reports", HTTP_SERVICE_UNAVAILABLE)
+
+        assertThrows<ServiceUnavailableException> { client.startReport(LicenseReportRequest("c", "1")) }
     }
 
     @Test
@@ -159,16 +168,19 @@ class ClassicLicenseServiceClientTest {
     private fun answerError(
         path: String,
         status: Int,
-    ) = answer(path, status, """{"error":{"code":$status,"message":"answered $status"}}""")
+        headers: Map<String, String> = emptyMap(),
+    ) = answer(path, status, """{"error":{"code":$status,"message":"answered $status"}}""", headers)
 
     private fun answer(
         path: String,
         status: Int,
         body: String,
+        headers: Map<String, String> = emptyMap(),
     ) {
         server.createContext(path) { exchange ->
             val bytes = body.toByteArray()
             exchange.responseHeaders.add("Content-Type", "application/json")
+            headers.forEach { (name, value) -> exchange.responseHeaders.add(name, value) }
             exchange.sendResponseHeaders(status, bytes.size.toLong())
             exchange.responseBody.use { it.write(bytes) }
         }
