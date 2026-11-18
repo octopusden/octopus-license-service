@@ -129,6 +129,19 @@ class LicenseRunnerCommandTest {
         assertEquals(Path.of("b"), LicenseRunnerCommand.outputDirIn(arguments.split(" ").toTypedArray()))
     }
 
+    @ParameterizedTest(name = "{0}")
+    @ValueSource(
+        strings = [
+            "--output-dir a -- --output-dir b",
+            "--output-dir a --component --output-dir=b --version 1",
+            "--output-dir a --component --output-dir b",
+        ],
+    )
+    @DisplayName("tokens Clikt does not read as options are not read as the output directory either")
+    fun onlyRealOptionsCount(arguments: String) {
+        assertEquals(Path.of("a"), LicenseRunnerCommand.outputDirIn(arguments.split(" ").toTypedArray()))
+    }
+
     @Test
     @DisplayName("arguments the runner cannot read are a warning, never an exception: the build step still passes")
     fun badArgumentsAreWarning() {

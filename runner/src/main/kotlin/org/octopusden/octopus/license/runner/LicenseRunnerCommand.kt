@@ -88,6 +88,9 @@ class LicenseRunnerCommand : CliktCommand(name = "license-runner") {
     companion object {
         const val DEFAULT_OUTPUT_DIR = "license-report"
         private const val OUTPUT_DIR_OPTION = "--output-dir"
+        private const val END_OF_OPTIONS = "--"
+        private val VALUE_OPTIONS =
+            setOf("--url", "--component", "--version", OUTPUT_DIR_OPTION, "--poll-interval", "--timeout")
         private const val DEFAULT_POLL_INTERVAL_SECONDS = 5L
         private const val DEFAULT_TIMEOUT_MINUTES = 30L
         private const val REPORT_FILE = "license-report.json"
@@ -108,18 +111,22 @@ class LicenseRunnerCommand : CliktCommand(name = "license-runner") {
 
         /**
          * The output directory named in [args], read without Clikt: for when Clikt could not parse
-         * them. The last one given wins, as it does for Clikt.
+         * them. Read the way Clikt reads them: the last `--output-dir` wins, the token after an option
+         * that takes a value is that value even when it starts with `--`, and nothing after `--` is
+         * an option.
          */
         fun outputDirIn(args: Array<String>): Path {
-            val value = args.indices
-                .mapNotNull { i ->
-                    when {
-                        args[i] == OUTPUT_DIR_OPTION -> args.getOrNull(i + 1)
-                        args[i].startsWith("$OUTPUT_DIR_OPTION=") -> args[i].substringAfter("=")
-                        else -> null
-                    }
-                }.lastOrNull()
-            return Path.of(value ?: DEFAULT_OUTPUT_DIR)
+            var outputDir: String? = null
+            var i = 0
+            while (i < args.size && args[i] != END_OF_OPTIONS) {
+                val token = args[i]
+                when {
+                    token == OUTPUT_DIR_OPTION -> outputDir = args.getOrNull(i + 1)
+                    token.startsWith("$OUTPUT_DIR_OPTION=") -> outputDir = token.substringAfter("=")
+                }
+                i += if (token in VALUE_OPTIONS) 2 else 1
+            }
+            return Path.of(outputDir ?: DEFAULT_OUTPUT_DIR)
         }
     }
 }
