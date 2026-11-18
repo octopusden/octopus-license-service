@@ -14,7 +14,6 @@ import org.octopusden.octopus.license.inventory.model.ReleasedFile
  *
  * @param selected every released file that is not [FileStatus.NOT_SELECTED] or [FileStatus.METADATA].
  * @param covered read files and plain files: plain text cannot hold libraries.
- * @param counted every counted library, ours included.
  * @param sbomSeen whether any counted library, ours included, came from an SBOM.
  */
 internal class GradingSubject private constructor(
@@ -22,7 +21,6 @@ internal class GradingSubject private constructor(
     val selected: List<ReleasedFile>,
     val read: List<ReleasedFile>,
     val covered: List<ReleasedFile>,
-    val counted: List<AssessedLibrary>,
     val thirdParty: List<AssessedLibrary>,
     val sbomSeen: Boolean,
     val findings: List<Finding>,
@@ -42,7 +40,6 @@ internal class GradingSubject private constructor(
                 selected = selected,
                 read = selected.filter { it.status == FileStatus.READ },
                 covered = selected.filter { it.status == FileStatus.READ || it.status == FileStatus.PLAIN_FILE },
-                counted = assessment.libraries,
                 thirdParty = assessment.libraries.filter { it.verdict != LibraryVerdict.INTERNAL },
                 sbomSeen = assessment.libraries.any { Evidence.SBOM in it.library.evidence },
                 findings = assessment.inventory.findings,

@@ -109,7 +109,7 @@ TrustGrader                      public · grade(assessment, labels): TrustGrade
 | --- | --- | --- | --- |
 | `TrustGrader` | orchestrator, pure | Builds the subject, asks `ComponentGrader` for the reasons and `FileGrader` for each file. Decides nothing itself | `assess_confidence` and `assess_artifacts` calls |
 | `ComponentGrader` | orchestrator, pure | Runs the component rules in order, removes duplicate reasons | `assess_confidence` body |
-| `GradingSubject` | pure value | Selected, read and covered files; third-party and counted libraries; types; whether any SBOM was seen; labels | `scanned`, `covered`, `third`, `types`, `has_sbom` |
+| `GradingSubject` | pure value | Selected, read and covered files; third-party libraries; whether any counted library was seen in an SBOM; labels; findings | `scanned`, `covered`, `third`, `types`, `has_sbom` |
 | `CoverageRule` | rule | Nothing covered: a reason per mapped scan finding, or `NOT_SCANNABLE`. Some covered: `PARTIAL_ARTIFACTS` | `NOT_ANALYSED_TYPES` loop, `PARTIAL_ARTIFACTS` |
 | `EmptyContentRule` | rule | Files read, no third-party library; adds the C/C++ note from the labels | `NO_THIRD_PARTY_FOUND`, `NATIVE_LABELS` |
 | `EcosystemRule` | rule | A labelled language has no package of its types; a type found that only an SBOM lists completely | `LABEL_ECOSYSTEMS`, `COMPLETE_TYPES` |
