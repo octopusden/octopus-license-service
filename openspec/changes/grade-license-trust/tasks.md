@@ -25,14 +25,16 @@
 
 ## 2. The facts every rule reads (Decision 3)
 
-- [ ] 2.1 Failing tests for `GradingSubject.of(assessment, labels)`:
-  - [ ] 2.1.1 Selected files leave out `NOT_SELECTED` and `METADATA`.
-  - [ ] 2.1.2 Read files are `READ`. Covered files are read files plus `PLAIN_FILE`, in listing order.
-  - [ ] 2.1.3 Third-party libraries are the counted libraries without `INTERNAL`. Skipped packages are never among them.
-  - [ ] 2.1.4 `sbomSeen`:
+- [x] 2.1 Failing tests for `GradingSubject.of(assessment, labels)`:
+  - [x] 2.1.1 Selected files leave out `NOT_SELECTED` and `METADATA`.
+  - [x] 2.1.2 Read files are `READ`. Covered files are read files plus `PLAIN_FILE`, in listing order.
+  - [x] 2.1.3 Third-party libraries are the counted libraries without `INTERNAL`. Skipped packages are never among them.
+  - [x] 2.1.4 `sbomSeen`:
     - an `INTERNAL` library with `SBOM` evidence counts;
     - a skipped OS package with `SBOM` evidence does not.
-- [ ] 2.2 Implement `impl/GradingSubject.kt`.
+  - [x] 2.1.5 `thirdPartyIn(entry)`: a file's own third-party libraries, the ones whose `foundIn` holds it; `FileGrader` reads it (added on review).
+- [x] 2.2 Implement `impl/GradingSubject.kt`. It also carries the findings, so `CoverageRule` reads one value like every other rule.
+- [x] 2.3 Confirm: `GradingSubjectTest` 5 green, `:license-trust:test` 36; `ktlintCheck` and `detekt` clean.
 
 ## 3. Component rules (Decisions 4, 6, 7)
 
