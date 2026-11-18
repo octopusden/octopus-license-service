@@ -14,6 +14,7 @@ Generates third-party license files for a component version from JFrog Xray and 
 | `license-policy-registry` | `engine/policy-registry/` | Not published; part of the service. Reads the license policy from the license registry and judges a library's licenses |
 | `license-inventory` | `engine/inventory/` | Not published; part of the service. Scans what a component version releases: the files, the libraries inside them, their licenses and which are ours, from Artifactory and Xray |
 | `license-evaluation` | `engine/evaluation/` | Not published; part of the service. Decides which libraries count and the verdict on each, from the inventory and the license policy; reads no system |
+| `license-trust` | `engine/trust/` | Not published; part of the service. Grades how far the library list of a version, and of each released file, can be trusted to be complete; reads no system |
 
 Which module may depend on which, and how a request flows: [docs/architecture.md](docs/architecture.md).
 

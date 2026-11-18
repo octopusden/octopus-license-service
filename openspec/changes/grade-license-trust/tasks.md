@@ -156,15 +156,17 @@
 ## 7. Finalization
 
 - [ ] 7.1 Run `./gradlew build qualityCheck` and confirm it is green.
-- [ ] 7.2 Update `docs/architecture.md`:
+- [x] 7.2 Update `docs/architecture.md`:
   - the trust module in the diagram and the table, with its rule;
   - the request flow (grade after evaluate);
   - the `SummaryMapper` sentence.
-- [ ] 7.3 Update the `CLAUDE.md` module list and the parity command (`:license-trust:parityTest`).
-- [ ] 7.4 Check the out-of-scope boundaries by grep:
+- [x] 7.3 Update the `CLAUDE.md` module list and the parity command (`:license-trust:parityTest`). Also the module table in `README.md`.
+- [x] 7.4 Check the out-of-scope boundaries by grep:
   - no `ERROR` or `NEVER_BUILT` code;
   - no per-file counts in `core`;
   - no trust metric;
   - the runner's exit code reads neither `trust` nor `violations`: report only;
   - no `native-builds` setting and no build name in the code.
+
+  Confirmed by grep over `engine/trust`, `core`, `server` and `runner`: none of the five found.
 - [ ] 7.5 Check that the risks in `design.md` still hold. Any rule found odd during parity goes to TD-002 or a new `TD-NNN`, never a `TODO`.
