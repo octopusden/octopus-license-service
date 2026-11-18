@@ -10,6 +10,8 @@ import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertDoesNotThrow
 import org.junit.jupiter.api.io.TempDir
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 import java.io.ByteArrayOutputStream
 import java.io.PrintStream
 import java.net.InetSocketAddress
@@ -118,6 +120,27 @@ class LicenseRunnerCommandTest {
 
         assertFalse(Files.exists(oldReport))
         assertFalse(Files.exists(oldZip))
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @ValueSource(strings = ["--output-dir a --output-dir b", "--output-dir=a --output-dir b", "--output-dir a --output-dir=b"])
+    @DisplayName("the output directory read without Clikt is the last one given, as Clikt reads it")
+    fun lastOutputDirWins(arguments: String) {
+        assertEquals(Path.of("b"), LicenseRunnerCommand.outputDirIn(arguments.split(" ").toTypedArray()))
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @ValueSource(
+        strings = [
+            "--output-dir a -- --output-dir b",
+            "--output-dir a --component --output-dir=b --version 1",
+            "--output-dir a --component --output-dir b",
+            "--output-dir a --output-dir",
+        ],
+    )
+    @DisplayName("tokens Clikt does not read as options are not read as the output directory either")
+    fun onlyRealOptionsCount(arguments: String) {
+        assertEquals(Path.of("a"), LicenseRunnerCommand.outputDirIn(arguments.split(" ").toTypedArray()))
     }
 
     @Test
