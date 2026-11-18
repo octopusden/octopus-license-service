@@ -13,12 +13,29 @@ jobs:
   build:
     uses: ./.github/workflows/build.yml
 
+  quality:
+    uses: octopusden/octopus-base/.github/workflows/common-java-gradle-quality-gates.yml@v3.4.1
+    with:
+      java-version: '25'
+
+  security:
+    permissions:
+      contents: read
+      security-events: write
+    uses: octopusden/octopus-base/.github/workflows/common-java-gradle-security-reports.yml@v3.4.1
+    with:
+      java-version: '25'
+      codeql-category: /license-service-codeql
+      # Trivy cannot install while get.trivy.dev does not resolve, and this repository has no cached
+      # binary. Re-enable once the shared workflow installs Trivy from its GitHub release.
+      enable-trivy: false
+
   gate-merge:
     name: gate/merge
     if: ${{ always() }}
-    needs: [ build ]
+    needs: [ build, quality, security ]
     runs-on: ubuntu-latest
     steps:
-      - uses: octopusden/octopus-base/.github/actions/merge-gate@v3.3.0
+      - uses: octopusden/octopus-base/.github/actions/merge-gate@v3.4.1
         with:
           needs: ${{ toJson(needs) }}

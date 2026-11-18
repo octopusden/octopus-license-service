@@ -1,0 +1,16 @@
+name: Quality Gates
+
+# Pull requests run the same reusable workflow through merge-gate.yml, not this file.
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    uses: octopusden/octopus-base/.github/workflows/common-java-gradle-quality-gates.yml@v3.4.1
+    with:
+      java-version: '25'
