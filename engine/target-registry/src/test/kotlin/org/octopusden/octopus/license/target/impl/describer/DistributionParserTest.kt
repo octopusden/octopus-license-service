@@ -50,6 +50,14 @@ class DistributionParserTest {
     }
 
     @ParameterizedTest
+    @ValueSource(strings = [":sample-app:jar", "org.a::jar", "org.a:x:", "org.a:x:jar:", "org.a: :jar"])
+    @DisplayName("a GAV entry with an empty part is unsupported")
+    fun emptyPartGav(entry: String) {
+        val declared = DistributionParser.parse(gav = entry, docker = null).single()
+        assertEquals(entry, (declared as Unsupported).entry)
+    }
+
+    @ParameterizedTest
     @ValueSource(strings = ["file:///share/sample/bundle.zip", "http://host/bundle.zip", "https://host/a:b:c"])
     @DisplayName("a GAV entry that is a file share or URL is unsupported")
     fun uriGav(entry: String) {

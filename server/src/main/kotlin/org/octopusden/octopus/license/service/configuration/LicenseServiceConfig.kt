@@ -27,6 +27,7 @@ class LicenseServiceConfig(
                 "license-service.components-registry-url is not set"
             },
             properties.exclusions,
+            properties.componentsRegistryDeadline,
         )
 
     @Bean
