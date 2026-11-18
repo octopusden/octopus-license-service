@@ -28,6 +28,8 @@ class LicenseReportServiceImpl(
     @Qualifier("licenseReportExecutor") private val licenseReportExecutor: TaskExecutor,
     private val clock: Clock,
 ) : LicenseReportService {
+    private val startLock = Any()
+
     override fun start(request: LicenseReportRequest): LicenseReport {
         validate(request)
         val report = LicenseReport(
@@ -37,13 +39,17 @@ class LicenseReportServiceImpl(
             status = LicenseReportStatus.RUNNING,
             mode = request.mode,
         )
-        val current = licenseReportStore.addUnlessRunning(report)
-        if (current.id != report.id) return current
-        try {
-            licenseReportExecutor.execute { generate(report) }
-        } catch (_: TaskRejectedException) {
-            licenseReportStore.remove(report.id)
-            throw ServiceBusyException("Every license report generation is busy; start the report again later")
+        // Registering and queuing are one step: a concurrent start must not join a report whose
+        // queuing is then refused and removed.
+        synchronized(startLock) {
+            val current = licenseReportStore.addUnlessRunning(report)
+            if (current.id != report.id) return current
+            try {
+                licenseReportExecutor.execute { generate(report) }
+            } catch (_: TaskRejectedException) {
+                licenseReportStore.remove(report.id)
+                throw ServiceBusyException("Every license report generation is busy; start the report again later")
+            }
         }
         return report
     }
