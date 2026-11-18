@@ -87,27 +87,27 @@
 
 ## 4. File grading and the grader (Decisions 4, 5)
 
-- [ ] 4.1 Failing tests for `FileGrader`, one per scenario of "Each selected released file…":
-  - [ ] 4.1.1 Status codes: `UNSUPPORTED`, `NOT_FOUND`, `NOT_READABLE`, and `READ` without a binary scan.
-  - [ ] 4.1.2 `READ`:
+- [x] 4.1 Failing tests for `FileGrader`, one per scenario of "Each selected released file…":
+  - [x] 4.1.1 Status codes: `UNSUPPORTED`, `NOT_FOUND`, `NOT_READABLE`, and `READ` without a binary scan.
+  - [x] 4.1.2 `READ`:
     - without a build record;
     - with no third-party library;
     - with 5 of 20 `UNKNOWN`;
     - with 10 of 50 `UNIDENTIFIED`.
-  - [ ] 4.1.3 `READ` from its build record only, with third-party libraries under the thresholds: `BUILD_LIST_ONLY` alone. A file with neither source is `NOT_READABLE`, so `BUILD_LIST_ONLY` and `NO_BUILD_RECORD` never meet.
-  - [ ] 4.1.4 The image with only skipped OS packages: `NO_BUILD_RECORD`, `NO_THIRD_PARTY_FOUND`.
-  - [ ] 4.1.5 `PLAIN_FILE`: no codes.
-- [ ] 4.2 Failing tests for `TrustGrader`:
-  - [ ] 4.2.1 The worked example, end to end: level `LOW`, the four reasons in order, the four files.
-  - [ ] 4.2.2 Duplicate `(code, detail)` dropped. The same code with another detail is kept.
-  - [ ] 4.2.3 A `NONE` file does not lower the component.
-  - [ ] 4.2.4 `NOT_SELECTED` and `METADATA` files have no `FileTrust`.
-  - [ ] 4.2.5 An empty assessment with `NO_DISTRIBUTION` gives `NONE`.
-  - [ ] 4.2.6 File reasons do not roll up:
+  - [x] 4.1.3 `READ` from its build record only, with third-party libraries under the thresholds: `BUILD_LIST_ONLY` alone. A file with neither source is `NOT_READABLE`, so `BUILD_LIST_ONLY` and `NO_BUILD_RECORD` never meet.
+  - [x] 4.1.4 The image with only skipped OS packages: `NO_BUILD_RECORD`, `NO_THIRD_PARTY_FOUND`.
+  - [x] 4.1.5 `PLAIN_FILE`: no codes.
+- [x] 4.2 Failing tests for `TrustGrader`:
+  - [x] 4.2.1 The worked example, end to end: level `LOW`, the four reasons in order, the four files.
+  - [x] 4.2.2 Duplicate `(code, detail)` dropped. The same code with another detail is kept.
+  - [x] 4.2.3 A `NONE` file does not lower the component.
+  - [x] 4.2.4 `NOT_SELECTED` and `METADATA` files have no `FileTrust`.
+  - [x] 4.2.5 An empty assessment with `NO_DISTRIBUTION` gives `NONE`.
+  - [x] 4.2.6 File reasons do not roll up:
     - an image with only OS packages beside a zip with libraries: `NO_THIRD_PARTY_FOUND` on the image, not on the component;
     - 5 `UNKNOWN` of 20 in one file, and 5 of 200 overall: `UNKNOWN_LICENSES` on the file only.
-- [ ] 4.3 Implement `impl/FileGrader.kt` and `TrustGrader.kt`.
-- [ ] 4.4 Confirm `:license-trust:test` is green and Kover covers the module. Record the counts.
+- [x] 4.3 Implement `impl/FileGrader.kt` and `TrustGrader.kt`.
+- [x] 4.4 Confirm `:license-trust:test` is green and Kover covers the module. Record the counts. 94 green (`FileGraderTest` 10, `TrustGraderTest` 8 new); line coverage 99.5 %, `koverVerify`, `ktlintCheck` and `detekt` clean.
 
 ## 5. Wire contract, server and runner (Decisions 8, 9)
 
