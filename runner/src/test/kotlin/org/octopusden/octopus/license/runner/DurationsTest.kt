@@ -28,7 +28,7 @@ class DurationsTest {
     }
 
     @ParameterizedTest(name = "\"{0}\"")
-    @ValueSource(strings = ["", "45", "45 minutes", "m45", "-5m", "1.5h"])
+    @ValueSource(strings = ["", "45", "45 minutes", "m45", "-5m", "1.5h", "99999999999999999999m", "9999999999999999h"])
     @DisplayName("anything else is not a duration")
     fun rejectsTheRest(text: String) {
         assertNull(Durations.parse(text))

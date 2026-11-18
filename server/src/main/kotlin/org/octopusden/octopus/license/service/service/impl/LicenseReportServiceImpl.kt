@@ -41,6 +41,8 @@ class LicenseReportServiceImpl(
     private val clock: Clock,
     private val meterRegistry: MeterRegistry,
 ) : LicenseReportService {
+    private val startLock = Any()
+
     override fun start(request: LicenseReportRequest): LicenseReport {
         validate(request)
         // Read once: the generation keeps this policy even if a newer one is loaded meanwhile (D7).
@@ -60,7 +62,9 @@ class LicenseReportServiceImpl(
                     licenseReportStore.finish(it, null)
                     log.info("License report {} for {}:{} excluded: {}", it.id, it.component, it.version, resolution.reason)
                 }
-            is TargetResolution.Resolved -> {
+            // Registering and queuing are one step: a concurrent start must not join a report whose
+            // queuing is then refused and removed.
+            is TargetResolution.Resolved -> synchronized(startLock) {
                 val current = licenseReportStore.addUnlessRunning(report)
                 if (current.id != report.id) return current
                 try {
