@@ -6,6 +6,7 @@ import org.octopusden.octopus.license.inventory.impl.JfrogLicenseInventoryScanne
 import org.octopusden.octopus.license.inventory.model.OwnershipRules
 import org.octopusden.octopus.license.policy.LicensePolicySource
 import org.octopusden.octopus.license.policy.impl.BitbucketLicensePolicySource
+import org.octopusden.octopus.license.service.service.impl.LicenseTextDownloader
 import org.octopusden.octopus.license.service.state.policy.LicensePolicyHolder
 import org.octopusden.octopus.license.service.state.policy.LicensePolicyRefresher
 import org.octopusden.octopus.license.service.state.report.LicenseReportStore
@@ -30,6 +31,9 @@ class LicenseServiceConfig(
 
     @Bean
     fun licenseReportStore(clock: Clock) = LicenseReportStore(clock, properties.reportTtl, properties.maxStoredBytes.toBytes())
+
+    @Bean
+    fun licenseTextDownloader(meterRegistry: MeterRegistry) = LicenseTextDownloader(properties.licenseTexts.downloadTimeout, meterRegistry)
 
     @Bean
     fun licenseTargetResolver(): LicenseTargetResolver =

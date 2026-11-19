@@ -64,17 +64,18 @@
 
 ## 6. Server: download, write, zip (Decisions 1, 7)
 
-- [ ] 6.1 Failing tests:
-  - [ ] 6.1.1 `LicenseTextDownloader`, against a local HTTP server: success; timeout and 404 are absent from the result; a second request for a succeeded URL makes no call; a failed URL is asked again next time; the counter's three outcomes;
-  - [ ] 6.1.2 `LicenseFilesZip`: entries `folder/file`, in the writer's order; an empty `LicenseFiles` gives an empty zip;
-  - [ ] 6.1.3 `EvaluatingLicenseReportGenerator`: writes after grading, downloads only `textsToDownload`, puts the zip in the result;
-  - [ ] 6.1.4 `SummaryMapper`: `missingLicenseTexts` from the writer's missing texts.
-- [ ] 6.2 Implement:
-  - [ ] 6.2.1 `server/.../service/impl/LicenseTextDownloader.kt`;
-  - [ ] 6.2.2 `server/.../service/impl/LicenseFilesZip.kt`;
-  - [ ] 6.2.3 `LicenseServiceProperties.licenseTexts.downloadTimeout`, `application.yaml`;
-  - [ ] 6.2.4 the `LicenseFilesWriter` bean; `server` depends on `:license-files`.
-- [ ] 6.3 Confirm `:license-service:check` passes.
+- [x] 6.1 Failing tests:
+  - [x] 6.1.1 `LicenseTextDownloader`, against a local HTTP server: success; timeout and 404 are absent from the result; a second request for a succeeded URL makes no call; a failed URL is asked again next time; the counter's three outcomes;
+  - [x] 6.1.2 `LicenseFilesZip`: entries `folder/file`, in the writer's order; an empty `LicenseFiles` gives an empty zip;
+  - [x] 6.1.3 `EvaluatingLicenseReportGenerator`: writes after grading, downloads only `textsToDownload`, puts the zip in the result. Covered as: the zip holds each read file's files and a URL that cannot be reached is listed missing and counted `failed` once, so only the needed URL was asked;
+  - [x] 6.1.4 `SummaryMapper`: `missingLicenseTexts` from the writer's missing texts.
+- [x] 6.2 Implement:
+  - [x] 6.2.1 `server/.../service/impl/LicenseTextDownloader.kt`;
+  - [x] 6.2.2 `server/.../service/impl/LicenseFilesZip.kt`;
+  - [x] 6.2.3 `LicenseServiceProperties.licenseTexts.downloadTimeout`, `application.yaml`;
+  - [x] 6.2.4 the `LicenseFilesWriter` bean; `server` depends on `:license-files`.
+- [x] 6.3 Confirm `:license-service:check` passes. Green: 109 tests, 0 skipped.
+- [x] 6.4 `SummaryMapper` also sets `Violation.preliminary` (task 8a.2a), so the mode reaches it now (added on review).
 
 ## 7. Core and runner (Decision 8)
 

@@ -43,3 +43,5 @@ license-service:
   xray:
     scan-timeout: PT5M
     scan-poll-interval: PT10S
+  license-texts:
+    download-timeout: PT10S

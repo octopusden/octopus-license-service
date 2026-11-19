@@ -4,6 +4,7 @@ import io.micrometer.core.instrument.MeterRegistry
 import org.octopusden.octopus.license.core.dto.GenerationInputs
 import org.octopusden.octopus.license.core.dto.LicenseReportMode
 import org.octopusden.octopus.license.evaluation.LicenseEvaluator
+import org.octopusden.octopus.license.files.LicenseFilesWriter
 import org.octopusden.octopus.license.inventory.LicenseInventoryScanner
 import org.octopusden.octopus.license.inventory.exception.InventorySourceUnavailableException
 import org.octopusden.octopus.license.policy.model.LicensePolicy
@@ -14,15 +15,14 @@ import org.octopusden.octopus.license.target.model.LicenseTarget
 import org.octopusden.octopus.license.trust.TrustGrader
 import org.springframework.boot.info.BuildProperties
 import org.springframework.stereotype.Component
-import java.io.ByteArrayOutputStream
 import java.time.Clock
 import java.time.Duration
-import java.util.zip.ZipOutputStream
 
 /**
  * Scans the target, evaluates the inventory with the policy the report started with, grades the
- * assessment with the target's registry labels, and maps both into the summary. The zip stays empty
- * until the license files are written.
+ * assessment with the target's registry labels, writes the license files, and maps all three into
+ * the summary. The texts the registry gives only as a URL are downloaded first; one that cannot be
+ * downloaded is listed as missing, never a failure (license files design, D1, D7).
  *
  * A FULL report waits for Xray up to `license-service.xray.scan-timeout`; a CHECK, a regular
  * build's optimistic check, does not wait at all (evaluation design, D10).
@@ -35,6 +35,8 @@ class EvaluatingLicenseReportGenerator(
     private val scanner: LicenseInventoryScanner,
     private val evaluator: LicenseEvaluator,
     private val grader: TrustGrader,
+    private val writer: LicenseFilesWriter,
+    private val downloader: LicenseTextDownloader,
     private val properties: LicenseServiceProperties,
     private val clock: Clock,
     private val buildProperties: BuildProperties,
@@ -62,12 +64,15 @@ class EvaluatingLicenseReportGenerator(
                 serviceVersion = requireNotNull(buildProperties.version) { "build-info carries no version" },
             )
         val assessment = evaluator.evaluate(inventory, policy)
-        return GeneratedReport(SummaryMapper.map(assessment, grader.grade(assessment, target.labels), inputs), emptyZip())
+        val grade = grader.grade(assessment, target.labels)
+        val files = writer.write(assessment, policy, downloader.download(writer.textsToDownload(assessment, policy)))
+        return GeneratedReport(
+            SummaryMapper.map(assessment, grade, inputs, mode, files.missingTexts),
+            LicenseFilesZip.zip(files),
+        )
     }
 
     private fun countScan(outcome: String) = meterRegistry.counter(SCANS_METRIC, "outcome", outcome).increment()
-
-    private fun emptyZip() = ByteArrayOutputStream().also { ZipOutputStream(it).close() }.toByteArray()
 
     private companion object {
         const val SCANS_METRIC = "license.inventory.scans"

@@ -2,7 +2,10 @@ package org.octopusden.octopus.license.service.service.impl
 
 import org.octopusden.octopus.license.core.dto.FileTrust
 import org.octopusden.octopus.license.core.dto.GenerationInputs
+import org.octopusden.octopus.license.core.dto.LicenseReportMode
 import org.octopusden.octopus.license.core.dto.LicenseReportSummary
+import org.octopusden.octopus.license.core.dto.MissingLicenseText
+import org.octopusden.octopus.license.core.dto.MissingTextReason
 import org.octopusden.octopus.license.core.dto.Trust
 import org.octopusden.octopus.license.core.dto.TrustLevel
 import org.octopusden.octopus.license.core.dto.TrustReason
@@ -11,6 +14,8 @@ import org.octopusden.octopus.license.core.dto.Verdict
 import org.octopusden.octopus.license.core.dto.Violation
 import org.octopusden.octopus.license.evaluation.model.LibraryVerdict
 import org.octopusden.octopus.license.evaluation.model.LicenseAssessment
+import org.octopusden.octopus.license.files.model.MissingText
+import org.octopusden.octopus.license.inventory.model.Evidence
 import org.octopusden.octopus.license.trust.model.TrustGrade
 import org.octopusden.octopus.license.trust.model.TrustLevel as GradedLevel
 import org.octopusden.octopus.license.trust.model.TrustReasonCode as GradedCode
@@ -19,13 +24,23 @@ import org.octopusden.octopus.license.trust.model.TrustReasonCode as GradedCode
  * Narrows an assessment and its grade to what a caller decides a build outcome on: third-party
  * libraries only, counted per verdict and listed when not allowed (evaluation design, D9), and the
  * grade one to one, each reason with its code's texts (trust design, D8).
+ *
+ * A CHECK report's violation is preliminary when Xray has scanned none of its files, so a regular
+ * build does not fail on what Xray has not seen yet (license files design, D11).
  */
 internal object SummaryMapper {
     fun map(
         assessment: LicenseAssessment,
         grade: TrustGrade,
         inputs: GenerationInputs,
+        mode: LicenseReportMode = LicenseReportMode.FULL,
+        missingTexts: List<MissingText> = emptyList(),
     ): LicenseReportSummary {
+        val scannedFiles =
+            assessment.inventory.releasedFiles
+                .filter { Evidence.BINARY_SCAN in it.evidence }
+                .map { it.entry }
+                .toSet()
         val thirdParty = assessment.libraries.mapNotNull { library -> wireVerdict(library.verdict)?.let { library to it } }
         return LicenseReportSummary(
             inputs = inputs,
@@ -35,8 +50,16 @@ internal object SummaryMapper {
                 thirdParty
                     .filter { (_, verdict) -> verdict != Verdict.ALLOWED }
                     .map { (library, verdict) ->
-                        Violation(library.library.id.toString(), verdict, library.licenses, library.library.foundIn.sorted())
+                        Violation(
+                            library.library.id.toString(),
+                            verdict,
+                            library.licenses,
+                            library.library.foundIn.sorted(),
+                            preliminary = mode == LicenseReportMode.CHECK && library.library.foundIn.none { it in scannedFiles },
+                        )
                     },
+            missingLicenseTexts =
+                missingTexts.map { MissingLicenseText(it.license, MissingTextReason.valueOf(it.reason.name), it.url) },
         )
     }
 

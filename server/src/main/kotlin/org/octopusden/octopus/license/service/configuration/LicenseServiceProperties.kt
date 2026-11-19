@@ -20,6 +20,7 @@ import java.time.Duration
  * @param licenseRegistry where the license policy is read from (D9).
  * @param xray how long a scan waits for Xray to finish scanning.
  * @param ownership what is ours, so the scan follows our archives and evaluation calls them internal.
+ * @param licenseTexts how the license texts the registry gives only as a URL are downloaded.
  */
 @ConfigurationProperties("license-service")
 data class LicenseServiceProperties(
@@ -32,6 +33,12 @@ data class LicenseServiceProperties(
     val licenseRegistry: LicenseRegistryProperties = LicenseRegistryProperties(),
     val xray: XrayProperties = XrayProperties(),
     val ownership: OwnershipProperties = OwnershipProperties(),
+    val licenseTexts: LicenseTextsProperties = LicenseTextsProperties(),
+)
+
+/** @param downloadTimeout how long one text's download may take, connecting included. */
+data class LicenseTextsProperties(
+    val downloadTimeout: Duration = Duration.ofSeconds(10),
 )
 
 /**

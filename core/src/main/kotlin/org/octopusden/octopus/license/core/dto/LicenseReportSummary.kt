@@ -2,12 +2,18 @@ package org.octopusden.octopus.license.core.dto
 
 import java.time.Instant
 
-/** Enough of the report for a caller to decide a build outcome without opening the license files. */
+/**
+ * Enough of the report for a caller to decide a build outcome without opening the license files.
+ *
+ * @param missingLicenseTexts the licenses a listed library uses whose text no license file holds,
+ * each once; empty when every text was written.
+ */
 data class LicenseReportSummary(
     val inputs: GenerationInputs,
     val trust: Trust,
     val libraryCounts: Map<Verdict, Int>,
     val violations: List<Violation>,
+    val missingLicenseTexts: List<MissingLicenseText> = emptyList(),
 )
 
 /**
@@ -86,10 +92,31 @@ enum class Verdict {
     UNIDENTIFIED,
 }
 
-/** A library whose verdict is anything but [Verdict.ALLOWED], and the released files it ships in. */
+/**
+ * A library whose verdict is anything but [Verdict.ALLOWED], and the released files it ships in.
+ *
+ * @param preliminary a CHECK report's violation found only in files Xray has not scanned yet; a
+ * build does not fail on it. Never set in a FULL report.
+ */
 data class Violation(
     val library: String,
     val verdict: Verdict,
     val licenses: List<String>,
     val files: List<String>,
+    val preliminary: Boolean = false,
 )
+
+/** @param url the text's URL, for [MissingTextReason.DOWNLOAD_FAILED] only. */
+data class MissingLicenseText(
+    val license: String,
+    val reason: MissingTextReason,
+    val url: String? = null,
+)
+
+enum class MissingTextReason {
+    /** The license registry gives no text for the license. */
+    NO_REGISTRY_ENTRY,
+
+    /** The registry gives the text only as a URL, and it could not be downloaded. */
+    DOWNLOAD_FAILED,
+}
