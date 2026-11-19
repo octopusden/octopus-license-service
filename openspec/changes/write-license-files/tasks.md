@@ -123,8 +123,8 @@
 
 ## 10. Finalization
 
-- [ ] 10.1 `./gradlew build qualityCheck` green.
-- [ ] 10.2 `docs/architecture.md`: the files module in the diagram and table, the request flow (write after grade, download texts), the `SummaryMapper` and empty-zip sentences, the downloads metric.
-- [ ] 10.3 `CLAUDE.md` and `README.md` module lists.
-- [ ] 10.4 Out of scope holds, by grep: no POM read; no combined top-level set; no folder for a file not read; nothing publishes the zip; `perFile` still unread; the runner's exit code reads neither `trust` nor `missingLicenseTexts`, and `violations` only through `BuildOutcome`; no fail flag defaults to on; the service has no fail setting.
-- [ ] 10.5 The risks in `design.md` still hold; anything deferred becomes a `TD-NNN`, never a `TODO`. The failed license lookup that gives a false `UNKNOWN` gets its own `TD-NNN`.
+- [x] 10.1 `./gradlew build qualityCheck` green. 742 tests, 0 skipped, every module.
+- [x] 10.2 `docs/architecture.md`: the files module in the diagram and table, the request flow (write after grade, download texts), the `SummaryMapper` and empty-zip sentences, the downloads metric.
+- [x] 10.3 `CLAUDE.md` and `README.md` module lists; `README.md` also documents the three fail flags (added on review).
+- [x] 10.4 Out of scope holds, by grep: no POM read; no combined top-level set; no folder for a file not read; nothing publishes the zip; `perFile` still unread; the runner's exit code reads neither `trust` nor `missingLicenseTexts`, and `violations` only through `BuildOutcome`; no fail flag defaults to on; the service has no fail setting. Confirmed by grep: no POM read in `:license-files` or the server; no reader of `perFile`; `BuildOutcome` reads only `violations` and the report status; the three flags are Clikt `flag()`s, off unless given; no fail setting in `server`. No combined set and no folder for an unread file: `FolderPlanner` and its tests.
+- [x] 10.5 The risks in `design.md` still hold; anything deferred becomes a `TD-NNN`, never a `TODO`. The failed license lookup that gives a false `UNKNOWN` gets its own `TD-NNN`. Recorded as TD-003, cited from the design risk and from `SummaryMapper`. The other risks stand as written.

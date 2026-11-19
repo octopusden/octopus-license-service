@@ -238,7 +238,7 @@ object LicenseFilesZip { fun zip(files: LicenseFiles): ByteArray }
 ## Risks / Trade-offs
 
 - **Failing on no answer:** with a flag on, a license service outage fails every RC and RELEASE build that passes one. Accepted, as asked: nothing ships unchecked. Regular builds are not affected.
-- **A license lookup that fails part-way gives a false `UNKNOWN`:** the component-summary lookup leaves a failed batch without licenses (scan design, D9), and the file itself may still have been read by Xray, so the violation is not preliminary. With `--fail-on-unknown` on, a short Xray hiccup can fail a build. Accepted for now: the batch failure is rare, and the scan does not record it. If it shows up, the fix is for the scan to record the failed lookup and the server to mark those violations preliminary; recorded as a `TD-NNN` at finalization.
+- **A license lookup that fails part-way gives a false `UNKNOWN`:** the component-summary lookup leaves a failed batch without licenses (scan design, D9), and the file itself may still have been read by Xray, so the violation is not preliminary. With `--fail-on-unknown` on, a short Xray hiccup can fail a build. Accepted for now: the batch failure is rare, and the scan does not record it. If it shows up, the fix is for the scan to record the failed lookup and the server to mark those violations preliminary; recorded as TD-003.
 
 - **Outbound HTTP from OKD:** the four link-only texts need it. Without it they are listed as missing on every report. Accepted: four rarely used licenses; the fix is to store their texts in the registry.
 - **A library in many released files is written many times:** the zip grows with the number of files. Accepted: texts are small and compress well; the byte limit bounds memory.

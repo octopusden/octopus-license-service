@@ -26,7 +26,8 @@ import org.octopusden.octopus.license.trust.model.TrustReasonCode as GradedCode
  * grade one to one, each reason with its code's texts (trust design, D8).
  *
  * A CHECK report's violation is preliminary when Xray has scanned none of its files, so a regular
- * build does not fail on what Xray has not seen yet (license files design, D11).
+ * build does not fail on what Xray has not seen yet (license files design, D11). A package whose
+ * license lookup failed in a file Xray did scan is not marked yet (TD-003).
  */
 internal object SummaryMapper {
     fun map(

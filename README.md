@@ -15,6 +15,7 @@ Generates third-party license files for a component version from JFrog Xray and 
 | `license-inventory` | `engine/inventory/` | Not published; part of the service. Scans what a component version releases: the files, the libraries inside them, their licenses and which are ours, from Artifactory and Xray |
 | `license-evaluation` | `engine/evaluation/` | Not published; part of the service. Decides which libraries count and the verdict on each, from the inventory and the license policy; reads no system |
 | `license-trust` | `engine/trust/` | Not published; part of the service. Grades how far the library list of a version, and of each released file, can be trusted to be complete; reads no system |
+| `license-files` | `engine/files/` | Not published; part of the service. Writes the license files of each released file in the license plugins' format; reads no system |
 
 Which module may depend on which, and how a request flows: [docs/architecture.md](docs/architecture.md).
 
@@ -45,7 +46,9 @@ The `dev` profile switches Spring Cloud Config off, so the service starts with n
 java -jar runner/build/libs/license-runner-*-all.jar --url http://localhost:8080 --component my-component --version 1.0.0
 ```
 
-With `--check-only` it asks for a quick `CHECK` and downloads no license files, for regular builds; RC and RELEASE leave it out. Durations take `45m`, `30s`, `2h` or ISO-8601. It waits out what can pass: a network or gateway error is asked again after a wait that doubles up to a minute, a busy service after the `Retry-After` it gave, and a report the service no longer knows is started again; everything stops at `--timeout`, including a call still under way. The runner writes `license-report.json` and the zip to `--output-dir` (`license-report` by default), prints the summary and always exits 0: it only reports. Problems are printed with a `WARNING:` prefix. Publishing the output directory, as TeamCity artifacts for example, is the caller's job.
+With `--check-only` it asks for a quick `CHECK` and downloads no license files, for regular builds; RC and RELEASE leave it out. Durations take `45m`, `30s`, `2h` or ISO-8601. It waits out what can pass: a network or gateway error is asked again after a wait that doubles up to a minute, a busy service after the `Retry-After` it gave, and a report the service no longer knows is started again; everything stops at `--timeout`, including a call still under way. The runner writes `license-report.json` and the zip to `--output-dir` (`license-report` by default), prints the summary and exits 0 unless it is asked to fail. Problems are printed with a `WARNING:` prefix.
+
+Three flags fail the build on a violation, each off unless given: `--fail-on-not-allowed` (a license the registry does not allow), `--fail-on-unknown` (no known license) and `--fail-on-unidentified` (a file nobody could name). With any of them on, a release also fails when there is no answer to check (the service is unavailable, the report failed or timed out); a `--check-only` run passes then, and never fails on a violation found only in files Xray has not scanned yet. The output is written before the runner exits, and each failing library is printed with an `ERROR:` prefix. Publishing the output directory, as TeamCity artifacts for example, is the caller's job.
 
 ## Building
 
