@@ -1,66 +1,66 @@
 ## 1. The `license-files` module and its model (Decision 1)
 
-- [ ] 1.1 Set up the module:
+- [x] 1.1 Set up the module:
   - `settings.gradle.kts`: `:license-files` at `engine/files`;
   - build file: `api(project(":license-evaluation"))` and JUnit.
 
-  Confirm with `dependencies` that no Spring, no `:core`, no `:license-trust` and no client is on the compile classpath.
-- [ ] 1.2 Model: `model/LicenseFiles.kt`, `FileFolder`, `NamedFile`, `MissingText`, `MissingTextReason`.
-- [ ] 1.3 `PackageDependencyTest`: `impl` is internal; the module imports no `core`, Spring or client package.
+  Confirm with `dependencies` that no Spring, no `:core`, no `:license-trust` and no client is on the compile classpath. Confirmed: `:license-evaluation`, `:license-inventory`, `:license-target-registry`, `:license-policy-registry` and the Kotlin stdlib only.
+- [x] 1.2 Model: `model/LicenseFiles.kt`, `FileFolder`, `NamedFile`, `MissingText`, `MissingTextReason`.
+- [x] 1.3 `PackageDependencyTest`: the model imports no `impl`; the module imports no `core`, trust, Spring, client, `java.net` or file-system package.
 
 ## 2. Folders and their libraries (Decisions 2, 3)
 
-- [ ] 2.1 Failing tests for `FolderPlanner`:
-  - [ ] 2.1.1 a folder per `READ` file, in listing order; none for `NOT_FOUND`, `NOT_READABLE`, `PLAIN_FILE`, `UNSUPPORTED`, `METADATA`, `NOT_SELECTED`;
-  - [ ] 2.1.2 a Maven file's folder is its path's last segment;
-  - [ ] 2.1.3 an image's folder is its entry with `/` and `:` as `_`;
-  - [ ] 2.1.4 a repeated name gets `-2`, then `-3`, in listing order;
-  - [ ] 2.1.5 a library is in the folder of each entry of its `foundIn`;
-  - [ ] 2.1.6 `INTERNAL` is left out; `ALLOWED`, `NOT_ALLOWED`, `UNKNOWN`, `UNIDENTIFIED` are listed;
-  - [ ] 2.1.7 a read file with no third-party library still gets a folder, with no library;
-  - [ ] 2.1.8 libraries keep the assessment's order.
-- [ ] 2.2 Implement `impl/FolderPlanner.kt`.
-- [ ] 2.3 Confirm the tests pass.
+- [x] 2.1 Failing tests for `FolderPlanner`:
+  - [x] 2.1.1 a folder per `READ` file, in listing order; none for `NOT_FOUND`, `NOT_READABLE`, `PLAIN_FILE`, `UNSUPPORTED`, `METADATA`, `NOT_SELECTED`;
+  - [x] 2.1.2 a Maven file's folder is its path's last segment;
+  - [x] 2.1.3 an image's folder is its entry with `/` and `:` as `_`;
+  - [x] 2.1.4 a repeated name gets `-2`, then `-3`, in listing order;
+  - [x] 2.1.5 a library is in the folder of each entry of its `foundIn`;
+  - [x] 2.1.6 `INTERNAL` is left out; `ALLOWED`, `NOT_ALLOWED`, `UNKNOWN`, `UNIDENTIFIED` are listed;
+  - [x] 2.1.7 a read file with no third-party library still gets a folder, with no library;
+  - [x] 2.1.8 libraries keep the assessment's order.
+- [x] 2.2 Implement `impl/FolderPlanner.kt`.
+- [x] 2.3 Confirm the tests pass. Green.
 
 ## 3. `THIRD-PARTY.txt` (Decision 4)
 
-- [ ] 3.1 Failing tests for `NoticeLine` and `ThirdPartyText`:
-  - [ ] 3.1.1 Maven: artifactId and `group:artifact:version`;
-  - [ ] 3.1.2 other purl: its name and the rendered purl;
-  - [ ] 3.1.3 checksum only: its file name and the rendered id;
-  - [ ] 3.1.4 unrecognized: the raw id twice;
-  - [ ] 3.1.5 two licenses: ` (A) (B)`, in the assessment's order;
-  - [ ] 3.1.6 no license: ` (Unknown license)`;
-  - [ ] 3.1.7 the whole file for three libraries matches the template's output byte for byte, leading empty line and indentation included, with no ` - ` URL part;
-  - [ ] 3.1.8 no library: the empty line, then `The project has no dependencies.`.
-- [ ] 3.2 Implement `impl/NoticeLine.kt` and `impl/ThirdPartyText.kt`.
-- [ ] 3.3 Confirm the tests pass.
+- [x] 3.1 Failing tests for `NoticeLine` and `ThirdPartyText`:
+  - [x] 3.1.1 Maven: artifactId and `group:artifact:version`;
+  - [x] 3.1.2 other purl: its name and the rendered purl;
+  - [x] 3.1.3 checksum only: its file name and the rendered id;
+  - [x] 3.1.4 unrecognized: the raw id twice;
+  - [x] 3.1.5 two licenses: ` (A) (B)`, in the assessment's order;
+  - [x] 3.1.6 no license: ` (Unknown license)`;
+  - [x] 3.1.7 the whole file for three libraries matches the template's output byte for byte, leading empty line and indentation included, with no ` - ` URL part;
+  - [x] 3.1.8 no library: the empty line, then `The project has no dependencies.`.
+- [x] 3.2 Implement `impl/NoticeLine.kt` and `impl/ThirdPartyText.kt`.
+- [x] 3.3 Confirm the tests pass. Green.
 
 ## 4. `licenses.xml` (Decision 5)
 
-- [ ] 4.1 Failing tests for `LicensesXml`:
-  - [ ] 4.1.1 a Maven library's `groupId`, `artifactId`, `version`;
-  - [ ] 4.1.2 an npm package: `groupId` `npm`;
-  - [ ] 4.1.3 a checksum-only file: `generic`, its file name, no `version`;
-  - [ ] 4.1.4 a license's `url` is the `licenses.properties` value, registry path or URL;
-  - [ ] 4.1.5 a license with no entry has no `url`;
-  - [ ] 4.1.6 the document parses back as the plugin's `LicenseSummaryReader` reads it (element names and nesting).
-- [ ] 4.2 Implement `impl/LicensesXml.kt` with the JDK's DOM and transformer, indented, UTF-8.
-- [ ] 4.3 Confirm the tests pass.
+- [x] 4.1 Failing tests for `LicensesXml`:
+  - [x] 4.1.1 a Maven library's `groupId`, `artifactId`, `version`;
+  - [x] 4.1.2 an npm package: `groupId` `npm`;
+  - [x] 4.1.3 a checksum-only file: `generic`, its file name, no `version`;
+  - [x] 4.1.4 a license's `url` is the `licenses.properties` value, registry path or URL;
+  - [x] 4.1.5 a license with no entry has no `url`;
+  - [x] 4.1.6 the document parses back as the plugin's `LicenseSummaryReader` reads it (element names and nesting).
+- [x] 4.2 Implement `impl/LicensesXml.kt` with the JDK's DOM and transformer, indented, UTF-8.
+- [x] 4.3 Confirm the tests pass. Green.
 
 ## 5. License texts and the writer (Decisions 1, 6)
 
-- [ ] 5.1 Failing tests for `LicenseTextFiles` and `LicenseFilesWriter`:
-  - [ ] 5.1.1 file names: `Apache-2.0` at `licenses/APACHE-2.0.txt` gives `apache-2.0 - apache-2.0.txt`; `CC0` at `licenses/cc0.html` keeps `.html`; a name with `/` gets `_`; a location with no extension gets `.txt`;
-  - [ ] 5.1.2 a registry text is written as stored;
-  - [ ] 5.1.3 a downloaded text is written as its bytes;
-  - [ ] 5.1.4 only licenses used in the folder get a text;
-  - [ ] 5.1.5 a license with no entry is `NO_REGISTRY_ENTRY`; a URL missing from `downloaded` is `DOWNLOAD_FAILED` with its URL;
-  - [ ] 5.1.6 a license missing in two folders is listed once;
-  - [ ] 5.1.7 `textsToDownload` holds exactly the URLs of used licenses, and no registry path;
-  - [ ] 5.1.8 the worked example of `design.md` end to end.
-- [ ] 5.2 Implement `impl/LicenseTextFiles.kt` and `LicenseFilesWriter.kt`.
-- [ ] 5.3 Confirm `:license-files:check` passes.
+- [x] 5.1 Failing tests for `LicenseTextFiles` and `LicenseFilesWriter`:
+  - [x] 5.1.1 file names (also a Bitbucket raw URL, a query string, and an extension shorter than two characters, which the plugin replaces): `Apache-2.0` at `licenses/APACHE-2.0.txt` gives `apache-2.0 - apache-2.0.txt`; `CC0` at `licenses/cc0.html` keeps `.html`; a name with `/` gets `_`; a location with no extension gets `.txt`;
+  - [x] 5.1.2 a registry text is written as stored;
+  - [x] 5.1.3 a downloaded text is written as its bytes;
+  - [x] 5.1.4 only licenses used in the folder get a text;
+  - [x] 5.1.5 a license with no entry is `NO_REGISTRY_ENTRY`; a URL missing from `downloaded` is `DOWNLOAD_FAILED` with its URL;
+  - [x] 5.1.6 a license missing in two folders is listed once;
+  - [x] 5.1.7 `textsToDownload` holds exactly the URLs of used licenses, and no registry path;
+  - [x] 5.1.8 the worked example of `design.md` end to end.
+- [x] 5.2 Implement `impl/LicenseTextFiles.kt` and `LicenseFilesWriter.kt`.
+- [x] 5.3 Confirm `:license-files:check` passes. Green: 50 tests, detekt and ktlint clean.
 
 ## 6. Server: download, write, zip (Decisions 1, 7)
 
