@@ -3,6 +3,7 @@ package org.octopusden.octopus.license.runner
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.core.CliktError
 import com.github.ajalt.clikt.core.Context
+import com.github.ajalt.clikt.core.ProgramResult
 import com.github.ajalt.clikt.core.parse
 import com.github.ajalt.clikt.parameters.options.OptionCallTransformContext
 import com.github.ajalt.clikt.parameters.options.convert
@@ -21,11 +22,12 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.time.Clock
 import java.time.Duration
+import kotlin.system.exitProcess
 
 /**
  * Generates the license report of one component version through the license service and writes
- * the report and its license files to [outputDir]. Always exits 0: license problems and service
- * problems are only reported for now.
+ * the report and its license files to [outputDir]. Exits 0 unless a `--fail-on-*` flag is given and
+ * [BuildOutcome] fails the build; the output is written first either way.
  */
 class LicenseRunnerCommand : CliktCommand(name = "license-runner") {
     private val url by option("--url", envvar = "LICENSE_SERVICE_URL", help = "License service base URL").required()
@@ -38,6 +40,9 @@ class LicenseRunnerCommand : CliktCommand(name = "license-runner") {
         "--check-only",
         help = "Quick check on what Xray knows now, for regular builds: no wait for Xray, no license files",
     ).flag()
+    private val failOnNotAllowed by option("--fail-on-not-allowed", help = "Fail on a library whose license is not allowed").flag()
+    private val failOnUnknown by option("--fail-on-unknown", help = "Fail on a library with no known license").flag()
+    private val failOnUnidentified by option("--fail-on-unidentified", help = "Fail on a file nobody could name").flag()
     private val pollInterval by option("--poll-interval", help = "Time between status checks, such as 5s or PT5S")
         .convert { duration(it) }
         .default(Duration.ofSeconds(DEFAULT_POLL_INTERVAL_SECONDS))
@@ -53,27 +58,32 @@ class LicenseRunnerCommand : CliktCommand(name = "license-runner") {
     override fun help(context: Context) = "Generate the third-party license files of a component version."
 
     override fun run() {
-        runCatching { report() }.onFailure {
-            echo(
-                BuildLog.render(
-                    LogLine("License runner failed for $component:$version: ${it.message ?: it.javaClass.name}", warning = true),
-                ),
-            )
+        val failOn = FailOn(failOnNotAllowed, failOnUnknown, failOnUnidentified)
+        val mode = if (checkOnly) LicenseReportMode.CHECK else LicenseReportMode.FULL
+        val outcome =
+            runCatching { BuildOutcome.of(failOn, mode, report(mode)) }.getOrElse {
+                val message = it.message ?: it.javaClass.name
+                echo(BuildLog.render(LogLine("License runner failed for $component:$version: $message", warning = true)))
+                BuildOutcome.ofRunnerError(failOn, mode, message)
+            }
+        if (outcome is BuildOutcome.Fail) {
+            outcome.reasons.forEach { echo("ERROR: License check fails the build: $it") }
+            throw ProgramResult(1)
         }
     }
 
-    private fun report() {
+    private fun report(mode: LicenseReportMode): RunOutcome {
         removePreviousOutput()
         val client = ClassicLicenseServiceClient(
             object : LicenseServiceClientParametersProvider {
                 override fun getApiUrl() = url
             },
         )
-        val mode = if (checkOnly) LicenseReportMode.CHECK else LicenseReportMode.FULL
         val outcome = LicenseReportRunner(client, pollInterval, timeout, Clock.systemUTC()) { Thread.sleep(it) }
             .run(component, version, mode)
         BuildLog.lines(component, version, outcome).forEach { echo(BuildLog.render(it)) }
         write(outcome)
+        return outcome
     }
 
     private fun removePreviousOutput() = removePreviousOutput(outputDir)
@@ -133,12 +143,15 @@ class LicenseRunnerCommand : CliktCommand(name = "license-runner") {
 
 /**
  * Like Clikt's own `main`, but arguments it cannot read end in a warning and exit 0 too: a typo in
- * the build settings must not fail the build any more than an unavailable service does.
+ * the build settings must not fail the build any more than an unavailable service does. Only a
+ * failing [BuildOutcome] exits non-zero.
  */
 fun main(args: Array<String>) {
     val command = LicenseRunnerCommand()
     try {
         command.parse(args)
+    } catch (e: ProgramResult) {
+        exitProcess(e.statusCode)
     } catch (e: CliktError) {
         command.echoFormattedHelp(e)
         if (e.statusCode != 0) {

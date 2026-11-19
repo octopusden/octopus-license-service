@@ -63,9 +63,16 @@ object BuildLog {
             .joinToString(", ") { "${it.key} ${it.value}" }
             .ifEmpty { "none" }
         val violations = summary.violations.map {
-            LogLine("${it.library} is ${it.verdict} (${it.licenses.joinToString(", ")}) in ${it.files.joinToString(", ")}", warning = true)
+            val note = if (it.preliminary) " (preliminary: Xray has not scanned these files yet)" else ""
+            LogLine(
+                "${it.library} is ${it.verdict} (${it.licenses.joinToString(", ")}) in ${it.files.joinToString(", ")}$note",
+                warning = true,
+            )
         }
-        return listOf(generated) + trustLines + LogLine("Libraries: $libraries") + violations
+        val missingTexts = summary.missingLicenseTexts.map {
+            LogLine("License text of ${it.license} missing: ${it.reason}" + (it.url?.let { url -> " ($url)" } ?: ""), warning = true)
+        }
+        return listOf(generated) + trustLines + LogLine("Libraries: $libraries") + violations + missingTexts
     }
 }
 

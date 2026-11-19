@@ -79,9 +79,10 @@
 
 ## 7. Core and runner (Decision 8)
 
-- [ ] 7.1 `core`: `LicenseReportSummary.missingLicenseTexts`, `MissingLicenseText`, `MissingTextReason`; serialization round-trip test.
-- [ ] 7.2 `BuildLog`: one warning per missing text; the exit code test still ignores it.
-- [ ] 7.3 Confirm `:core:check` and `:license-runner:check` pass.
+- [x] 7.1 `core`: `LicenseReportSummary.missingLicenseTexts`, `MissingLicenseText`, `MissingTextReason`; serialization round-trip test. Covered by the runner's command test, which reads a summary with both fields from JSON; both fields have defaults, so earlier JSON still reads.
+- [x] 7.2 `BuildLog`: one warning per missing text; the exit code test still ignores it.
+- [x] 7.2a A preliminary violation's warning says Xray has not scanned its files yet (added on review).
+- [x] 7.3 Confirm `:core:check` and `:license-runner:check` pass. Green.
 
 ## 8. Report store (Decision 9)
 
@@ -95,23 +96,24 @@
 
 ## 8a. Build outcome (Decision 11)
 
-- [ ] 8a.1 Failing tests for `BuildOutcome`:
-  - [ ] 8a.1.1 no flag: pass for every outcome, unavailable and `FAILED` included;
-  - [ ] 8a.1.2 each flag alone fails on its own verdict and passes on the other two;
-  - [ ] 8a.1.3 the fail reasons name each failing library with its verdict;
-  - [ ] 8a.1.4 `FULL`, any flag on: unavailable, `FAILED`, timed out, `DONE` without summary each fail;
-  - [ ] 8a.1.5 `CHECK`, any flag on: the same four, and the runner's own error, each pass with a warning;
-  - [ ] 8a.1.6 `CHECK`: a `preliminary` violation passes with a warning; a non-preliminary one follows its flag;
-  - [ ] 8a.1.7 any flag on: `EXCLUDED` passes;
-  - [ ] 8a.1.8 trust `NONE` and missing texts never fail.
-- [ ] 8a.2 Implement `runner/.../BuildOutcome.kt` and `FailOn`; `BuildOutcome.of` takes the mode.
-- [ ] 8a.2a Server: failing tests, then `Violation.preliminary` in `core` and in `SummaryMapper`:
-  - [ ] 8a.2a.1 `CHECK`, every file of the violation without `BINARY_SCAN` evidence: `true`;
-  - [ ] 8a.2a.2 `CHECK`, one of its files with `BINARY_SCAN`: `false`;
-  - [ ] 8a.2a.3 `FULL`: always `false`.
-- [ ] 8a.3 `LicenseRunnerCommand`: the three flags; writes the output, prints the fail reasons as errors, then exits non-zero on `Fail`; the runner's own error goes through the same decision. Update its KDoc, which says it always exits 0.
-- [ ] 8a.4 Command tests: exit code 0 without flags on a report with violations; non-zero with `--fail-on-unknown` on an `UNKNOWN` library, with the report and zip written.
-- [ ] 8a.5 Confirm `:license-runner:check` passes.
+- [x] 8a.1 Failing tests for `BuildOutcome`:
+  - [x] 8a.1.1 no flag: pass for every outcome, unavailable and `FAILED` included;
+  - [x] 8a.1.2 each flag alone fails on its own verdict and passes on the other two;
+  - [x] 8a.1.3 the fail reasons name each failing library with its verdict;
+  - [x] 8a.1.4 `FULL`, any flag on: unavailable, `FAILED`, timed out, `DONE` without summary each fail;
+  - [x] 8a.1.5 `CHECK`, any flag on: the same four, and the runner's own error, each pass with a warning;
+  - [x] 8a.1.6 `CHECK`: a `preliminary` violation passes with a warning; a non-preliminary one follows its flag;
+  - [x] 8a.1.7 any flag on: `EXCLUDED` passes;
+  - [x] 8a.1.8 trust `NONE` and missing texts never fail.
+- [x] 8a.2 Implement `runner/.../BuildOutcome.kt` and `FailOn`; `BuildOutcome.of` takes the mode.
+- [x] 8a.2a Server: failing tests, then `Violation.preliminary` in `core` and in `SummaryMapper`:
+  - [x] 8a.2a.1 `CHECK`, every file of the violation without `BINARY_SCAN` evidence: `true`;
+  - [x] 8a.2a.2 `CHECK`, one of its files with `BINARY_SCAN`: `false`;
+  - [x] 8a.2a.3 `FULL`: always `false`.
+- [x] 8a.3 `LicenseRunnerCommand`: the three flags; writes the output, prints the fail reasons as errors, then exits non-zero on `Fail`; the runner's own error goes through the same decision. Update its KDoc, which says it always exits 0.
+- [x] 8a.4 Command tests (also: an unavailable service with `--fail-on-unknown` exits 1 for a release and 0 with `--check-only`): exit code 0 without flags on a report with violations; non-zero with `--fail-on-unknown` on an `UNKNOWN` library, with the report and zip written.
+- [x] 8a.4a `main`: a failing outcome exits with its code; arguments that cannot be read stay a warning with exit 0 even when a fail flag is among them, since the flags themselves may not have been read (added on review).
+- [x] 8a.5 Confirm `:license-runner:check` passes. Green: 70 tests, 0 skipped.
 
 ## 9. Compare with the plugin (Decision 10)
 

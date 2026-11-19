@@ -9,6 +9,8 @@ import org.octopusden.octopus.license.core.dto.LicenseReport
 import org.octopusden.octopus.license.core.dto.LicenseReportMode
 import org.octopusden.octopus.license.core.dto.LicenseReportStatus
 import org.octopusden.octopus.license.core.dto.LicenseReportSummary
+import org.octopusden.octopus.license.core.dto.MissingLicenseText
+import org.octopusden.octopus.license.core.dto.MissingTextReason
 import org.octopusden.octopus.license.core.dto.Trust
 import org.octopusden.octopus.license.core.dto.TrustLevel
 import org.octopusden.octopus.license.core.dto.TrustReason
@@ -176,6 +178,43 @@ class BuildLogTest {
         assertEquals("Libraries: none", BuildLog.render(LogLine("Libraries: none")))
     }
 
+    @Test
+    @DisplayName("a preliminary violation says Xray has not scanned its files yet")
+    fun preliminaryViolation() {
+        val summary =
+            summary(
+                violations = listOf(
+                    Violation("pkg:npm/left-pad@1.3.0", Verdict.UNKNOWN, emptyList(), listOf("app.jar"), preliminary = true),
+                ),
+            )
+
+        assertEquals(
+            LogLine("pkg:npm/left-pad@1.3.0 is UNKNOWN () in app.jar (preliminary: Xray has not scanned these files yet)", warning = true),
+            BuildLog.lines(COMPONENT, VERSION, finished(summary)).last(),
+        )
+    }
+
+    @Test
+    @DisplayName("each missing license text is one warning with its reason and URL")
+    fun missingTexts() {
+        val summary =
+            summary(
+                missingTexts =
+                    listOf(
+                        MissingLicenseText("GWT", MissingTextReason.DOWNLOAD_FAILED, "http://www.gwtproject.org/terms.html"),
+                        MissingLicenseText("SSPL-1.0", MissingTextReason.NO_REGISTRY_ENTRY),
+                    ),
+            )
+
+        assertEquals(
+            listOf(
+                LogLine("License text of GWT missing: DOWNLOAD_FAILED (http://www.gwtproject.org/terms.html)", warning = true),
+                LogLine("License text of SSPL-1.0 missing: NO_REGISTRY_ENTRY", warning = true),
+            ),
+            BuildLog.lines(COMPONENT, VERSION, finished(summary)).takeLast(2),
+        )
+    }
+
     private fun finished(summary: LicenseReportSummary) =
         RunOutcome.Finished(LicenseReport(REPORT_ID, COMPONENT, VERSION, LicenseReportStatus.DONE, summary = summary), byteArrayOf())
 
@@ -183,11 +222,13 @@ class BuildLogTest {
         trust: Trust = Trust(TrustLevel.HIGH, emptyList(), emptyList()),
         libraryCounts: Map<Verdict, Int> = emptyMap(),
         violations: List<Violation> = emptyList(),
+        missingTexts: List<MissingLicenseText> = emptyList(),
     ) = LicenseReportSummary(
         GenerationInputs(licenseRegistryCommit = null, generatedAt = Instant.parse("2026-11-04T10:00:00Z"), serviceVersion = "1.0.0"),
         trust,
         libraryCounts,
         violations,
+        missingTexts,
     )
 
     private companion object {

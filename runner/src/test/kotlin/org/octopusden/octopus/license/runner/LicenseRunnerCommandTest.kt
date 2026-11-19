@@ -160,6 +160,53 @@ class LicenseRunnerCommandTest {
         assertTrue(output.toString().contains("WARNING: License runner did not run"), output.toString())
     }
 
+    @Test
+    @DisplayName("no fail flag: a report with an UNKNOWN library still exits 0")
+    fun violationWithoutFlagPasses() {
+        serveDoneReportWithUnknownLibrary()
+
+        val result = LicenseRunnerCommand().test(args(url = serverUrl(), outputDir = workDir.resolve("out")))
+
+        assertEquals(0, result.statusCode, result.stderr)
+        assertTrue(result.stdout.contains("WARNING: $UNKNOWN_LIBRARY is UNKNOWN"), result.stdout)
+    }
+
+    @Test
+    @DisplayName("--fail-on-unknown fails the build on an UNKNOWN library, after writing the report and the zip (D11)")
+    fun failOnUnknownFails() {
+        serveDoneReportWithUnknownLibrary()
+        val outputDir = workDir.resolve("out")
+
+        val result = LicenseRunnerCommand().test(args(url = serverUrl(), outputDir = outputDir) + "--fail-on-unknown")
+
+        assertEquals(1, result.statusCode, result.stdout)
+        assertTrue(result.stdout.contains("ERROR: License check fails the build: $UNKNOWN_LIBRARY is UNKNOWN"), result.stdout)
+        assertTrue(Files.exists(outputDir.resolve("license-report.json")))
+        assertTrue(Files.exists(outputDir.resolve("$COMPONENT-$VERSION-licenses.zip")))
+    }
+
+    @Test
+    @DisplayName("--fail-on-unknown: an unavailable service fails a release, never a regular build's check (D11)")
+    fun unavailableWithFlag() {
+        val release = LicenseRunnerCommand().test(args(url = UNREACHABLE_URL, outputDir = workDir.resolve("a")) + "--fail-on-unknown")
+        val check =
+            LicenseRunnerCommand().test(
+                args(url = UNREACHABLE_URL, outputDir = workDir.resolve("b")) + "--fail-on-unknown" + "--check-only",
+            )
+
+        assertEquals(1, release.statusCode, release.stdout)
+        assertEquals(0, check.statusCode, check.stdout)
+    }
+
+    private fun serveDoneReportWithUnknownLibrary() {
+        answer("/rest/api/1/license-reports", report("RUNNING"))
+        answer("/rest/api/1/license-reports/$REPORT_ID", REPORT_WITH_UNKNOWN)
+        server.createContext("/rest/api/1/license-reports/$REPORT_ID/files") { exchange ->
+            exchange.sendResponseHeaders(HTTP_OK, EMPTY_ZIP.size.toLong())
+            exchange.responseBody.use { it.write(EMPTY_ZIP) }
+        }
+    }
+
     private fun serveDoneReportWithoutSummary() {
         answer("/rest/api/1/license-reports", report("RUNNING"))
         answer("/rest/api/1/license-reports/$REPORT_ID", report("DONE"))
@@ -209,6 +256,17 @@ class LicenseRunnerCommandTest {
         const val HTTP_OK = 200
         const val UNREACHABLE_URL = "http://localhost:1"
         val EMPTY_ZIP = byteArrayOf(0x50, 0x4b, 0x05, 0x06, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+
+        const val UNKNOWN_LIBRARY = "pkg:maven/com.example/foo-core@1.0"
+        val REPORT_WITH_UNKNOWN =
+            """
+            {"id":"$REPORT_ID","component":"$COMPONENT","version":"$VERSION","status":"DONE","mode":"FULL",
+             "summary":{"inputs":{"licenseRegistryCommit":"a1b2c3d","generatedAt":"2026-11-19T10:00:00Z","serviceVersion":"1.0.0"},
+              "trust":{"level":"HIGH","reasons":[],"files":[]},
+              "libraryCounts":{"ALLOWED":0,"NOT_ALLOWED":0,"UNKNOWN":1,"UNIDENTIFIED":0},
+              "violations":[{"library":"$UNKNOWN_LIBRARY","verdict":"UNKNOWN","licenses":[],"files":["app.jar"],"preliminary":false}],
+              "missingLicenseTexts":[]}}
+            """.trimIndent()
 
         fun report(status: String) = """{"id":"$REPORT_ID","component":"$COMPONENT","version":"$VERSION","status":"$status"}"""
     }
