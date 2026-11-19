@@ -86,13 +86,13 @@
 
 ## 8. Report store (Decision 9)
 
-- [ ] 8.1 Failing tests for `LicenseReportStore`:
-  - [ ] 8.1.1 over `maxStoredReports`, the oldest finished go first; the one just finished stays;
-  - [ ] 8.1.2 a running report never counts toward the limit and is never dropped;
-  - [ ] 8.1.3 over the byte limit, a finished report without files is never dropped;
-  - [ ] 8.1.4 the existing byte-limit tests still hold.
-- [ ] 8.2 Implement; `license-service.max-stored-reports` (default 500) in the properties and `application.yaml`.
-- [ ] 8.3 Confirm the tests pass.
+- [x] 8.1 Failing tests for `LicenseReportStore`:
+  - [x] 8.1.1 over `maxStoredReports`, the oldest finished go first; the one just finished stays;
+  - [x] 8.1.2 a running report never counts toward the limit and is never dropped;
+  - [x] 8.1.3 over the byte limit, a finished report without files is never dropped;
+  - [x] 8.1.4 the existing byte-limit tests still hold.
+- [x] 8.2 Implement; `license-service.max-stored-reports` (default 500) in the properties and `application.yaml`.
+- [x] 8.3 Confirm the tests pass. Green: `:license-service:check`, 112 tests.
 
 ## 8a. Build outcome (Decision 11)
 

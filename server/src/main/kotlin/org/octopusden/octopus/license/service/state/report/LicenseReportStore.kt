@@ -12,14 +12,17 @@ import java.util.concurrent.ConcurrentHashMap
  * them, then forgets them. A running report is never dropped. Nothing survives a restart: the
  * service is stateless, and a caller whose report is gone starts a new one.
  *
- * The license files of finished reports are kept within [maxStoredBytes]: past it, the oldest
- * finished reports go before their TTL ends. The report that just finished is always kept, even
- * when it is larger than the limit on its own.
+ * Finished reports are kept within [maxStoredReports], and their license files within
+ * [maxStoredBytes]: past either, the oldest finished reports go before their TTL ends; for bytes,
+ * only those holding files, since dropping one without frees nothing. The report that just finished
+ * is always kept, even when it is larger than the byte limit on its own. Running reports are
+ * bounded where they are queued, never here.
  */
 class LicenseReportStore(
     private val clock: Clock,
     private val ttl: Duration,
     private val maxStoredBytes: Long,
+    private val maxStoredReports: Int,
 ) {
     private val entries = ConcurrentHashMap<String, Entry>()
     private var storedBytes = 0L
@@ -48,7 +51,7 @@ class LicenseReportStore(
         files: ByteArray?,
     ) {
         put(report.id, Entry(StoredReport(report, files), finishedAt = clock.instant()))
-        evictOldestFinishedBeyondLimit(keep = report.id)
+        evictOldestFinishedBeyondLimits(keep = report.id)
     }
 
     fun find(id: String): StoredReport? = entries[id]?.takeUnless { it.isExpired(clock.instant()) }?.stored
@@ -76,15 +79,20 @@ class LicenseReportStore(
         storedBytes += entry.size - (entries.put(id, entry)?.size ?: 0)
     }
 
-    private fun evictOldestFinishedBeyondLimit(keep: String) {
-        if (storedBytes <= maxStoredBytes) return
-        val oldestFirst = entries.entries
-            .filter { it.key != keep && it.value.finishedAt != null }
-            .sortedBy { it.value.finishedAt }
-            .map { it.key }
-        for (id in oldestFirst) {
-            if (storedBytes <= maxStoredBytes) return
+    private fun evictOldestFinishedBeyondLimits(keep: String) {
+        val oldestFirst =
+            entries.entries
+                .filter { it.key != keep && it.value.finishedAt != null }
+                .sortedBy { it.value.finishedAt }
+        var finished = oldestFirst.size + 1
+        for ((id, _) in oldestFirst) {
+            if (finished <= maxStoredReports) break
             remove(id)
+            finished--
+        }
+        for ((id, entry) in oldestFirst) {
+            if (storedBytes <= maxStoredBytes) return
+            if (entry.stored.files != null && entries.containsKey(id)) remove(id)
         }
     }
 

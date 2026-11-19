@@ -30,7 +30,13 @@ class LicenseServiceConfig(
     fun clock(): Clock = Clock.systemUTC()
 
     @Bean
-    fun licenseReportStore(clock: Clock) = LicenseReportStore(clock, properties.reportTtl, properties.maxStoredBytes.toBytes())
+    fun licenseReportStore(clock: Clock) =
+        LicenseReportStore(
+            clock,
+            properties.reportTtl,
+            properties.maxStoredBytes.toBytes(),
+            properties.maxStoredReports,
+        )
 
     @Bean
     fun licenseTextDownloader(meterRegistry: MeterRegistry) = LicenseTextDownloader(properties.licenseTexts.downloadTimeout, meterRegistry)
