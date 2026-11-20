@@ -36,7 +36,7 @@ import kotlin.concurrent.thread
 
 class LicenseReportServiceImplTest {
     private val clock = Clock.systemUTC()
-    private val store = LicenseReportStore(clock, Duration.ofHours(1), Long.MAX_VALUE)
+    private val store = LicenseReportStore(clock, Duration.ofHours(1), Long.MAX_VALUE, Int.MAX_VALUE)
     private val generator = object : LicenseReportGenerator {
         override fun generate(
             target: LicenseTarget,

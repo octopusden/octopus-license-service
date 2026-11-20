@@ -16,6 +16,7 @@ import org.octopusden.octopus.license.inventory.model.FindingCode.NOT_IN_XRAY
 import org.octopusden.octopus.license.inventory.model.FindingCode.NOT_SCANNABLE
 import org.octopusden.octopus.license.inventory.model.FindingCode.NO_DISTRIBUTION
 import org.octopusden.octopus.license.inventory.model.FoundLibrary
+import org.octopusden.octopus.license.inventory.model.LicenseSource
 import org.octopusden.octopus.license.inventory.model.ReleasedFile
 import org.octopusden.octopus.license.inventory.model.SelectionReason.DECLARED
 import org.octopusden.octopus.license.inventory.model.SelectionReason.DOCKER_BUILD
@@ -215,14 +216,25 @@ class JfrogLicenseInventoryScannerTest {
                     setOf(BUILD_RECORD),
                     setOf(zipEntry),
                     false,
+                    mapOf(LicenseSource.LICENSE_DATABASE to setOf("Apache-2.0")),
                 ),
-                FoundLibrary(pkg("com.google.guava/guava@32.1.2-jre"), setOf("Apache-2.0"), setOf(BINARY_SCAN), setOf(imageEntry), false),
+                FoundLibrary(
+                    pkg("com.google.guava/guava@32.1.2-jre"),
+                    setOf("Apache-2.0"),
+                    setOf(BINARY_SCAN),
+                    setOf(imageEntry),
+                    false,
+                    mapOf(
+                        LicenseSource.BINARY_SCAN to setOf("Apache-2.0"),
+                    ),
+                ),
                 FoundLibrary(
                     pkg("io.netty/netty-common@4.1.107.Final"),
                     setOf("Apache-2.0"),
                     setOf(BINARY_SCAN, CHECKSUM_MATCH),
                     setOf(zipEntry),
                     false,
+                    mapOf(LicenseSource.LICENSE_DATABASE to setOf("Apache-2.0")),
                 ),
                 FoundLibrary(
                     pkg("org.apache.commons/commons-text@1.11.0"),
@@ -230,6 +242,7 @@ class JfrogLicenseInventoryScannerTest {
                     setOf(BINARY_SCAN, BUILD_RECORD),
                     setOf(zipEntry),
                     false,
+                    mapOf(LicenseSource.BINARY_SCAN to setOf("Apache-2.0")),
                 ),
                 FoundLibrary(
                     pkg("org.example.portal/portal-plugins@$BUILD_VERSION"),
@@ -237,8 +250,18 @@ class JfrogLicenseInventoryScannerTest {
                     setOf(BINARY_SCAN),
                     setOf(zipEntry),
                     true,
+                    mapOf(LicenseSource.BINARY_SCAN to setOf("Unknown")),
                 ),
-                FoundLibrary(pkg("org.springframework/spring-core@6.1.4"), setOf("Apache-2.0"), setOf(BINARY_SCAN), setOf(zipEntry), false),
+                FoundLibrary(
+                    pkg("org.springframework/spring-core@6.1.4"),
+                    setOf("Apache-2.0"),
+                    setOf(BINARY_SCAN),
+                    setOf(zipEntry),
+                    false,
+                    mapOf(
+                        LicenseSource.BINARY_SCAN to setOf("Apache-2.0"),
+                    ),
+                ),
             ),
             packages,
         )

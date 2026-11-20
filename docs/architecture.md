@@ -15,12 +15,14 @@ flowchart TD
     server --> inventory
     server --> evaluation
     server --> trust
+    server --> files
     subgraph engine["engine/"]
         target["license-target-registry"]
         policy["license-policy-registry"]
         inventory["license-inventory"]
         evaluation["license-evaluation"]
         trust["license-trust"]
+        files["license-files"]
     end
     target --> crs["components registry client (published)"]
     policy --> bitbucket["Bitbucket client (published)"]
@@ -29,11 +31,12 @@ flowchart TD
     evaluation --> inventory
     evaluation --> policy
     trust --> evaluation
+    files --> evaluation
 ```
 
 An arrow means "depends on"; a dashed arrow does not exist yet.
 
-`engine/` holds the modules that produce a report: what a version releases, the license policy, the scan that finds each file's licenses, the evaluation that judges them, and the grade that says how far the list can be trusted. It is a folder, not a module: each part is its own Gradle project, so each reaches only the systems it reads.
+`engine/` holds the modules that produce a report: what a version releases, the license policy, the scan that finds each file's licenses, the evaluation that judges them, the grade that says how far the list can be trusted, and the license files. It is a folder, not a module: each part is its own Gradle project, so each reaches only the systems it reads.
 
 | Module | Owns | May depend on | Must never depend on |
 | --- | --- | --- | --- |
@@ -46,6 +49,7 @@ An arrow means "depends on"; a dashed arrow does not exist yet.
 | `engine/inventory` (`:license-inventory`) | The license scan: every file a version releases and every library in it, with the licenses its sources name and whether it is ours; not judged | `license-target-registry` (its model only), the Artifactory and Xray clients | `core`, `server`, Spring, `license-policy-registry` |
 | `engine/evaluation` (`:license-evaluation`) | Which libraries of an inventory count (no image layers, OS packages or base-image Python) and the verdict on each | `license-inventory` and `license-policy-registry` (their models only) | `core`, `server`, Spring, any client, any I/O |
 | `engine/trust` (`:license-trust`) | Whether the library list of a component version, and of each released file, is complete: its level, reasons and fixes | `license-evaluation` (its model, and through it the inventory's) | `core`, `server`, Spring, any client, any I/O |
+| `engine/files` (`:license-files`) | The license files of each released file that was read: `THIRD-PARTY.txt`, `licenses.xml` and the license texts, in the license plugins' format | `license-evaluation` (its model, and through it the inventory's and the policy's) | `core`, `server`, Spring, any client, any I/O, `license-trust` |
 
 Why each rule:
 
@@ -59,6 +63,8 @@ Why each rule:
 - **`license-inventory` does not judge.** It names licenses as its sources give them. It does record whether a library is ours: for a file known only by its checksum that takes Artifactory (is a copy in one of our repositories?), which only the scan reads, so `Ownership` answers it there, once. Whether a library counts and whether its license is allowed is evaluation's, with the license policy.
 - **`license-evaluation` reads nothing.** Inventory and policy in, assessment out; the judging rule is the policy's (`LicensePolicy.judge`), never a second copy.
 - **`license-trust` reads nothing either, and judges no license.** Assessment and registry labels in, grade out. "Is this license allowed" is evaluation's; "is this list complete" is trust's. A grade never decides a build's outcome: the runner does, from the verdicts.
+- **`license-files` reads nothing either.** Assessment, policy and the downloaded texts in, files out. The texts the registry gives only as a URL are downloaded by the server, which asks the module which URLs it needs first; a text that cannot be downloaded is listed as missing, never a failure.
+- **The build outcome is the runner's.** The service only reports. The runner fails a build on a violation only when its step passes the matching `--fail-on-*` flag; with a flag on, no answer fails a release and passes a regular build's quick check, whose violations Xray has not scanned yet never fail it.
 
 Gradle enforces the dependency rules: a module cannot import what its build file does not declare. This page holds the reasons.
 
@@ -77,10 +83,13 @@ TeamCity step (metarunner)
                                                                 ├─ the license scan (license-inventory)
                                                                 │    Artifactory or Xray unreachable → report FAILED
                                                                 ├─ evaluation (license-evaluation)
-                                                                └─ trust (license-trust), with the target's labels, then the summary
+                                                                ├─ trust (license-trust), with the target's labels
+                                                                ├─ license texts at a URL, downloaded once and kept
+                                                                └─ license files (license-files), zipped, then the summary
   runner ──client── GET …/{id} until DONE, EXCLUDED or FAILED
   runner ──client── GET …/{id}/files ──► zip
   runner writes license-report.json and the zip to --output-dir
+  runner exits non-zero only when a --fail-on-* flag asks for it and the verdicts fail
 ```
 
 Only `core` types cross the wire, in both directions.
@@ -129,6 +138,7 @@ What each part does on a request:
 - **Instead, an outage answers `503` with a message, and is counted.** `license.target.resolutions{outcome}` (`license_target_resolutions_total` in Prometheus) counts each resolution as `resolved`, `excluded`, `not_found`, `unavailable` or `error` (an unexpected registry answer); an alert watches `unavailable` and `error`.
 - **The scan is counted the same way.** It runs after the report started, so an Artifactory or Xray outage ends the report `FAILED` instead of a `503`. `license.inventory.scans{outcome}` (`license_inventory_scans_total`) counts each scan as `scanned`, `unavailable` or `failed`; an alert watches `unavailable`.
 - **A background dependency is counted the same way.** The license policy is refreshed from Bitbucket in the background; once a policy is loaded readiness stays up, so a failing refresh shows only as a metric. `license.policy.refreshes{outcome}` (`license_policy_refreshes_total`) counts each refresh that asks Bitbucket as `loaded`, `unchanged`, `unavailable`, `invalid` or `failed`; an alert watches all but the first two. The gauge `license.policy.problems` (`license_policy_problems`) is the number of registry entries the loaded policy skipped; an alert watches it above 0, since a skipped override still loads.
+- **License texts at a URL are counted the same way.** `license.texts.downloads{outcome}` (`license_texts_downloads_total`) counts each text a report needs as `downloaded`, `cached` or `failed`; a failure only leaves that text out.
 - **Metrics live in `server`.** `engine/` modules know nothing of Micrometer; the server counts what they answer or throw.
 
 ## Boundaries
@@ -137,7 +147,7 @@ What each part does on a request:
 
 - **`engine/` has its own model.** It never uses the `core` DTOs. Otherwise every wire change would ripple into the algorithm, and the algorithm would see only what callers are allowed to see.
 - **`engine/` reads the external systems; the server maps.** The server passes the license target into the scan, and maps the scan's result into `core` types and the zip.
-- **The `LicenseReportGenerator` implementation is that mapping.** `EvaluatingLicenseReportGenerator` scans, evaluates and grades; `SummaryMapper` narrows the assessment to third-party counts and violations, and maps the grade into `trust`. The license files are not written yet: the zip is empty.
+- **The `LicenseReportGenerator` implementation is that mapping.** `EvaluatingLicenseReportGenerator` scans, evaluates, grades and writes the license files; `SummaryMapper` narrows the assessment to third-party counts and violations, maps the grade into `trust` and lists the license texts that could not be written; `LicenseFilesZip` turns the files into the download.
 
 The service stores nothing but the current license policy. Each result records its inputs (license registry commit, generation time, service version), so a difference between two results for one version can be explained later.
 

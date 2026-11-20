@@ -30,6 +30,7 @@ license-service:
   generation-threads: 4
   max-queued-reports: 50
   max-stored-bytes: 512MB
+  max-stored-reports: 500
   components-registry-deadline: PT45S
   # The systems read are configured under the keys every service shares: components-registry-service.url,
   # bitbucket.host and artifactory.url in Spring Cloud Config's application.yml, bitbucket.token and
@@ -43,3 +44,5 @@ license-service:
   xray:
     scan-timeout: PT5M
     scan-poll-interval: PT10S
+  license-texts:
+    download-timeout: PT10S

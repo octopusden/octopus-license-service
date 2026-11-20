@@ -5,10 +5,13 @@ import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.octopusden.octopus.license.core.dto.FileTrust
 import org.octopusden.octopus.license.core.dto.GenerationInputs
+import org.octopusden.octopus.license.core.dto.LicenseDisagreement
 import org.octopusden.octopus.license.core.dto.LicenseReport
 import org.octopusden.octopus.license.core.dto.LicenseReportMode
 import org.octopusden.octopus.license.core.dto.LicenseReportStatus
 import org.octopusden.octopus.license.core.dto.LicenseReportSummary
+import org.octopusden.octopus.license.core.dto.MissingLicenseText
+import org.octopusden.octopus.license.core.dto.MissingTextReason
 import org.octopusden.octopus.license.core.dto.Trust
 import org.octopusden.octopus.license.core.dto.TrustLevel
 import org.octopusden.octopus.license.core.dto.TrustReason
@@ -253,6 +256,68 @@ class BuildLogTest {
         assertEquals("Libraries: none", BuildLog.render(LogLine("Libraries: none")))
     }
 
+    @Test
+    @DisplayName("a preliminary violation says Xray has not scanned its files yet")
+    fun preliminaryViolation() {
+        val summary =
+            summary(
+                violations = listOf(
+                    Violation("pkg:npm/left-pad@1.3.0", Verdict.UNKNOWN, emptyList(), listOf("app.jar"), preliminary = true),
+                ),
+            )
+
+        assertEquals(
+            LogLine("pkg:npm/left-pad@1.3.0 is UNKNOWN () in app.jar (preliminary: Xray has not scanned these files yet)", warning = true),
+            BuildLog.lines(COMPONENT, VERSION, finished(summary)).last(),
+        )
+    }
+
+    @Test
+    @DisplayName("each missing license text is one warning with its reason and URL")
+    fun missingTexts() {
+        val summary =
+            summary(
+                missingTexts =
+                    listOf(
+                        MissingLicenseText("GWT", MissingTextReason.DOWNLOAD_FAILED, "http://www.gwtproject.org/terms.html"),
+                        MissingLicenseText("SSPL-1.0", MissingTextReason.NO_REGISTRY_ENTRY),
+                    ),
+            )
+
+        assertEquals(
+            listOf(
+                LogLine("License text of GWT missing: DOWNLOAD_FAILED (http://www.gwtproject.org/terms.html)", warning = true),
+                LogLine("License text of SSPL-1.0 missing: NO_REGISTRY_ENTRY", warning = true),
+            ),
+            BuildLog.lines(COMPONENT, VERSION, finished(summary)).takeLast(2),
+        )
+    }
+
+    @Test
+    @DisplayName("a library whose sources disagree is one warning with each source's names and the verdict used")
+    fun disagreement() {
+        val summary =
+            summary().copy(
+                licenseDisagreements =
+                    listOf(
+                        LicenseDisagreement(
+                            "pkg:npm/left-pad@1.3.0",
+                            Verdict.ALLOWED,
+                            mapOf("BINARY_SCAN" to listOf("GPL-3.0"), "SBOM" to listOf("MIT")),
+                            listOf("app.jar"),
+                        ),
+                    ),
+            )
+
+        assertEquals(
+            LogLine(
+                "pkg:npm/left-pad@1.3.0 is ALLOWED, but its sources disagree: BINARY_SCAN (GPL-3.0), SBOM (MIT) in app.jar",
+                warning = true,
+            ),
+            BuildLog.lines(COMPONENT, VERSION, finished(summary)).last(),
+        )
+    }
+
     private fun finished(summary: LicenseReportSummary) =
         RunOutcome.Finished(LicenseReport(REPORT_ID, COMPONENT, VERSION, LicenseReportStatus.DONE, summary = summary), byteArrayOf())
 
@@ -260,11 +325,13 @@ class BuildLogTest {
         trust: Trust = Trust(TrustLevel.HIGH, emptyList(), emptyList()),
         libraryCounts: Map<Verdict, Int> = emptyMap(),
         violations: List<Violation> = emptyList(),
+        missingTexts: List<MissingLicenseText> = emptyList(),
     ) = LicenseReportSummary(
         GenerationInputs(licenseRegistryCommit = null, generatedAt = Instant.parse("2026-11-04T10:00:00Z"), serviceVersion = "1.0.0"),
         trust,
         libraryCounts,
         violations,
+        missingTexts,
     )
 
     private companion object {

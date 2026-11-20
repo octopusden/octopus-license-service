@@ -1,6 +1,7 @@
 package org.octopusden.octopus.license.service.configuration
 
 import org.octopusden.octopus.license.evaluation.LicenseEvaluator
+import org.octopusden.octopus.license.files.LicenseFilesWriter
 import org.octopusden.octopus.license.trust.TrustGrader
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
@@ -16,4 +17,7 @@ class AssessmentConfig {
 
     @Bean
     fun trustGrader() = TrustGrader()
+
+    @Bean
+    fun licenseFilesWriter() = LicenseFilesWriter()
 }

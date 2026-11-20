@@ -15,7 +15,7 @@ import java.time.ZoneOffset
 
 class LicenseReportStoreTest {
     private val clock = MutableClock(Instant.parse("2026-11-04T10:00:00Z"))
-    private val store = LicenseReportStore(clock, TTL, MAX_STORED_BYTES)
+    private val store = LicenseReportStore(clock, TTL, MAX_STORED_BYTES, MAX_STORED_REPORTS)
 
     @Test
     @DisplayName("a finished report is kept until the TTL has passed since it finished")
@@ -157,6 +157,46 @@ class LicenseReportStoreTest {
         assertEquals("second", answer.id)
     }
 
+    @Test
+    @DisplayName("over the report count, the oldest finished reports go first, the one just finished stays (D9)")
+    fun countLimitDropsOldestFinished() {
+        listOf("first", "second", "third").forEach {
+            store.addUnlessRunning(report(LicenseReportStatus.RUNNING, id = it))
+            store.finish(report(LicenseReportStatus.EXCLUDED, id = it), null)
+            clock.advance(Duration.ofMinutes(1))
+        }
+
+        store.addUnlessRunning(report(LicenseReportStatus.RUNNING, id = "fourth"))
+        store.finish(report(LicenseReportStatus.EXCLUDED, id = "fourth"), null)
+
+        assertEquals(listOf("fourth", "second", "third"), store.ids())
+    }
+
+    @Test
+    @DisplayName("running reports do not count toward the report limit and are never dropped for it (D9)")
+    fun countLimitIgnoresRunning() {
+        // Each its own version: a second running report of one version would join the first.
+        listOf("r1", "r2", "r3").forEach { store.addUnlessRunning(LicenseReport(it, "component", it, LicenseReportStatus.RUNNING)) }
+        finish("done1", ByteArray(1))
+        finish("done2", ByteArray(1))
+
+        assertEquals(listOf("done1", "done2", "r1", "r2", "r3"), store.ids())
+    }
+
+    @Test
+    @DisplayName("over the byte limit, a finished report without files is never dropped: it frees nothing (D9)")
+    fun byteLimitKeepsReportsWithoutFiles() {
+        store.addUnlessRunning(report(LicenseReportStatus.RUNNING, id = "excluded"))
+        store.finish(report(LicenseReportStatus.EXCLUDED, id = "excluded"), null)
+        clock.advance(Duration.ofMinutes(1))
+        finish("older", ByteArray(6))
+        clock.advance(Duration.ofMinutes(1))
+
+        finish("newest", ByteArray(6))
+
+        assertEquals(listOf("excluded", "newest"), store.ids())
+    }
+
     private fun finish(
         id: String,
         files: ByteArray,
@@ -184,6 +224,7 @@ class LicenseReportStoreTest {
         val TTL: Duration = Duration.ofHours(1)
         val FILES = byteArrayOf(1, 2, 3)
         const val MAX_STORED_BYTES = 10L
+        const val MAX_STORED_REPORTS = 3
 
         fun report(
             status: LicenseReportStatus,
