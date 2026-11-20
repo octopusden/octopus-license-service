@@ -183,6 +183,7 @@ internal fun interface ComponentRule {
   - a caller always names the version.
 
   Neither code can be reached.
+- `SBOM_UNREADABLE` (`LOW`) is the service's own, beyond the prototype's table. The scan records an SBOM that is missing from Artifactory or cannot be parsed as finding `SBOM_UNREADABLE` (scan design, Decision 11); the prototype skipped it without a word. Its libraries are missing from the list, so the list is doubtful. Added on review.
 - `core` carries the code as its name, a string, not as an enum of its own (Decision 8). `SummaryMapper` writes `code.name`; engine modules never import `core` (architecture).
 
 ### 3. The prototype's facts, read from the assessment
@@ -226,7 +227,7 @@ internal fun interface ComponentRule {
     - detail: `"missing {types} (label {labels…}), …; detected {type} {n}, …"`, or `"detected nothing"`;
     - the "detected" list is by count descending, and ties keep the order in which each type first appears among the third-party libraries (sorted by rendered id). This is Python's `Counter.most_common`, and it decides the text.
     - Types outside `COMPLETE_TYPES`, when no counted library (ours included) has `SBOM` evidence: `"found {types, sorted} libraries, but no SBOM"`.
-  - `SourceRule`: read files without a build record give `"no build for: {entries, space-separated, in listing order}"`. Read files without a binary scan give `"not indexed in Xray: {entries}"`.
+  - `SourceRule`: read files without a build record give `"no build for: {entries, space-separated, in listing order}"`. Read files without a binary scan give `"not indexed in Xray: {entries}"`. Each `SBOM_UNREADABLE` finding gives one `SBOM_UNREADABLE`, `"{subject}: {detail}"`, after those two. The finding names the SBOM, not a released file, so no file is graded for it.
   - `IdentificationRule`: `"{n} of {third} outside files identified by checksum only"`, and `"{n} of {third} outside libraries have no known license"`.
 - Trust grades only what evaluation counted. Evaluation's scope therefore decides what a label can find (evaluation design, Decision 3.3): Python found only in images by the image scan is skipped as base-image Python, so a `python` label finds no `pypi` and raises `ECOSYSTEM_NOT_DETECTED`; Python the build declared is counted, so the label is satisfied. The prototype skips both, so the declared case is listed under "follows from evaluation" in parity (Decision 10). `EvaluatedTrustTest` runs the real evaluator before the grader to hold this.
 - `LABEL_ECOSYSTEMS`, `NATIVE_LABELS` and `COMPLETE_TYPES` are private constants of the rule that reads them. A label or type the prototype does not know is not matched, as in the prototype.
@@ -297,7 +298,7 @@ data class FileTrust(val file: String, val level: TrustLevel, val reasons: List<
      - `reasons` as a set of `(code, detail)`, the prototype's `UNKNOWN_LICENCES` read as `UNKNOWN_LICENSES` and "licence" as "license" in details;
      - files: entry to `(level, codes)` for every selected file, against `level` and `flags`.
 - **Reasons are compared as a set, not a list.** The inventory compares findings as a set, because the scan's lookups can find them in a different order. `CoverageRule` follows the findings' order, so the order can differ while the content is the same.
-- **When a component already has a "policy rules" or "deliberate" evaluation difference,** its trust differences are listed as "follows from evaluation" and do not fail. Either difference changes a count grading reads (third-party libraries, unknown licenses, types, SBOM seen).
+- **When a component already has a deliberate difference,** its trust differences are listed as "follows from a deliberate difference" and do not fail: a "policy rules" or "deliberate" evaluation difference, which changes a count grading reads (third-party libraries, unknown licenses, types, SBOM seen), or an `SBOM_UNREADABLE` finding, which the prototype never reported. The report counts and names these components.
 - Prototype components with `error` or with no `version` are skipped and named in the report. The service has no grade to compare for them (Decision 2).
 - Output: `build/parity/report.md`, adding a trust column. Done means no difference outside those listed, and the reference components named in the ticket the same.
 

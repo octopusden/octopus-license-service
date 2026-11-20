@@ -9,7 +9,7 @@ import org.junit.jupiter.params.provider.CsvSource
 import org.junit.jupiter.params.provider.EnumSource
 
 class TrustReasonCodeTest {
-    // The prototype's REASONS table at e380518, minus ERROR and NEVER_BUILT (D2).
+    // The prototype's REASONS table at e380518, minus ERROR and NEVER_BUILT, plus SBOM_UNREADABLE (D2).
     @ParameterizedTest(name = "{0} is {1}")
     @CsvSource(
         "NO_ARTIFACT_IN_REGISTRY, NONE",
@@ -23,6 +23,7 @@ class TrustReasonCodeTest {
         "UNIDENTIFIED_BINARIES, MEDIUM",
         "UNKNOWN_LICENSES, MEDIUM",
         "NO_BUILD_RECORD, MEDIUM",
+        "SBOM_UNREADABLE, LOW",
     )
     @DisplayName("each code has the prototype's level (D2)")
     fun level(
@@ -33,9 +34,9 @@ class TrustReasonCodeTest {
     }
 
     @Test
-    @DisplayName("the eleven codes, no more: ERROR and NEVER_BUILT cannot be reached (D2)")
+    @DisplayName("the prototype's eleven reachable codes, and SBOM_UNREADABLE, which the prototype has no (D2)")
     fun codes() {
-        assertEquals(11, TrustReasonCode.entries.size)
+        assertEquals(12, TrustReasonCode.entries.size)
     }
 
     @ParameterizedTest

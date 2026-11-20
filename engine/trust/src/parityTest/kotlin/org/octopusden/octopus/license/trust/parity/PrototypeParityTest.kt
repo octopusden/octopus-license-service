@@ -9,6 +9,7 @@ import org.octopusden.octopus.license.evaluation.LicenseEvaluator
 import org.octopusden.octopus.license.evaluation.parity.EvaluationParityDiff
 import org.octopusden.octopus.license.evaluation.parity.EvaluationParityView
 import org.octopusden.octopus.license.inventory.impl.JfrogLicenseInventoryScanner
+import org.octopusden.octopus.license.inventory.model.FindingCode
 import org.octopusden.octopus.license.inventory.model.OwnershipRules
 import org.octopusden.octopus.license.inventory.parity.ParityAccepted
 import org.octopusden.octopus.license.inventory.parity.ParityDiff
@@ -39,15 +40,16 @@ class PrototypeParityTest {
     private fun list(name: String) = env(name).split(',').map { it.trim() }.filter { it.isNotEmpty() }
 
     /**
-     * @param followsFromEvaluation trust differences on a component whose assessment already differs on
-     * purpose ("policy rules" or "deliberate"): those differences move counts grading reads (D10).
+     * @param followsFromDeliberate trust differences on a component that already differs on purpose: its
+     * evaluation ("policy rules" or "deliberate"), which moves counts grading reads, or an SBOM the scan
+     * could not read, which the prototype skipped without a word and the service grades (D10, D2).
      */
     private class Result(
         val component: String,
         val differences: List<Pair<String, String?>>,
         val policyRules: List<String> = emptyList(),
         val deliberate: List<String> = emptyList(),
-        val followsFromEvaluation: List<String> = emptyList(),
+        val followsFromDeliberate: List<String> = emptyList(),
         val prototypeLevel: String? = null,
         val serviceLevel: String? = null,
     ) {
@@ -108,12 +110,12 @@ class PrototypeParityTest {
             buildString {
                 appendLine("# Parity with ${run.parentFile}, license registry ${policy.commit}")
                 appendLine()
-                appendLine("| Component | Result | Trust | Policy rules | Follows from evaluation |")
+                appendLine("| Component | Result | Trust | Policy rules | Follows from a deliberate difference |")
                 appendLine("| --- | --- | --- | --- | --- |")
                 results.forEach {
                     appendLine(
                         "| ${it.component} | ${it.summary()} | ${it.prototypeLevel ?: "-"} / ${it.serviceLevel ?: "-"} | " +
-                            "${it.policyRules.size} | ${it.followsFromEvaluation.size} |",
+                            "${it.policyRules.size} | ${it.followsFromDeliberate.size} |",
                     )
                 }
                 appendTrustTotals(results)
@@ -125,7 +127,7 @@ class PrototypeParityTest {
                     )
                 }
                 results
-                    .filter { it.differences.size + it.policyRules.size + it.deliberate.size + it.followsFromEvaluation.size > 0 }
+                    .filter { it.differences.size + it.policyRules.size + it.deliberate.size + it.followsFromDeliberate.size > 0 }
                     .forEach { result ->
                         appendLine()
                         appendLine("## ${result.component}")
@@ -135,7 +137,7 @@ class PrototypeParityTest {
                         }
                         result.policyRules.forEach { appendLine("- policy rules (evaluation D6): $it") }
                         result.deliberate.forEach { appendLine("- deliberate: $it") }
-                        result.followsFromEvaluation.forEach { appendLine("- follows from evaluation: $it") }
+                        result.followsFromDeliberate.forEach { appendLine("- follows from a deliberate difference: $it") }
                     }
             },
         )
@@ -171,7 +173,10 @@ class PrototypeParityTest {
                             (theirs.packages.keys - ours.packages.keys) + (ours.packages.keys - theirs.packages.keys),
                         )
                     val trust = TrustParityDiff.diff(TrustParityView.ofPrototype(component), TrustParityView.of(grade))
-                    val excused = evaluation.policyRules.isNotEmpty() || evaluation.deliberate.isNotEmpty()
+                    val excused =
+                        evaluation.policyRules.isNotEmpty() ||
+                            evaluation.deliberate.isNotEmpty() ||
+                            inventory.findings.any { it.code == FindingCode.SBOM_UNREADABLE }
                     Result(
                         name,
                         judged(
@@ -201,10 +206,10 @@ class PrototypeParityTest {
                 "| $level | ${graded.count { it.prototypeLevel == level.name }} | ${graded.count { it.serviceLevel == level.name }} |",
             )
         }
-        val excused = results.filter { it.followsFromEvaluation.isNotEmpty() }
+        val excused = results.filter { it.followsFromDeliberate.isNotEmpty() }
         appendLine()
         appendLine(
-            "Trust differences excused as following from evaluation: ${excused.size} component(s)" +
+            "Trust differences excused as following from a deliberate difference: ${excused.size} component(s)" +
                 excused.joinToString(", ", prefix = if (excused.isEmpty()) "" else ": ") { it.component },
         )
     }
