@@ -32,6 +32,7 @@ import org.octopusden.octopus.license.inventory.model.FileKind
 import org.octopusden.octopus.license.inventory.model.FileStatus
 import org.octopusden.octopus.license.inventory.model.Finding
 import org.octopusden.octopus.license.inventory.model.FindingCode.NO_LIBRARIES_IN_FILE
+import org.octopusden.octopus.license.inventory.model.FindingCode.SBOM_UNREADABLE
 import org.octopusden.octopus.license.inventory.model.FindingCode.UNRESOLVED_INTERNAL_ARCHIVE
 import org.octopusden.octopus.license.inventory.model.FoundLibrary
 import org.octopusden.octopus.license.inventory.model.PackageId
@@ -147,12 +148,13 @@ class FileContentReaderTest {
     }
 
     @Test
-    @DisplayName("an SBOM of any module of the build adds its components; one that cannot be read is skipped")
+    @DisplayName("an SBOM of any module of the build adds its components; one that cannot be parsed is skipped with a finding")
     fun sboms() {
         scanner.scanned(zip)
         val sbom = stored("portal-ui.cdx.json", sha1 = "sha1-portal-ui.cdx.json")
         store.add(sbom, """{"components":[{"purl":"pkg:npm/lodash@4.17.21","licenses":[{"license":{"id":"MIT"}}]}]}""")
-        store.add(stored("broken-bom.json"))
+        val broken = stored("broken-bom.json")
+        store.add(broken, "not json")
         val record =
             build(
                 modules =
@@ -166,9 +168,10 @@ class FileContentReaderTest {
                     ),
             )
 
-        read(record)
+        val reading = read(record)
 
         assertEquals(listOf(pkg("pkg:npm/lodash@4.17.21", setOf("MIT"), SBOM)), table.libraries())
+        assertEquals(listOf(SBOM_UNREADABLE to broken.fullPath), reading.findings.map { it.code to it.subject })
     }
 
     @Test

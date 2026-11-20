@@ -185,7 +185,7 @@ The service SHALL ask Xray for a file's license scan status before reading its s
 
 ### Requirement: A read file's packages come from every source it has
 
-For a `READ` file the service SHALL take, in order: the packages Xray found in it (evidence `BINARY_SCAN`); and when its build is known, the components of every CycloneDX file (`.cdx.json`, `bom.json`, `sbom.json`, `-cyclonedx.json`) any module of the build published, without purl qualifiers and percent-decoded, with their license ids, names or expressions (evidence `SBOM`); the `prod` dependencies of every `npm` module (evidence `BUILD_RECORD`); and the shipped dependencies of the module that published the file, by its sha1 when both have one, or by its name. When no module published the file it SHALL add finding `NO_PRODUCING_MODULE` and read no dependencies.
+For a `READ` file the service SHALL take, in order: the packages Xray found in it (evidence `BINARY_SCAN`); and when its build is known, the components of every CycloneDX file (`.cdx.json`, `bom.json`, `sbom.json`, `-cyclonedx.json`) any module of the build published, without purl qualifiers and percent-decoded, with their license ids, names or expressions (evidence `SBOM`), adding finding `SBOM_UNREADABLE` for one Artifactory does not have by its sha1 or that cannot be parsed; the `prod` dependencies of every `npm` module (evidence `BUILD_RECORD`); and the shipped dependencies of the module that published the file, by its sha1 when both have one, or by its name. When no module published the file it SHALL add finding `NO_PRODUCING_MODULE` and read no dependencies.
 
 #### Scenario: Fat jar library only in build-info
 
@@ -202,10 +202,20 @@ For a `READ` file the service SHALL take, in order: the packages Xray found in i
 - **WHEN** an SBOM lists `pkg:npm/%40angular/core@17.0.0`
 - **THEN** the package is `pkg:npm/@angular/core@17.0.0`, the one Xray names
 
-#### Scenario: SBOM that cannot be read
+#### Scenario: SBOM that cannot be parsed
 
-- **WHEN** an SBOM file of the build cannot be downloaded or parsed
-- **THEN** it is skipped and the other sources are still read
+- **WHEN** an SBOM file of the build is not valid JSON
+- **THEN** it is skipped with finding `SBOM_UNREADABLE` naming its path, and the other sources are still read
+
+#### Scenario: SBOM not in Artifactory
+
+- **WHEN** build-info lists an SBOM whose sha1 Artifactory does not find
+- **THEN** it is skipped with finding `SBOM_UNREADABLE`, detail `not in Artifactory`
+
+#### Scenario: Artifactory down while an SBOM downloads
+
+- **WHEN** downloading an SBOM fails with `503` after retries
+- **THEN** the inventory fails with `InventorySourceUnavailableException`, as for any other Artifactory call
 
 #### Scenario: Bundled JavaScript
 
@@ -349,7 +359,7 @@ The inventory SHALL hold every listed file in listing order with its status, sel
 
 ### Requirement: An unreachable Artifactory or Xray fails the inventory
 
-The service SHALL fail the inventory with `InventorySourceUnavailableException` when Artifactory or Xray cannot be asked, apart from the tolerated cases (build-info that does not exist, an unreadable SBOM, a failed license call, an error Xray gives for one path).
+The service SHALL fail the inventory with `InventorySourceUnavailableException` when Artifactory or Xray cannot be asked, apart from the tolerated cases (build-info that does not exist, an SBOM Artifactory does not have or cannot be parsed, a failed license call, an error Xray gives for one path).
 
 #### Scenario: Artifactory down
 
