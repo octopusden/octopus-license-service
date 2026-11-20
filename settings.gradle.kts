@@ -46,3 +46,5 @@ project(":license-inventory").projectDir = file("engine/inventory")
 
 include(":license-evaluation")
 project(":license-evaluation").projectDir = file("engine/evaluation")
+include(":license-trust")
+project(":license-trust").projectDir = file("engine/trust")

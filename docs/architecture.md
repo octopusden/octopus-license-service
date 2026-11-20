@@ -14,11 +14,13 @@ flowchart TD
     server --> policy
     server --> inventory
     server --> evaluation
+    server --> trust
     subgraph engine["engine/"]
         target["license-target-registry"]
         policy["license-policy-registry"]
         inventory["license-inventory"]
         evaluation["license-evaluation"]
+        trust["license-trust"]
     end
     target --> crs["components registry client (published)"]
     policy --> bitbucket["Bitbucket client (published)"]
@@ -26,11 +28,12 @@ flowchart TD
     inventory --> jfrog["Artifactory and Xray clients (published)"]
     evaluation --> inventory
     evaluation --> policy
+    trust --> evaluation
 ```
 
 An arrow means "depends on"; a dashed arrow does not exist yet.
 
-`engine/` holds the modules that produce a report: what a version releases, the license policy, the scan that finds each file's licenses, and the evaluation that judges them. It is a folder, not a module: each part is its own Gradle project, so each reaches only the systems it reads.
+`engine/` holds the modules that produce a report: what a version releases, the license policy, the scan that finds each file's licenses, the evaluation that judges them, and the grade that says how far the list can be trusted. It is a folder, not a module: each part is its own Gradle project, so each reaches only the systems it reads.
 
 | Module | Owns | May depend on | Must never depend on |
 | --- | --- | --- | --- |
@@ -42,6 +45,7 @@ An arrow means "depends on"; a dashed arrow does not exist yet.
 | `engine/policy-registry` (`:license-policy-registry`) | The license policy, read from the license registry through Bitbucket (to move to octopus-vcs-facade, [TD-001](tech-debt/001-read-license-registry-through-vcs-facade.md)), and the verdict on one named library | the Bitbucket client, `versions-api` | `core`, `server`, Spring, any other system |
 | `engine/inventory` (`:license-inventory`) | The license scan: every file a version releases and every library in it, with the licenses its sources name and whether it is ours; not judged | `license-target-registry` (its model only), the Artifactory and Xray clients | `core`, `server`, Spring, `license-policy-registry` |
 | `engine/evaluation` (`:license-evaluation`) | Which libraries of an inventory count (no image layers, OS packages or base-image Python) and the verdict on each | `license-inventory` and `license-policy-registry` (their models only) | `core`, `server`, Spring, any client, any I/O |
+| `engine/trust` (`:license-trust`) | Whether the library list of a component version, and of each released file, is complete: its level, reasons and fixes | `license-evaluation` (its model, and through it the inventory's) | `core`, `server`, Spring, any client, any I/O |
 
 Why each rule:
 
@@ -54,6 +58,7 @@ Why each rule:
 - **The license scan needs lookups mid-decision** (a nested archive's build, an SBOM's bytes), so it cannot take all its data up front. Its decisions are pure classes; four orchestrators sequence them through four ports (`BuildRecords`, `ArtifactStore`, `BinaryScanner`, `LicenseDatabase`), tested against in-memory fakes; only `impl/adapter/` sees a client type. Xray sits behind two of the ports, so replacing it changes two adapters.
 - **`license-inventory` does not judge.** It names licenses as its sources give them. It does record whether a library is ours: for a file known only by its checksum that takes Artifactory (is a copy in one of our repositories?), which only the scan reads, so `Ownership` answers it there, once. Whether a library counts and whether its license is allowed is evaluation's, with the license policy.
 - **`license-evaluation` reads nothing.** Inventory and policy in, assessment out; the judging rule is the policy's (`LicensePolicy.judge`), never a second copy.
+- **`license-trust` reads nothing either, and judges no license.** Assessment and registry labels in, grade out. "Is this license allowed" is evaluation's; "is this list complete" is trust's. A grade never decides a build's outcome: the runner does, from the verdicts.
 
 Gradle enforces the dependency rules: a module cannot import what its build file does not declare. This page holds the reasons.
 
@@ -71,7 +76,8 @@ TeamCity step (metarunner)
                                                            └─ generator, on a background thread, with the target and that policy
                                                                 ├─ the license scan (license-inventory)
                                                                 │    Artifactory or Xray unreachable → report FAILED
-                                                                └─ evaluation (license-evaluation), then the summary
+                                                                ├─ evaluation (license-evaluation)
+                                                                └─ trust (license-trust), with the target's labels, then the summary
   runner ──client── GET …/{id} until DONE, EXCLUDED or FAILED
   runner ──client── GET …/{id}/files ──► zip
   runner writes license-report.json and the zip to --output-dir
@@ -100,7 +106,7 @@ org.octopusden.octopus.license.service
 | --- | --- | --- |
 | `controller` | `service.LicenseReportService`; only `core` types in and out | `state`, `engine/`, the generator |
 | `service`: the report service | `state.report` (add, finish, find), `state.policy` (`current()`, read once per report), `engine/` `LicenseTargetResolver`, the generator | `controller`, `health` |
-| `service`: the generator | only what it is given: the license target and the policy; the scanner and the evaluator | `state`: a reload or an eviction never changes a running generation |
+| `service`: the generator | only what it is given: the license target and the policy; the scanner, the evaluator and the grader | `state`: a reload or an eviction never changes a running generation |
 | `state` | `engine/` models; its own `@Scheduled` job | `service`, `controller`, `health`: state never calls back into the use case |
 | `health` | `state`, read-only | anything that writes |
 | `configuration` | everything, to wire it | — |
@@ -131,7 +137,7 @@ What each part does on a request:
 
 - **`engine/` has its own model.** It never uses the `core` DTOs. Otherwise every wire change would ripple into the algorithm, and the algorithm would see only what callers are allowed to see.
 - **`engine/` reads the external systems; the server maps.** The server passes the license target into the scan, and maps the scan's result into `core` types and the zip.
-- **The `LicenseReportGenerator` implementation is that mapping.** `EvaluatingLicenseReportGenerator` scans, evaluates, and `SummaryMapper` narrows the assessment to third-party counts and violations. Trust and the license files are not computed yet: `trust` is null and the zip is empty.
+- **The `LicenseReportGenerator` implementation is that mapping.** `EvaluatingLicenseReportGenerator` scans, evaluates and grades; `SummaryMapper` narrows the assessment to third-party counts and violations, and maps the grade into `trust`. The license files are not written yet: the zip is empty.
 
 The service stores nothing but the current license policy. Each result records its inputs (license registry commit, generation time, service version), so a difference between two results for one version can be explained later.
 

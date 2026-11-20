@@ -10,6 +10,8 @@ import org.octopusden.octopus.license.core.dto.LicenseReport
 import org.octopusden.octopus.license.core.dto.LicenseReportMode
 import org.octopusden.octopus.license.core.dto.LicenseReportRequest
 import org.octopusden.octopus.license.core.dto.LicenseReportSummary
+import org.octopusden.octopus.license.core.dto.Trust
+import org.octopusden.octopus.license.core.dto.TrustLevel
 import org.octopusden.octopus.license.core.exception.ServiceBusyException
 import org.octopusden.octopus.license.policy.model.LicensePolicy
 import org.octopusden.octopus.license.service.service.GeneratedReport
@@ -41,7 +43,12 @@ class LicenseReportServiceImplTest {
             mode: LicenseReportMode,
             policy: LicensePolicy,
         ) = GeneratedReport(
-            LicenseReportSummary(GenerationInputs(null, Instant.EPOCH, "test"), null, emptyMap(), emptyList()),
+            LicenseReportSummary(
+                GenerationInputs(null, Instant.EPOCH, "test"),
+                Trust(TrustLevel.HIGH, emptyList(), emptyList()),
+                emptyMap(),
+                emptyList(),
+            ),
             byteArrayOf(),
         )
     }
