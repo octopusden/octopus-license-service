@@ -256,6 +256,7 @@ data class FoundLibrary(
   - per component: resolve, scan, evaluate with the policy loaded once at the start;
   - compared: the inventory view (as today), then per library `verdict` (prototype `REVIEW_HASH_ONLY` read as `UNIDENTIFIED`) and `overridden`; `os_packages_skipped`, `docker_python_skipped`; `os_skipped` per artifact; the `LICENCE_NOT_ALLOWED` subjects, derived from the verdicts;
   - on the same licenses found, a difference in what the policy answers (`ALLOWED`, `NOT_ALLOWED`, `UNKNOWN`, or whether an override applied) is reported under "policy rules" (Decision 6), separately from the rest; `INTERNAL` or `UNIDENTIFIED` on one side only is always a failure;
+  - a library judged on one side only is a failure, unless the inventory view already has it on one side only, so evaluation dropping a library the inventory holds is caught and an inventory difference is not reported twice;
   - output: `build/parity/report.md`, one line per component, then each difference. Done means no difference outside Decision 6.
 - The prototype's run should use the same registry commit as the policy the service loads: both read `master` at the time of the run.
 

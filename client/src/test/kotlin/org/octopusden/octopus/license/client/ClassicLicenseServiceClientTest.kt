@@ -13,7 +13,6 @@ import org.octopusden.octopus.license.client.impl.LicenseServiceClientParameters
 import org.octopusden.octopus.license.core.dto.LicenseReportRequest
 import org.octopusden.octopus.license.core.dto.LicenseReportStatus
 import org.octopusden.octopus.license.core.dto.TrustLevel
-import org.octopusden.octopus.license.core.dto.TrustReasonCode
 import org.octopusden.octopus.license.core.dto.Verdict
 import org.octopusden.octopus.license.core.exception.InvalidRequestException
 import org.octopusden.octopus.license.core.exception.LicenseFilesNotAvailableException
@@ -64,7 +63,7 @@ class ClassicLicenseServiceClientTest {
         assertEquals(mapOf(Verdict.ALLOWED to 3), summary.libraryCounts)
         assertEquals(TrustLevel.MEDIUM, summary.trust.level)
         assertEquals(
-            listOf(TrustReasonCode.NO_BUILD_RECORD),
+            listOf("NO_BUILD_RECORD"),
             summary.trust.files
                 .single()
                 .reasons,

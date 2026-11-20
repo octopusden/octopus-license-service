@@ -143,11 +143,24 @@ class EvaluationParityTest {
     }
 
     @Test
-    @DisplayName("a library on one side only is left to the inventory's diff, which already reports it")
-    fun oneSideOnly() {
+    @DisplayName("a library judged on one side only, while the inventory holds it on both, is a difference (D11)")
+    fun judgedOnOneSide() {
         val fewer = service.copy(libraries = service.libraries - "pkg:npm/left-pad@1.3.0", notAllowed = emptySet())
 
-        assertEquals(EvaluationDiffs(emptyList(), emptyList()), EvaluationParityDiff.diff(prototype, fewer))
+        val id = "pkg:npm/left-pad@1.3.0"
+        assertEquals(listOf("library $id: judged only in the prototype"), EvaluationParityDiff.diff(prototype, fewer).others)
+        assertEquals(listOf("library $id: judged only in the service"), EvaluationParityDiff.diff(fewer, prototype).others)
+    }
+
+    @Test
+    @DisplayName("a library the inventory's diff already reports on one side only is not reported twice")
+    fun inventoryOneSided() {
+        val fewer = service.copy(libraries = service.libraries - "pkg:npm/left-pad@1.3.0", notAllowed = emptySet())
+
+        assertEquals(
+            EvaluationDiffs(emptyList(), emptyList()),
+            EvaluationParityDiff.diff(prototype, fewer, inventoryOneSided = setOf("pkg:npm/left-pad@1.3.0")),
+        )
     }
 
     @Test

@@ -13,7 +13,6 @@ import org.octopusden.octopus.license.core.dto.MissingTextReason
 import org.octopusden.octopus.license.core.dto.Trust
 import org.octopusden.octopus.license.core.dto.TrustLevel
 import org.octopusden.octopus.license.core.dto.TrustReason
-import org.octopusden.octopus.license.core.dto.TrustReasonCode
 import org.octopusden.octopus.license.core.dto.Verdict
 import org.octopusden.octopus.license.core.dto.Violation
 import org.octopusden.octopus.license.evaluation.model.AssessedLibrary
@@ -137,7 +136,7 @@ class SummaryMapperTest {
                 reasons =
                     listOf(
                         TrustReason(
-                            TrustReasonCode.NO_BUILD_RECORD,
+                            "NO_BUILD_RECORD",
                             TrustLevel.MEDIUM,
                             GradedCode.NO_BUILD_RECORD.title,
                             "no build for: $IMAGE",
@@ -148,7 +147,7 @@ class SummaryMapperTest {
                 files =
                     listOf(
                         FileTrust(ZIP, TrustLevel.HIGH, emptyList()),
-                        FileTrust(IMAGE, TrustLevel.LOW, listOf(TrustReasonCode.NO_BUILD_RECORD, TrustReasonCode.NO_THIRD_PARTY_FOUND)),
+                        FileTrust(IMAGE, TrustLevel.LOW, listOf("NO_BUILD_RECORD", "NO_THIRD_PARTY_FOUND")),
                     ),
             ),
             SummaryMapper.map(workedExample, grade, inputs).trust,
@@ -157,14 +156,14 @@ class SummaryMapperTest {
 
     @ParameterizedTest
     @EnumSource(GradedCode::class)
-    @DisplayName("every graded code has a wire code of the same name and level")
+    @DisplayName("every graded code goes on the wire by its name, with its level")
     fun everyCode(code: GradedCode) {
         val wire = SummaryMapper
             .map(assessment(), TrustGrade(listOf(GradedReason(code, "")), emptyList()), inputs)
             .trust.reasons
             .single()
 
-        assertEquals(code.name, wire.code.name)
+        assertEquals(code.name, wire.code)
         assertEquals(code.level.name, wire.level.name)
     }
 

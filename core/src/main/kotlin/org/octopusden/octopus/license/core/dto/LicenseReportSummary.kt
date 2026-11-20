@@ -41,9 +41,12 @@ data class Trust(
 /**
  * One reason the list may be incomplete. [level], [title], [meaning] and [fix] are fixed per [code];
  * [detail] says which files or libraries it is about.
+ *
+ * [code] is a string, not an enum: the service adds codes as its rules change, and a client built
+ * before a code existed still reads it, with the level and texts that come with it.
  */
 data class TrustReason(
-    val code: TrustReasonCode,
+    val code: String,
     val level: TrustLevel,
     val title: String,
     val detail: String,
@@ -55,22 +58,8 @@ data class TrustReason(
 data class FileTrust(
     val file: String,
     val level: TrustLevel,
-    val reasons: List<TrustReasonCode>,
+    val reasons: List<String>,
 )
-
-enum class TrustReasonCode {
-    NO_ARTIFACT_IN_REGISTRY,
-    ARTIFACT_NOT_FOUND,
-    NOT_SCANNABLE,
-    PARTIAL_ARTIFACTS,
-    NO_THIRD_PARTY_FOUND,
-    ECOSYSTEM_NOT_DETECTED,
-    FULL_LIST_UNAVAILABLE,
-    UNIDENTIFIED_BINARIES,
-    UNKNOWN_LICENSES,
-    NO_BUILD_RECORD,
-    BUILD_LIST_ONLY,
-}
 
 /** Whether the library list of a component version is complete. */
 enum class TrustLevel {

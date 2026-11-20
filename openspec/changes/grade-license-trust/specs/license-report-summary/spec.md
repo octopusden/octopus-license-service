@@ -41,12 +41,22 @@ The runner SHALL log:
 - each reason with its level, title, detail and fix;
 - each released file graded below `HIGH`, with its level and codes.
 
-These lines SHALL be warnings when the level is `LOW` or `NONE`. The runner's outcome SHALL NOT depend on trust.
+These lines SHALL be warnings when the level is `LOW` or `NONE`. For a `CHECK` report, `BUILD_LIST_ONLY` SHALL NOT be a warning and SHALL say that Xray has not indexed the file yet and the full report waits for it; the other lines SHALL be warnings only when another reason is `LOW` or `NONE`. The runner's outcome SHALL NOT depend on trust.
 
 #### Scenario: Low trust in a build
 
 - **WHEN** a report finishes with trust `LOW`
 - **THEN** the build log shows the reasons as warnings and the step does not fail
+
+#### Scenario: Check of a file Xray has not indexed yet
+
+- **WHEN** a `CHECK` report finishes with trust `LOW` and `BUILD_LIST_ONLY` as its only reason
+- **THEN** the build log shows the reason without a warning, saying the full report at RC or RELEASE waits for Xray
+
+#### Scenario: Full report of a file Xray has not indexed
+
+- **WHEN** a `FULL` report finishes with `BUILD_LIST_ONLY`
+- **THEN** the reason is a warning with its fix, as Xray was waited for
 
 ## REMOVED Requirements
 

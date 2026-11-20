@@ -10,7 +10,6 @@ import org.octopusden.octopus.license.core.dto.LicenseReportMode
 import org.octopusden.octopus.license.core.dto.MissingLicenseText
 import org.octopusden.octopus.license.core.dto.MissingTextReason
 import org.octopusden.octopus.license.core.dto.TrustLevel
-import org.octopusden.octopus.license.core.dto.TrustReasonCode
 import org.octopusden.octopus.license.core.dto.Verdict
 import org.octopusden.octopus.license.core.dto.Violation
 import org.octopusden.octopus.license.evaluation.LicenseEvaluator
@@ -181,7 +180,7 @@ class EvaluatingLicenseReportGeneratorTest {
         assertEquals(TrustLevel.HIGH, unlabelled.level)
         assertEquals(listOf(ZIP), unlabelled.files.map { it.file })
         assertEquals(TrustLevel.LOW, javascript.level)
-        assertEquals(listOf(TrustReasonCode.ECOSYSTEM_NOT_DETECTED), javascript.reasons.map { it.code })
+        assertEquals(listOf("ECOSYSTEM_NOT_DETECTED"), javascript.reasons.map { it.code })
     }
 
     @Test

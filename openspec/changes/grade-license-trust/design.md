@@ -183,7 +183,7 @@ internal fun interface ComponentRule {
   - a caller always names the version.
 
   Neither code can be reached.
-- `core` gets its own `TrustReasonCode`, mapped one to one in `SummaryMapper`, as `LibraryVerdict` maps to `Verdict`: engine modules never import `core` (architecture).
+- `core` carries the code as its name, a string, not as an enum of its own (Decision 8). `SummaryMapper` writes `code.name`; engine modules never import `core` (architecture).
 
 ### 3. The prototype's facts, read from the assessment
 
@@ -242,6 +242,7 @@ internal fun interface ComponentRule {
      - `UNIDENTIFIED_BINARIES` and `UNKNOWN_LICENSES` by `IdentificationShare` over its own third-party libraries.
 - A `PLAIN_FILE` file has no codes, so its level is `HIGH`.
 - A file's level never lowers the component's. The component sees file problems only through its own rules, as in the prototype, where `confidence` reads `reasons` only.
+- So a component can be `HIGH` while one of its files is `LOW`: a read file with nothing found inside, for one. Nothing reads either level for a build outcome today. When enforcement is switched on, its rule must say which level it reads, the component's or the lowest file's (raised on review).
 
 ### 6. The C/C++ note comes from the labels only
 
@@ -261,14 +262,14 @@ internal fun interface ComponentRule {
 
 ```kotlin
 data class Trust(val level: TrustLevel, val reasons: List<TrustReason>, val files: List<FileTrust>)
-data class TrustReason(val code: TrustReasonCode, val level: TrustLevel, val title: String,
+data class TrustReason(val code: String, val level: TrustLevel, val title: String,
                        val detail: String, val meaning: String, val fix: String)
-data class FileTrust(val file: String, val level: TrustLevel, val reasons: List<TrustReasonCode>)
-enum class TrustReasonCode { … }   // the engine's eleven, same names
+data class FileTrust(val file: String, val level: TrustLevel, val reasons: List<String>)   // codes by name
 ```
 
 - `LicenseReportSummary.trust` becomes non-null. Every finished report is graded.
 - `TrustReason.reason` is gone. It held one text, and a caller needs the code to act on and the detail to locate the problem.
+- The code is a string on the wire, not an enum. Rules are expected to change after parity, and a new code must not break a client built before it existed: every reason already carries its level, title, meaning and fix, so a client never needs the code table. Changed on review; `core`'s `TrustReasonCode` enum is gone. `Verdict` stays an enum: its values follow the license registry's, which do not grow.
 - The level is repeated on each reason and file on the wire, so a caller need not know the code table.
 - File reasons are codes only, as the prototype's `flags`. The component's reasons carry the details.
 
@@ -324,5 +325,5 @@ enum class TrustReasonCode { … }   // the engine's eleven, same names
 - **The detail strings are part of parity.** A reworded detail would show up as a difference. This is intended: the details are what a developer reads to find the file.
 - **A trust difference can hide behind an evaluation difference** (Decision 10). The excused components are few, and they are named in the report. They are not silently dropped.
 - **Labels per version, not per component.** The service grades with the labels of the requested version, and the prototype with the component's current ones. For the latest version they are the same. For an older version the service is the more correct one. A parity difference from this shows up as `ECOSYSTEM_NOT_DETECTED` or a C/C++ note, and it is named in the report.
-- **A regular build will often show `BUILD_LIST_ONLY` (LOW).** A `CHECK` report, a regular build's, does not wait for Xray (evaluation design, Decision 9). A file uploaded seconds before is then usually not indexed yet, so it is read from its build record only, and the component and the file get `BUILD_LIST_ONLY`, a warning in the build log. RC and RELEASE (`FULL`) wait up to 5 minutes and are not affected. Accepted: the list really is weaker at that moment, the runner already marks a `CHECK` as preliminary, and every step only reports. If the warnings turn out to be noise, the fix is in the runner (not warning on `BUILD_LIST_ONLY` for a `CHECK`), not in the grade, which should stay honest.
+- **A regular build will often grade `BUILD_LIST_ONLY` (LOW).** A `CHECK` report, a regular build's, does not wait for Xray (evaluation design, Decision 9). A file uploaded seconds before is then usually not indexed yet, so it is read from its build record only, and the component and the file get `BUILD_LIST_ONLY`. RC and RELEASE (`FULL`) wait up to 5 minutes and are not affected. The grade stays honest; the runner, for a `CHECK` only, does not warn on that reason and replaces its fix with "Xray has not indexed it yet; the full report at RC or RELEASE waits for it", so the warnings left in a regular build (real violations, other reasons) are worth reading. Found on review: a warning on every build, with a fix that is wrong for a file merely not indexed yet, would teach people to skip the block.
 - **`TrustReason` changes shape on the wire.** It is safe now because no caller reads it: it was always null. After this change it is part of the contract.

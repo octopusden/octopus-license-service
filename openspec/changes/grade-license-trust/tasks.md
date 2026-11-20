@@ -174,6 +174,17 @@
 - [x] 6c.1 Merged the latest evaluation branch, which brought the scan's and the evaluation's review fixes and `PARITY_ACCEPTED`. No textual conflict.
 - [x] 6c.2 Two follow-ups: the trust parity check reads `PARITY_ACCEPTED` as the evaluation's does, and passes the resolver its new lookup timeout; `LicenseReportServiceImplTest`, new on that branch, built a summary with `trust = null`, which the contract no longer allows, so it uses a `HIGH` trust with no reasons.
 - [x] 6c.3 Confirm: `./gradlew build qualityCheck` green on the merged branch, 661 tests, 0 skipped.
+- [x] 6c.4 Merged the evaluation's next change, which reports a library judged on one side only: the trust parity check passes the inventory's one-sided libraries to the evaluation diff as the evaluation's does, so none is reported twice. `./gradlew build qualityCheck` green, 663 tests, 0 skipped.
+
+## 6d. Address the review (added on review)
+
+- [x] 6d.1 Runner, for a `CHECK`: `BUILD_LIST_ONLY` is not a warning, and its fix reads "Xray has not indexed it yet; the full report at RC or RELEASE waits for it"; the trust line and the other lines warn only when another reason is `LOW` or `NONE`; a file whose only code is `BUILD_LIST_ONLY` is not a warning. A `FULL` report is unchanged. The grade is unchanged. `BuildLogTest`: 3 new, 13 green.
+- [x] 6d.2 Parity report: the trust level counts on each side, and the number of components whose trust differences were excused as following from evaluation, with their names.
+- [x] 6d.3 Design: which level enforcement reads, the component's or the lowest file's, is left to the enforcement change and named there. TD-002: one SBOM lifts `FULL_LIST_UNAVAILABLE` for every package type.
+- [x] 6d.4 The reason code is a string on the wire: `TrustReason.code: String`, `FileTrust.reasons: List<String>`; `core`'s `TrustReasonCode` is gone. A client built before a code existed still reads it, with its level and texts. Design Decision 8. `:core`, `:client`, server and runner green, 165 tests.
+- [ ] 6d.5 A skipped SBOM: the scan's to fix (reading SBOMs), handed over with a brief.
+- [ ] 6d.6 An Xray scan still pending at the deadline: experiment against the real Xray first.
+- [x] 6d.7 License sources that disagree: not trust's; owned by the license files change, which already reports it.
 
 ## 7. Finalization
 
