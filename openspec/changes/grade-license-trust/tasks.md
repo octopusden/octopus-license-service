@@ -181,7 +181,10 @@
 - [x] 6d.1 Runner, for a `CHECK`: `BUILD_LIST_ONLY` is not a warning, and its fix reads "Xray has not indexed it yet; the full report at RC or RELEASE waits for it"; the trust line and the other lines warn only when another reason is `LOW` or `NONE`; a file whose only code is `BUILD_LIST_ONLY` is not a warning. A `FULL` report is unchanged. The grade is unchanged. `BuildLogTest`: 3 new, 13 green.
 - [x] 6d.2 Parity report: the trust level counts on each side, and the number of components whose trust differences were excused as following from evaluation, with their names.
 - [x] 6d.3 Design: which level enforcement reads, the component's or the lowest file's, is left to the enforcement change and named there. TD-002: one SBOM lifts `FULL_LIST_UNAVAILABLE` for every package type.
-- [ ] 6d.4 Open, needs a decision: a skipped SBOM, an Xray scan still pending at the deadline, license sources that disagree, and `TrustReasonCode` as an enum on the wire. See the review reply.
+- [x] 6d.4 The reason code is a string on the wire: `TrustReason.code: String`, `FileTrust.reasons: List<String>`; `core`'s `TrustReasonCode` is gone. A client built before a code existed still reads it, with its level and texts. Design Decision 8. `:core`, `:client`, server and runner green, 165 tests.
+- [ ] 6d.5 A skipped SBOM: the scan's to fix (reading SBOMs), handed over with a brief.
+- [ ] 6d.6 An Xray scan still pending at the deadline: experiment against the real Xray first.
+- [x] 6d.7 License sources that disagree: not trust's; owned by the license files change, which already reports it.
 
 ## 7. Finalization
 

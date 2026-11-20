@@ -183,7 +183,7 @@ internal fun interface ComponentRule {
   - a caller always names the version.
 
   Neither code can be reached.
-- `core` gets its own `TrustReasonCode`, mapped one to one in `SummaryMapper`, as `LibraryVerdict` maps to `Verdict`: engine modules never import `core` (architecture).
+- `core` carries the code as its name, a string, not as an enum of its own (Decision 8). `SummaryMapper` writes `code.name`; engine modules never import `core` (architecture).
 
 ### 3. The prototype's facts, read from the assessment
 
@@ -262,14 +262,14 @@ internal fun interface ComponentRule {
 
 ```kotlin
 data class Trust(val level: TrustLevel, val reasons: List<TrustReason>, val files: List<FileTrust>)
-data class TrustReason(val code: TrustReasonCode, val level: TrustLevel, val title: String,
+data class TrustReason(val code: String, val level: TrustLevel, val title: String,
                        val detail: String, val meaning: String, val fix: String)
-data class FileTrust(val file: String, val level: TrustLevel, val reasons: List<TrustReasonCode>)
-enum class TrustReasonCode { … }   // the engine's eleven, same names
+data class FileTrust(val file: String, val level: TrustLevel, val reasons: List<String>)   // codes by name
 ```
 
 - `LicenseReportSummary.trust` becomes non-null. Every finished report is graded.
 - `TrustReason.reason` is gone. It held one text, and a caller needs the code to act on and the detail to locate the problem.
+- The code is a string on the wire, not an enum. Rules are expected to change after parity, and a new code must not break a client built before it existed: every reason already carries its level, title, meaning and fix, so a client never needs the code table. Changed on review; `core`'s `TrustReasonCode` enum is gone. `Verdict` stays an enum: its values follow the license registry's, which do not grow.
 - The level is repeated on each reason and file on the wire, so a caller need not know the code table.
 - File reasons are codes only, as the prototype's `flags`. The component's reasons carry the details.
 

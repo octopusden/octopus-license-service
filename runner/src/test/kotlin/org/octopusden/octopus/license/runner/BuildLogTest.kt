@@ -12,7 +12,6 @@ import org.octopusden.octopus.license.core.dto.LicenseReportSummary
 import org.octopusden.octopus.license.core.dto.Trust
 import org.octopusden.octopus.license.core.dto.TrustLevel
 import org.octopusden.octopus.license.core.dto.TrustReason
-import org.octopusden.octopus.license.core.dto.TrustReasonCode
 import org.octopusden.octopus.license.core.dto.Verdict
 import org.octopusden.octopus.license.core.dto.Violation
 import java.time.Instant
@@ -20,7 +19,7 @@ import java.time.Instant
 class BuildLogTest {
     private val notIndexed =
         TrustReason(
-            TrustReasonCode.BUILD_LIST_ONLY,
+            "BUILD_LIST_ONLY",
             TrustLevel.LOW,
             "Only the build's list used",
             "not indexed in Xray: app.jar",
@@ -68,7 +67,7 @@ class BuildLogTest {
                 TrustLevel.LOW,
                 listOf(
                     reason(
-                        TrustReasonCode.PARTIAL_ARTIFACTS,
+                        "PARTIAL_ARTIFACTS",
                         TrustLevel.LOW,
                         "Only some files checked",
                         "1 of 2 registered artifacts checked",
@@ -76,7 +75,7 @@ class BuildLogTest {
                 ),
                 listOf(
                     FileTrust("app.jar", TrustLevel.HIGH, emptyList()),
-                    FileTrust("app.war", TrustLevel.NONE, listOf(TrustReasonCode.ARTIFACT_NOT_FOUND)),
+                    FileTrust("app.war", TrustLevel.NONE, listOf("ARTIFACT_NOT_FOUND")),
                 ),
             )
 
@@ -99,8 +98,8 @@ class BuildLogTest {
         val trust =
             Trust(
                 TrustLevel.MEDIUM,
-                listOf(reason(TrustReasonCode.NO_BUILD_RECORD, TrustLevel.MEDIUM, "No build record", "no build for: app.jar")),
-                listOf(FileTrust("app.jar", TrustLevel.MEDIUM, listOf(TrustReasonCode.NO_BUILD_RECORD))),
+                listOf(reason("NO_BUILD_RECORD", TrustLevel.MEDIUM, "No build record", "no build for: app.jar")),
+                listOf(FileTrust("app.jar", TrustLevel.MEDIUM, listOf("NO_BUILD_RECORD"))),
             )
 
         val lines = BuildLog.lines(COMPONENT, VERSION, finished(summary(trust = trust)))
@@ -129,7 +128,7 @@ class BuildLogTest {
     @DisplayName("a check whose only doubt is a file Xray has not indexed yet warns about nothing, and says the full report waits for it")
     fun checkNotIndexedYet() {
         val trust =
-            Trust(TrustLevel.LOW, listOf(notIndexed), listOf(FileTrust("app.jar", TrustLevel.LOW, listOf(TrustReasonCode.BUILD_LIST_ONLY))))
+            Trust(TrustLevel.LOW, listOf(notIndexed), listOf(FileTrust("app.jar", TrustLevel.LOW, listOf("BUILD_LIST_ONLY"))))
 
         assertEquals(
             listOf(
@@ -148,14 +147,14 @@ class BuildLogTest {
     @DisplayName("a check with another LOW reason still warns, except on the file Xray has not indexed yet")
     fun checkWithAnotherReason() {
         val partial =
-            reason(TrustReasonCode.PARTIAL_ARTIFACTS, TrustLevel.LOW, "Only some files checked", "1 of 2 registered artifacts checked")
+            reason("PARTIAL_ARTIFACTS", TrustLevel.LOW, "Only some files checked", "1 of 2 registered artifacts checked")
         val trust =
             Trust(
                 TrustLevel.LOW,
                 listOf(partial, notIndexed),
                 listOf(
-                    FileTrust("app.jar", TrustLevel.LOW, listOf(TrustReasonCode.BUILD_LIST_ONLY)),
-                    FileTrust("app.war", TrustLevel.NONE, listOf(TrustReasonCode.ARTIFACT_NOT_FOUND)),
+                    FileTrust("app.jar", TrustLevel.LOW, listOf("BUILD_LIST_ONLY")),
+                    FileTrust("app.war", TrustLevel.NONE, listOf("ARTIFACT_NOT_FOUND")),
                 ),
             )
 
@@ -169,7 +168,7 @@ class BuildLogTest {
     @DisplayName("a full report keeps warning on a file Xray has not indexed, with the registry's fix: it waited for Xray")
     fun fullNotIndexed() {
         val trust =
-            Trust(TrustLevel.LOW, listOf(notIndexed), listOf(FileTrust("app.jar", TrustLevel.LOW, listOf(TrustReasonCode.BUILD_LIST_ONLY))))
+            Trust(TrustLevel.LOW, listOf(notIndexed), listOf(FileTrust("app.jar", TrustLevel.LOW, listOf("BUILD_LIST_ONLY"))))
 
         val lines = BuildLog.lines(COMPONENT, VERSION, finished(summary(trust = trust)))
 
@@ -184,7 +183,7 @@ class BuildLogTest {
     }
 
     private fun reason(
-        code: TrustReasonCode,
+        code: String,
         level: TrustLevel,
         title: String,
         detail: String,

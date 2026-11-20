@@ -5,18 +5,18 @@ import org.octopusden.octopus.license.core.dto.LicenseReportStatus
 import org.octopusden.octopus.license.core.dto.LicenseReportSummary
 import org.octopusden.octopus.license.core.dto.Trust
 import org.octopusden.octopus.license.core.dto.TrustLevel
-import org.octopusden.octopus.license.core.dto.TrustReasonCode
 
 /**
  * What the runner prints for an outcome. A warning marks what the Build outcome rules ask a build
  * to warn about; nothing here fails a build.
  *
  * A check does not wait for Xray, so a file uploaded seconds before is usually not indexed yet and
- * graded [TrustReasonCode.BUILD_LIST_ONLY]. The grade stays as the service gives it; a check only
+ * graded `BUILD_LIST_ONLY`. The grade stays as the service gives it; a check only
  * does not warn about that reason and says the full report waits for it, so the warnings that
  * remain are worth reading.
  */
 object BuildLog {
+    private const val NOT_INDEXED_CODE = "BUILD_LIST_ONLY"
     private const val NOT_INDEXED_YET = "Xray has not indexed it yet; the full report at RC or RELEASE waits for it."
     private val warnedTrustLevels = setOf(TrustLevel.LOW, TrustLevel.NONE)
 
@@ -76,7 +76,7 @@ object BuildLog {
         trust: Trust,
         mode: LicenseReportMode,
     ): List<LogLine> {
-        val pending = if (mode == LicenseReportMode.CHECK) setOf(TrustReasonCode.BUILD_LIST_ONLY) else emptySet()
+        val pending = if (mode == LicenseReportMode.CHECK) setOf(NOT_INDEXED_CODE) else emptySet()
         val warning = trust.reasons.filter { it.code !in pending }.any { it.level in warnedTrustLevels }
         return listOf(LogLine("Trust: ${trust.level}", warning)) +
             trust.reasons.map {
