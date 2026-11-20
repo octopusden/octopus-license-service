@@ -174,6 +174,7 @@
 - [x] 6c.1 Merged the latest evaluation branch, which brought the scan's and the evaluation's review fixes and `PARITY_ACCEPTED`. No textual conflict.
 - [x] 6c.2 Two follow-ups: the trust parity check reads `PARITY_ACCEPTED` as the evaluation's does, and passes the resolver its new lookup timeout; `LicenseReportServiceImplTest`, new on that branch, built a summary with `trust = null`, which the contract no longer allows, so it uses a `HIGH` trust with no reasons.
 - [x] 6c.3 Confirm: `./gradlew build qualityCheck` green on the merged branch, 661 tests, 0 skipped.
+- [x] 6c.4 Merged the evaluation's next change, which reports a library judged on one side only: the trust parity check passes the inventory's one-sided libraries to the evaluation diff as the evaluation's does, so none is reported twice. `./gradlew build qualityCheck` green, 663 tests, 0 skipped.
 
 ## 7. Finalization
 

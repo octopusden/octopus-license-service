@@ -158,16 +158,20 @@ class PrototypeParityTest {
                     val inventory = scanner.scan(resolution.target, Duration.ofMinutes(5))
                     val assessment = evaluator.evaluate(inventory, policy)
                     val grade = grader.grade(assessment, resolution.target.labels)
-                    val evaluation = EvaluationParityDiff.diff(
-                        EvaluationParityView.ofPrototype(component),
-                        EvaluationParityView.of(assessment),
-                    )
+                    val theirs = ParityView.ofPrototype(component)
+                    val ours = ParityView.of(inventory)
+                    val evaluation =
+                        EvaluationParityDiff.diff(
+                            EvaluationParityView.ofPrototype(component),
+                            EvaluationParityView.of(assessment),
+                            (theirs.packages.keys - ours.packages.keys) + (ours.packages.keys - theirs.packages.keys),
+                        )
                     val trust = TrustParityDiff.diff(TrustParityView.ofPrototype(component), TrustParityView.of(grade))
                     val excused = evaluation.policyRules.isNotEmpty() || evaluation.deliberate.isNotEmpty()
                     Result(
                         name,
                         judged(
-                            ParityDiff.diff(ParityView.ofPrototype(component), ParityView.of(inventory)) + evaluation.others +
+                            ParityDiff.diff(theirs, ours) + evaluation.others +
                                 trust.takeUnless { excused }.orEmpty(),
                         ),
                         evaluation.policyRules,
