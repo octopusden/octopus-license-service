@@ -5,10 +5,11 @@ internal fun registryComponent(
     version: String = "1.4.12",
     archived: Boolean = false,
     external: Boolean = true,
+    explicit: Boolean = true,
     buildSystem: String = "GRADLE",
     testComponent: Boolean = false,
     labels: Set<String> = emptySet(),
     gav: String? = null,
     docker: String? = null,
     buildVersion: String? = null,
-) = RegistryComponent(id, version, archived, external, buildSystem, testComponent, labels, gav, docker, buildVersion)
+) = RegistryComponent(id, version, archived, external, explicit, buildSystem, testComponent, labels, gav, docker, buildVersion)

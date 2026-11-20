@@ -9,6 +9,7 @@ internal data class RegistryComponent(
     val version: String,
     val archived: Boolean,
     val external: Boolean,
+    val explicit: Boolean,
     val buildSystem: String,
     val testComponent: Boolean,
     val labels: Set<String>,
