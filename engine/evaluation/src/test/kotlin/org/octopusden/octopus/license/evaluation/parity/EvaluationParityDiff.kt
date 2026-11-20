@@ -13,15 +13,17 @@ data class EvaluationDiffs(
 )
 
 /**
- * Every way the service's evaluation differs from the prototype's, one line each. Only libraries on
- * both sides are compared: one on a single side is the inventory's difference, reported there.
+ * Every way the service's evaluation differs from the prototype's, one line each. A library judged on
+ * one side only is a difference too, unless the inventory's diff already reports it on one side only.
  */
 object EvaluationParityDiff {
     private val POLICY_VERDICTS = setOf("ALLOWED", "NOT_ALLOWED", "UNKNOWN")
 
+    /** @param inventoryOneSided rendered ids of the libraries the inventory's diff reports on one side only. */
     fun diff(
         prototype: EvaluationParityView,
         service: EvaluationParityView,
+        inventoryOneSided: Set<String> = emptySet(),
     ): EvaluationDiffs {
         val policyRules = mutableListOf<String>()
         val others = mutableListOf<String>()
@@ -46,7 +48,26 @@ object EvaluationParityDiff {
             service.declaredImagePython.sorted().map {
                 "library $it: Python only in images, declared by the build: judged, the prototype skips it (D3.3)"
             }
-        return EvaluationDiffs(policyRules, others + skipped(prototype, service) + notAllowed(prototype, service), deliberate)
+        return EvaluationDiffs(
+            policyRules,
+            others + judgedOnOneSide(prototype, service, inventoryOneSided) + skipped(prototype, service) + notAllowed(prototype, service),
+            deliberate,
+        )
+    }
+
+    // The inventory can hold a library on both sides while evaluation judges it on one only; nothing else would see it.
+    private fun judgedOnOneSide(
+        prototype: EvaluationParityView,
+        service: EvaluationParityView,
+        inventoryOneSided: Set<String>,
+    ): List<String> {
+        fun onlyIn(
+            side: String,
+            ids: Set<String>,
+        ) = (ids - inventoryOneSided).sorted().map { "library $it: judged only in the $side" }
+
+        return onlyIn("prototype", prototype.libraries.keys - service.libraries.keys) +
+            onlyIn("service", service.libraries.keys - prototype.libraries.keys)
     }
 
     private fun skipped(
