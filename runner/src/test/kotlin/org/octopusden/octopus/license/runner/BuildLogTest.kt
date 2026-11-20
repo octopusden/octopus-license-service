@@ -18,6 +18,16 @@ import org.octopusden.octopus.license.core.dto.Violation
 import java.time.Instant
 
 class BuildLogTest {
+    private val notIndexed =
+        TrustReason(
+            TrustReasonCode.BUILD_LIST_ONLY,
+            TrustLevel.LOW,
+            "Only the build's list used",
+            "not indexed in Xray: app.jar",
+            "what it means",
+            "Add the repository to Xray's indexed resources, or reindex the file.",
+        )
+
     @Test
     @DisplayName("a clean DONE report gives no warning")
     fun cleanReportHasNoWarning() {
@@ -102,6 +112,74 @@ class BuildLogTest {
                 LogLine("  app.jar: MEDIUM (NO_BUILD_RECORD)"),
             ),
             lines.subList(2, 5),
+        )
+    }
+
+    private fun checked(trust: Trust) =
+        BuildLog.lines(
+            COMPONENT,
+            VERSION,
+            RunOutcome.Finished(
+                LicenseReport(REPORT_ID, COMPONENT, VERSION, LicenseReportStatus.DONE, LicenseReportMode.CHECK, summary(trust = trust)),
+                byteArrayOf(),
+            ),
+        )
+
+    @Test
+    @DisplayName("a check whose only doubt is a file Xray has not indexed yet warns about nothing, and says the full report waits for it")
+    fun checkNotIndexedYet() {
+        val trust =
+            Trust(TrustLevel.LOW, listOf(notIndexed), listOf(FileTrust("app.jar", TrustLevel.LOW, listOf(TrustReasonCode.BUILD_LIST_ONLY))))
+
+        assertEquals(
+            listOf(
+                LogLine("Trust: LOW"),
+                LogLine(
+                    "  LOW Only the build's list used: not indexed in Xray: app.jar. " +
+                        "Xray has not indexed it yet; the full report at RC or RELEASE waits for it.",
+                ),
+                LogLine("  app.jar: LOW (BUILD_LIST_ONLY)"),
+            ),
+            checked(trust).subList(2, 5),
+        )
+    }
+
+    @Test
+    @DisplayName("a check with another LOW reason still warns, except on the file Xray has not indexed yet")
+    fun checkWithAnotherReason() {
+        val partial =
+            reason(TrustReasonCode.PARTIAL_ARTIFACTS, TrustLevel.LOW, "Only some files checked", "1 of 2 registered artifacts checked")
+        val trust =
+            Trust(
+                TrustLevel.LOW,
+                listOf(partial, notIndexed),
+                listOf(
+                    FileTrust("app.jar", TrustLevel.LOW, listOf(TrustReasonCode.BUILD_LIST_ONLY)),
+                    FileTrust("app.war", TrustLevel.NONE, listOf(TrustReasonCode.ARTIFACT_NOT_FOUND)),
+                ),
+            )
+
+        assertEquals(
+            listOf(true, true, false, false, true),
+            checked(trust).subList(2, 7).map { it.warning },
+        )
+    }
+
+    @Test
+    @DisplayName("a full report keeps warning on a file Xray has not indexed, with the registry's fix: it waited for Xray")
+    fun fullNotIndexed() {
+        val trust =
+            Trust(TrustLevel.LOW, listOf(notIndexed), listOf(FileTrust("app.jar", TrustLevel.LOW, listOf(TrustReasonCode.BUILD_LIST_ONLY))))
+
+        val lines = BuildLog.lines(COMPONENT, VERSION, finished(summary(trust = trust)))
+
+        assertEquals(
+            LogLine(
+                "  LOW Only the build's list used: not indexed in Xray: app.jar. " +
+                    "Fix: Add the repository to Xray's indexed resources, or reindex the file.",
+                warning = true,
+            ),
+            lines[3],
         )
     }
 

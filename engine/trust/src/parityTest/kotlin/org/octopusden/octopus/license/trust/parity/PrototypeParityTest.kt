@@ -18,6 +18,7 @@ import org.octopusden.octopus.license.policy.model.LicensePolicy
 import org.octopusden.octopus.license.target.impl.RegistryLicenseTargetResolver
 import org.octopusden.octopus.license.target.model.TargetResolution
 import org.octopusden.octopus.license.trust.TrustGrader
+import org.octopusden.octopus.license.trust.model.TrustLevel
 import java.io.File
 import java.time.Duration
 
@@ -47,7 +48,8 @@ class PrototypeParityTest {
         val policyRules: List<String> = emptyList(),
         val deliberate: List<String> = emptyList(),
         val followsFromEvaluation: List<String> = emptyList(),
-        val trust: String = "",
+        val prototypeLevel: String? = null,
+        val serviceLevel: String? = null,
     ) {
         val unaccepted = differences.count { it.second == null }
 
@@ -110,9 +112,11 @@ class PrototypeParityTest {
                 appendLine("| --- | --- | --- | --- | --- |")
                 results.forEach {
                     appendLine(
-                        "| ${it.component} | ${it.summary()} | ${it.trust} | ${it.policyRules.size} | ${it.followsFromEvaluation.size} |",
+                        "| ${it.component} | ${it.summary()} | ${it.prototypeLevel ?: "-"} / ${it.serviceLevel ?: "-"} | " +
+                            "${it.policyRules.size} | ${it.followsFromEvaluation.size} |",
                     )
                 }
+                appendTrustTotals(results)
                 if (ungradable.isNotEmpty()) {
                     appendLine()
                     appendLine(
@@ -177,10 +181,31 @@ class PrototypeParityTest {
                         evaluation.policyRules,
                         evaluation.deliberate,
                         trust.takeIf { excused }.orEmpty(),
-                        "${component.path("confidence").asText()} / ${grade.level}",
+                        component.path("confidence").asText(),
+                        grade.level.name,
                     )
                 }
             }
         }.getOrElse { Result(name, judged(listOf("failed: ${it.javaClass.simpleName}: ${it.message}"))) }
+    }
+
+    // How the grades spread on each side, and how many components the evaluation's differences excuse:
+    // a trust difference excused that way is listed, never failed, so the count must be visible (D10).
+    private fun StringBuilder.appendTrustTotals(results: List<Result>) {
+        val graded = results.filter { it.prototypeLevel != null && it.serviceLevel != null }
+        appendLine()
+        appendLine("| Trust level | Prototype | Service |")
+        appendLine("| --- | --- | --- |")
+        TrustLevel.entries.reversed().forEach { level ->
+            appendLine(
+                "| $level | ${graded.count { it.prototypeLevel == level.name }} | ${graded.count { it.serviceLevel == level.name }} |",
+            )
+        }
+        val excused = results.filter { it.followsFromEvaluation.isNotEmpty() }
+        appendLine()
+        appendLine(
+            "Trust differences excused as following from evaluation: ${excused.size} component(s)" +
+                excused.joinToString(", ", prefix = if (excused.isEmpty()) "" else ": ") { it.component },
+        )
     }
 }

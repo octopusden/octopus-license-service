@@ -19,6 +19,7 @@ Open. **Should do**, after the parity check passes for all components in scope.
 - a build file named `mybom.json` is read as an SBOM, and an SBOM's nested components are not read;
 - a dependency's classifier is ignored, for the nested archive looked up and for the package listed.
 - evaluation skips `rpm`, `deb` and `alpine` packages wherever they are found, not only in images: a released zip that bundles third-party `.rpm` files is not judged (`license-evaluation`, `PackageScope`).
+- trust: one SBOM seen anywhere in the component lifts `FULL_LIST_UNAVAILABLE` for every package type, so an SBOM listing only Maven libraries hides Dart or iOS libraries no source lists completely (`license-trust`, `GradingSubject.sbomSeen`).
 
 ## Why this matters
 
