@@ -64,8 +64,9 @@
 
 - [x] 5.11 (added on review) `declared` is derived from `selectedBy`: a declared image is `{DOCKER_BUILD, DECLARED}`, so the flag no longer repeats what the set says. The parity view drops `DECLARED` from an image's selection, as the prototype records it in `in_registry` only.
 - [x] 5.12 (added on review) `LicenseInventory.files` and `packages` are `releasedFiles` and `libraries`, `FoundPackage` is `FoundLibrary` and `PackageTable` is `LibraryTable`: a library is the word the reports use, and it says the list is what is inside the files. `PackageId` keeps its name, as a package URL is the id's format. `:license-inventory:test` 178 green.
-- [x] 5.13 (added on review) `SbomReader` skips an SBOM on any exception, Jackson's parse errors and a broken download included, and reads a build's SBOMs once per scan; tests for both and for a malformed SBOM.
+- [x] 5.13 (added on review; superseded by 5.15) `SbomReader` skips an SBOM on any exception, Jackson's parse errors and a broken download included, and reads a build's SBOMs once per scan; tests for both and for a malformed SBOM.
 - [x] 5.14 (added on review) Six prototype rules that turn a gap into a clean result are fixed, each a row of Decision 11 with its test: two missing sha1s are no match; only `404` build-info is no build; `METADATA` by the last extension; a nested archive Xray has not indexed is read from its build; an internal group matches up to a boundary; SBOM purls are percent-decoded.
+- [x] 5.15 (added on review) An SBOM no longer vanishes without a trace: one Artifactory does not have, or names without a sha1, and one that cannot be parsed each give finding `SBOM_UNREADABLE` (a note); Artifactory failing while one downloads fails the scan. Three rows of Decision 11; tests in `SbomReaderTest` and `FileContentReaderTest`. Run 14 is expected to show no difference unless one of its components has an unreadable SBOM, which would then show as a finding only in the service.
 
 ## 6. Adapters (Decisions 12, 13)
 

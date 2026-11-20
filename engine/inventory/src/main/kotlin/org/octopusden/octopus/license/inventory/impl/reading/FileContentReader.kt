@@ -68,7 +68,9 @@ internal class FileContentReader(
                 findings += Finding(FindingCode.NO_LIBRARIES_IN_FILE, file.name, "inner archive without libraries, build-info ignored")
                 return
             }
-            sbomReader.read(build).forEach { (id, licenses) -> table.add(id, licenses, Evidence.SBOM, foundIn) }
+            val sboms = sbomReader.read(build)
+            sboms.packages.forEach { (id, licenses) -> table.add(id, licenses, Evidence.SBOM, foundIn) }
+            findings += sboms.findings
             val reading = dependencyReader.read(build, file, scanned.keys)
             reading.packages.forEach { table.add(it, emptySet(), Evidence.BUILD_RECORD, foundIn) }
             findings += reading.findings

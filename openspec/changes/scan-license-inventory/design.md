@@ -193,7 +193,7 @@ data class Finding(val code: FindingCode, val subject: String, val detail: Strin
 
 enum class FindingCode(val violation: Boolean) {   // a violation, else a note
     NOT_SCANNABLE, NO_PRODUCING_MODULE, LOCAL_FILE_DEPENDENCY, UNRESOLVED_INTERNAL_ARCHIVE,
-    NO_LIBRARIES_IN_FILE, BUILD_NAME_DIFFERS, ARTIFACT_NOT_FOUND, UNSUPPORTED_DISTRIBUTION_ENTRY,
+    NO_LIBRARIES_IN_FILE, BUILD_NAME_DIFFERS, SBOM_UNREADABLE, ARTIFACT_NOT_FOUND, UNSUPPORTED_DISTRIBUTION_ENTRY,
     NOT_IN_XRAY, NO_BUILD_INFO, NO_DISTRIBUTION,
 }
 
@@ -258,6 +258,7 @@ internal interface LicenseDatabase {
   | `NO_LIBRARIES_IN_FILE` | file name | `inner archive without libraries, build-info ignored` |
   | `LOCAL_FILE_DEPENDENCY` | dependency id | `shipped file without Maven coordinates; check its license by hand` |
   | `UNRESOLVED_INTERNAL_ARCHIVE` | dependency id | `covered by the Xray scan only` |
+  | `SBOM_UNREADABLE` | the SBOM's full path, or its name in build-info when Artifactory has no file | `not in Artifactory`, `no sha1 in build-info`, or the first line of the parse error |
 
 - The prototype writes "licence" in one detail; the service writes "license", and the parity check compares with that one spelling normalised.
 
@@ -284,7 +285,7 @@ internal interface LicenseDatabase {
   1. Xray's packages, evidence `BINARY_SCAN`;
   2. no build: stop;
   3. a nested archive (depth > 0) Xray has indexed whose list has no library other than itself and docker layers: finding `NO_LIBRARIES_IN_FILE`, stop;
-  4. every SBOM of every module of the build, evidence `SBOM`;
+  4. every SBOM of every module of the build, evidence `SBOM`; one Artifactory does not have or that cannot be parsed: finding `SBOM_UNREADABLE`, the others still read;
   5. production dependencies of every `npm` module, evidence `BUILD_RECORD`;
   6. the producing module (an artifact with the file's sha1, both present, or its name); none: finding `NO_PRODUCING_MODULE`, stop;
   7. its dependencies (Decision 7).
@@ -343,7 +344,9 @@ Kept because the prototype's results are the baseline; each may be revisited aft
 | A `docker` entry written as a URL is an image, not unsupported (already in the target) | The target parses URIs only in `GAV` | None in run 14 |
 | A finding is listed once | The same code, subject and detail twice says nothing more; the prototype repeats `NOT_SCANNABLE` and `BUILD_NAME_DIFFERS` for an entry declared twice | An entry written twice in `GAV` that no convention build produces |
 | A `GAV` entry starting with `FILE:`, `HTTP:` or `HTTPS:` in any case is a file share (already in the target) | The target compares the scheme without case | None in run 14 |
-| An SBOM that is not CycloneDX JSON is skipped | The prototype skips only one that cannot be downloaded, and fails on a malformed one | None known |
+| An SBOM that cannot be parsed is skipped with finding `SBOM_UNREADABLE` | The prototype fails the component on a malformed one; one bad file should not lose the rest of the build's list, but must not vanish either | None known |
+| An SBOM build-info lists that Artifactory does not have is skipped with finding `SBOM_UNREADABLE` | The prototype drops it without a word, so the report looks complete without its libraries | None known |
+| Artifactory failing while an SBOM downloads fails the scan | The prototype skips the SBOM on any HTTP error after its retries, so an outage ends as a clean report with fewer libraries (Decision 13) | Any component with SBOMs while Artifactory is failing |
 | A docker manifest with no usable path in build-info is not listed | The prototype fails the component on it | None known |
 | Two missing sha1s do not make a module the producing one; only the name does then | In the prototype `None == None` matches, so a file takes the dependencies of the first module with any file without a checksum | A build whose modules publish files without checksums |
 | Build-info Artifactory cannot serve (`5xx`, `401`, `403`, no answer) fails the scan; only `404` is no build | The prototype reads every error as no build, so an outage ends as a clean report with fewer libraries (Decision 13) | Any component while Artifactory is failing |
@@ -368,7 +371,7 @@ Kept because the prototype's results are the baseline; each may be revisited aft
 ### 13. Failures
 
 - Artifactory or Xray unreachable, `5xx` after retries, or `401`/`403`: `InventorySourceUnavailableException(system)`; the scan fails, as the prototype's component ended in `ERROR`.
-- Tolerated as the prototype tolerates them: build-info that does not exist (no build); an SBOM that cannot be downloaded or parsed (skipped); a license batch that fails (no licenses); Xray answering with an error for a path (not indexed).
+- Tolerated as the prototype tolerates them: build-info that does not exist (no build); an SBOM Artifactory does not have or that cannot be parsed (skipped, finding `SBOM_UNREADABLE`); a license batch that fails (no licenses); Xray answering with an error for a path (not indexed).
 - Retries: each call is tried three times, 1 s then 2 s apart, on no answer or a server error, as the prototype retried (`JfrogCalls`). The Artifactory client reports every error but `404` as a server error, so an Artifactory client error is tried three times too; harmless, only slower.
 
 ### 14. Clients in octopus-external-systems-client
