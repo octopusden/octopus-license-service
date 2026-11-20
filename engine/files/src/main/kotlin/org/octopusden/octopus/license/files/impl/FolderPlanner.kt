@@ -14,15 +14,16 @@ import org.octopusden.octopus.license.inventory.model.ReleasedFile
 internal object FolderPlanner {
     fun plan(assessment: LicenseAssessment): List<PlannedFolder> {
         val thirdParty = assessment.libraries.filter { it.verdict != LibraryVerdict.INTERNAL }
-        val used = mutableMapOf<String, Int>()
+        val taken = mutableSetOf<String>()
         return assessment.inventory.releasedFiles
             .filter { it.status == FileStatus.READ }
             .map { file ->
                 val base = baseName(file)
-                val seen = (used[base] ?: 0) + 1
-                used[base] = seen
+                // A suffixed name can be another file's own name, so every candidate is checked.
+                val name = generateSequence(1) { it + 1 }.map { if (it == 1) base else "$base-$it" }.first { it !in taken }
+                taken += name
                 PlannedFolder(
-                    name = if (seen == 1) base else "$base-$seen",
+                    name = name,
                     releasedFile = file.entry,
                     libraries = thirdParty.filter { file.entry in it.library.foundIn },
                 )

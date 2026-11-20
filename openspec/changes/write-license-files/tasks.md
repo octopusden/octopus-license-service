@@ -15,6 +15,7 @@
   - [x] 2.1.2 a Maven file's folder is its path's last segment;
   - [x] 2.1.3 an image's folder is its entry with `/` and `:` as `_`;
   - [x] 2.1.4 a repeated name gets `-2`, then `-3`, in listing order;
+  - [x] 2.1.4a a suffixed name never takes a name another file has on its own: `a/b:2`, `a_b:2`, `a_b:2-2` give `a_b_2`, `a_b_2-2`, `a_b_2-2-2`. Found on review: the first pass counted repeats per base name, so the third file got `a_b_2-2` twice and the zip failed on a duplicate entry (added on review).
   - [x] 2.1.5 a library is in the folder of each entry of its `foundIn`;
   - [x] 2.1.6 `INTERNAL` is left out; `ALLOWED`, `NOT_ALLOWED`, `UNKNOWN`, `UNIDENTIFIED` are listed;
   - [x] 2.1.7 a read file with no third-party library still gets a folder, with no library;
@@ -117,9 +118,9 @@
 
 ## 9. Compare with the plugin (Decision 10)
 
-- [ ] 9.1 Adapt the prototype's `compare_plugin.py` to read the service's zip: per released file, the plugin's `THIRD-PARTY.txt` against the folder's, by group:artifact:version and canonical licenses.
-- [ ] 9.2 A component that releases several wars: every plugin line is in the matching folder, same canonical licenses; each extra line explained. Record the counts here, never the component's name.
-- [ ] 9.3 The other components of the earlier comparison: record the totals and any difference not explained by naming or by libraries outside the Maven tree.
+- [x] 9.2 The libraries and licenses the plugins list: covered by the earlier comparison of the plugins' `THIRD-PARTY.txt`, read from the released files per war and zip, with the prototype's inventory. 23 components with a plugin list: every one of the 3,526 dependencies the plugins list was found at the same version; the differences were license names, nearly all naming, and the libraries outside the Maven tree the plugins never saw.
+- [x] 9.3 From the prototype to the service: covered by the parity checks, which give the same libraries, licenses and verdicts as the prototype (`:license-trust:parityTest`, through the scan's and the evaluation's). With 9.2, the service lists every library the plugins list.
+- [ ] 9.1 Optional, before rollout: run the service on a component that releases several wars and compare its zip with the plugin's files folder by folder, with the earlier comparison's script reading the zip. It checks only the format (folder names, `THIRD-PARTY.txt` layout, `licenses.xml`, text names), which the unit tests already hold against the plugin's template and naming. Record counts only, never the component's name.
 
 ## 11. Library license sources that disagree (Decision 12, added on review)
 

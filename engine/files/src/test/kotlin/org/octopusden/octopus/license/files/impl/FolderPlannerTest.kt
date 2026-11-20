@@ -58,6 +58,13 @@ class FolderPlannerTest {
     }
 
     @Test
+    @DisplayName("a suffixed name never takes a name another file has on its own: every folder is distinct (D2)")
+    fun suffixNeverCollides() {
+        val folders = plan(listOf(file("a/b:2"), file("a_b:2"), file("a_b:2-2")))
+        assertEquals(listOf("a_b_2", "a_b_2-2", "a_b_2-2-2"), folders.map { it.name })
+    }
+
+    @Test
     @DisplayName("a library is in the folder of each file it was found in")
     fun foundIn() {
         val folders =

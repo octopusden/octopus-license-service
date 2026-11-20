@@ -6,7 +6,12 @@ Which license files a finished report's download holds, and what each file says.
 
 ### Requirement: One folder per released file that was read
 
-The download of a `DONE` report SHALL hold one folder per released file with status `READ`, in listing order, and none for any other released file. A Maven file's folder SHALL be named by the last segment of its Artifactory path; an image's by its entry with `/` and `:` replaced by `_`. A name already used SHALL get `-2`, `-3`… in listing order.
+The download of a `DONE` report SHALL hold one folder per released file with status `READ`, in listing order, and none for any other released file. A Maven file's folder SHALL be named by the last segment of its Artifactory path; an image's by its entry with `/` and `:` replaced by `_`. A name already used SHALL get the first of `-2`, `-3`… that no earlier folder has, in listing order, so every folder name is distinct.
+
+#### Scenario: A suffix that is another file's name
+
+- **WHEN** the read images `a/b:2`, `a_b:2` and `a_b:2-2` are listed in that order
+- **THEN** their folders are `a_b_2`, `a_b_2-2` and `a_b_2-2-2`
 
 #### Scenario: Three wars
 

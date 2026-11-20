@@ -144,7 +144,7 @@ object LicenseFilesZip { fun zip(files: LicenseFiles): ByteArray }
 - The folder name:
   - a Maven file: the last segment of its Artifactory path (`sample-app-1.4.0.war`);
   - an image: its entry with `/` and `:` replaced by `_` (`payments_ui_1.4.0`), since a manifest's file name says nothing.
-  - Two folders with the same name get `-2`, `-3` in listing order.
+  - Two folders with the same name get `-2`, `-3` in listing order; a suffix that another file has as its own name is skipped, so every folder is distinct.
 - A library goes into the folder of every entry in its `foundIn`.
 
 ### 3. Which libraries: every counted third-party library
@@ -198,6 +198,8 @@ object LicenseFilesZip { fun zip(files: LicenseFiles): ByteArray }
 - A running report is never evicted; `max-queued-reports` already bounds those.
 
 ### 10. The plugin comparison is a recorded manual check
+
+- What the files list is already compared: the earlier comparison of the plugins' files with the prototype's inventory, and the parity checks from the prototype to the service (tasks 9.2, 9.3). What is left is the format of a real zip, which the unit tests hold against the plugin's template and naming; running it is optional before rollout (task 9.1).
 
 - The plugin's files live inside released wars and jars; the prototype's `compare_plugin.py` already reads them by range requests.
 - Pointed at the service's zip instead of the prototype's scan, it compares, per released file, every group:artifact:version and its canonical licenses.
