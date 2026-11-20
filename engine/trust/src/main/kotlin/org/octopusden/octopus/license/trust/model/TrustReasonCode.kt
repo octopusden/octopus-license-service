@@ -86,6 +86,15 @@ enum class TrustReasonCode(
         "Publish build-info for the build that produces this file, or set its build.name and build.number " +
             "properties.",
     ),
+
+    /** The service's own: the prototype skipped an SBOM it could not read without a word (D2). */
+    SBOM_UNREADABLE(
+        TrustLevel.LOW,
+        "Part of the build's library list couldn't be read",
+        "The build published an SBOM that is missing from Artifactory or is not valid CycloneDX, so the libraries it lists " +
+            "are not in this report.",
+        "Republish a valid CycloneDX SBOM from the build.",
+    ),
     BUILD_LIST_ONLY(
         TrustLevel.LOW,
         "Only the build's list used",

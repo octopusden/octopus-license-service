@@ -20,6 +20,7 @@ Some codes are raised only for the component, and none only for a file. The tabl
 | `ECOSYSTEM_NOT_DETECTED` | `LOW` | a language label has no library of its kind | — |
 | `FULL_LIST_UNAVAILABLE` | `LOW` | a type only an SBOM can list completely was found, and no SBOM was seen | — |
 | `BUILD_LIST_ONLY` | `LOW` | some read file was not seen by the binary scanner | the file was read without a binary scan |
+| `SBOM_UNREADABLE` | `LOW` | the scan could not read an SBOM the build published | — |
 | `UNIDENTIFIED_BINARIES` | `MEDIUM` | the share of checksum-only libraries crosses the threshold, among all third-party libraries | the same, among the file's own third-party libraries |
 | `UNKNOWN_LICENSES` | `MEDIUM` | the share of libraries with no known license crosses the threshold, among all third-party libraries | the same, among the file's own third-party libraries |
 | `NO_BUILD_RECORD` | `MEDIUM` | some read file has no build record | the file was read without a build record |
@@ -177,6 +178,15 @@ A read file without a build record SHALL give the component `NO_BUILD_RECORD` (`
 
 - **WHEN** a zip was read from its build record only
 - **THEN** `BUILD_LIST_ONLY`, "not indexed in Xray: …"
+
+### Requirement: An SBOM the scan could not read lowers the grade
+
+Each `SBOM_UNREADABLE` finding of the scan SHALL give the component `SBOM_UNREADABLE` (`LOW`), with the detail `"{subject}: {detail}"`. No released file SHALL be graded for it: the finding names the SBOM, not a file.
+
+#### Scenario: Unparsable SBOM
+
+- **WHEN** the scan found `SBOM_UNREADABLE` for `rnd-maven-dev-local/org/example/portal/2.4.0/portal-2.4.0.cdx.json`, "Unexpected end-of-input"
+- **THEN** the component has `SBOM_UNREADABLE` with that subject and detail, and is at most `LOW`
 
 ### Requirement: Too many unnamed or unlicensed libraries is MEDIUM
 

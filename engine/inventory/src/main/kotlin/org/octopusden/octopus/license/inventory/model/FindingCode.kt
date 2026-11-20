@@ -13,6 +13,7 @@ enum class FindingCode(
     UNRESOLVED_INTERNAL_ARCHIVE(false),
     NO_LIBRARIES_IN_FILE(false),
     BUILD_NAME_DIFFERS(false),
+    SBOM_UNREADABLE(false),
     ARTIFACT_NOT_FOUND(true),
     UNSUPPORTED_DISTRIBUTION_ENTRY(true),
     NOT_IN_XRAY(true),
