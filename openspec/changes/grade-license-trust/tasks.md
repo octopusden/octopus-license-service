@@ -183,7 +183,11 @@
 - [x] 6d.3 Design: which level enforcement reads, the component's or the lowest file's, is left to the enforcement change and named there. TD-002: one SBOM lifts `FULL_LIST_UNAVAILABLE` for every package type.
 - [x] 6d.4 The reason code is a string on the wire: `TrustReason.code: String`, `FileTrust.reasons: List<String>`; `core`'s `TrustReasonCode` is gone. A client built before a code existed still reads it, with its level and texts. Design Decision 8. `:core`, `:client`, server and runner green, 165 tests.
 - [ ] 6d.5 A skipped SBOM: the scan's to fix (reading SBOMs), handed over with a brief.
-- [ ] 6d.6 An Xray scan still pending at the deadline: experiment against the real Xray first.
+- [x] 6d.6 An Xray scan still pending at the deadline: watched against the real Xray, read-only, for 20 minutes. Every 10 s, the scan status and the artifact summary of every file uploaded to our repositories in that time: 12 files, 9 seen from upload to `DONE` (docker manifests, a zip, jars). Each time:
+  - `NOT_SCANNED`, and `SCANNING` at first: the summary answers an error, which the scan already reads as "not indexed" (`NOT_IN_XRAY`, then `BUILD_LIST_ONLY` or `NOT_SCANNABLE`);
+  - `SCANNING` later, with a summary that answers: the same number of components as at `DONE` (387, 271, 662), on every file where it was seen; the status lags the index, the list does not grow.
+  
+  No partial list was seen, so no new reason: a summary that answers is complete, and one that does not is already graded. One image's list went from 271 to 272 components 13 minutes after `DONE`, the same path re-indexed after a push of the same tag; a new upload, not a partial answer. Small sample, recorded in design Risks.
 - [x] 6d.7 License sources that disagree: not trust's; owned by the license files change, which already reports it.
 
 ## 7. Finalization
