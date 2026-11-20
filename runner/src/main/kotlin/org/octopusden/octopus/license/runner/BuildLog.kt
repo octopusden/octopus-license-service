@@ -76,7 +76,12 @@ object BuildLog {
         val missingTexts = summary.missingLicenseTexts.map {
             LogLine("License text of ${it.license} missing: ${it.reason}" + (it.url?.let { url -> " ($url)" } ?: ""), warning = true)
         }
-        return listOf(generated) + trustLines + LogLine("Libraries: $libraries") + violations + missingTexts
+        val disagreements = summary.licenseDisagreements.map { disagreement ->
+            val sources = disagreement.bySource.entries.joinToString(", ") { (source, names) -> "$source (${names.joinToString(", ")})" }
+            val files = disagreement.files.joinToString(", ")
+            LogLine("${disagreement.library} is ${disagreement.verdict}, but its sources disagree: $sources in $files", warning = true)
+        }
+        return listOf(generated) + trustLines + LogLine("Libraries: $libraries") + violations + missingTexts + disagreements
     }
 
     private fun trustLines(

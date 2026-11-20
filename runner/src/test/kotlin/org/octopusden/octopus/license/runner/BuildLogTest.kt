@@ -5,6 +5,7 @@ import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.octopusden.octopus.license.core.dto.FileTrust
 import org.octopusden.octopus.license.core.dto.GenerationInputs
+import org.octopusden.octopus.license.core.dto.LicenseDisagreement
 import org.octopusden.octopus.license.core.dto.LicenseReport
 import org.octopusden.octopus.license.core.dto.LicenseReportMode
 import org.octopusden.octopus.license.core.dto.LicenseReportStatus
@@ -289,6 +290,31 @@ class BuildLogTest {
                 LogLine("License text of SSPL-1.0 missing: NO_REGISTRY_ENTRY", warning = true),
             ),
             BuildLog.lines(COMPONENT, VERSION, finished(summary)).takeLast(2),
+        )
+    }
+
+    @Test
+    @DisplayName("a library whose sources disagree is one warning with each source's names and the verdict used")
+    fun disagreement() {
+        val summary =
+            summary().copy(
+                licenseDisagreements =
+                    listOf(
+                        LicenseDisagreement(
+                            "pkg:npm/left-pad@1.3.0",
+                            Verdict.ALLOWED,
+                            mapOf("BINARY_SCAN" to listOf("GPL-3.0"), "SBOM" to listOf("MIT")),
+                            listOf("app.jar"),
+                        ),
+                    ),
+            )
+
+        assertEquals(
+            LogLine(
+                "pkg:npm/left-pad@1.3.0 is ALLOWED, but its sources disagree: BINARY_SCAN (GPL-3.0), SBOM (MIT) in app.jar",
+                warning = true,
+            ),
+            BuildLog.lines(COMPONENT, VERSION, finished(summary)).last(),
         )
     }
 

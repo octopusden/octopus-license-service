@@ -7,6 +7,7 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.EnumSource
 import org.octopusden.octopus.license.core.dto.FileTrust
 import org.octopusden.octopus.license.core.dto.GenerationInputs
+import org.octopusden.octopus.license.core.dto.LicenseDisagreement
 import org.octopusden.octopus.license.core.dto.LicenseReportMode
 import org.octopusden.octopus.license.core.dto.MissingLicenseText
 import org.octopusden.octopus.license.core.dto.MissingTextReason
@@ -19,12 +20,14 @@ import org.octopusden.octopus.license.evaluation.model.AssessedLibrary
 import org.octopusden.octopus.license.evaluation.model.LibraryVerdict
 import org.octopusden.octopus.license.evaluation.model.LicenseAssessment
 import org.octopusden.octopus.license.evaluation.model.SkippedPackages
+import org.octopusden.octopus.license.evaluation.model.SourceDisagreement
 import org.octopusden.octopus.license.files.model.MissingText
 import org.octopusden.octopus.license.inventory.model.Evidence
 import org.octopusden.octopus.license.inventory.model.FileKind
 import org.octopusden.octopus.license.inventory.model.FileStatus
 import org.octopusden.octopus.license.inventory.model.FoundLibrary
 import org.octopusden.octopus.license.inventory.model.LicenseInventory
+import org.octopusden.octopus.license.inventory.model.LicenseSource
 import org.octopusden.octopus.license.inventory.model.PackageId
 import org.octopusden.octopus.license.inventory.model.ReleasedFile
 import org.octopusden.octopus.license.inventory.model.SelectionReason
@@ -231,6 +234,39 @@ class SummaryMapperTest {
                 MissingLicenseText("SSPL-1.0", MissingTextReason.NO_REGISTRY_ENTRY),
             ),
             SummaryMapper.map(workedExample, high, inputs, missingTexts = missing).missingLicenseTexts,
+        )
+    }
+
+    @Test
+    @DisplayName(
+        "a third-party library whose sources disagree is listed with each source's names and its verdict (write-license-files D12)",
+    )
+    fun disagreements() {
+        val disagreeing =
+            AssessedLibrary(
+                FoundLibrary(
+                    PackageId.parse("pkg:npm/left-pad@1.3.0"),
+                    setOf("GPL-3.0", "MIT"),
+                    setOf(Evidence.BINARY_SCAN),
+                    setOf(ZIP, IMAGE),
+                    false,
+                ),
+                LibraryVerdict.ALLOWED,
+                listOf("GPL-3.0", "MIT"),
+                false,
+                SourceDisagreement(mapOf(LicenseSource.BINARY_SCAN to listOf("GPL-3.0"), LicenseSource.SBOM to listOf("MIT"))),
+            )
+
+        assertEquals(
+            listOf(
+                LicenseDisagreement(
+                    "pkg:npm/left-pad@1.3.0",
+                    Verdict.ALLOWED,
+                    mapOf("BINARY_SCAN" to listOf("GPL-3.0"), "SBOM" to listOf("MIT")),
+                    listOf(ZIP, IMAGE),
+                ),
+            ),
+            SummaryMapper.map(assessment(disagreeing), high, inputs).licenseDisagreements,
         )
     }
 

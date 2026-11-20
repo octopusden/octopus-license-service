@@ -2,6 +2,7 @@ package org.octopusden.octopus.license.evaluation.impl
 
 import org.octopusden.octopus.license.evaluation.model.AssessedLibrary
 import org.octopusden.octopus.license.evaluation.model.LibraryVerdict
+import org.octopusden.octopus.license.evaluation.model.SourceDisagreement
 import org.octopusden.octopus.license.inventory.model.FoundLibrary
 import org.octopusden.octopus.license.inventory.model.PackageId
 import org.octopusden.octopus.license.policy.model.LicensePolicy
@@ -29,7 +30,27 @@ internal class LibraryJudge(
                         LicenseVerdict.UNKNOWN -> LibraryVerdict.UNKNOWN
                     }
             }
-        return AssessedLibrary(library, verdict, judgement.licenses, judgement.overridden)
+        val judgedByNames = verdict != LibraryVerdict.INTERNAL && verdict != LibraryVerdict.UNIDENTIFIED && !judgement.overridden
+        return AssessedLibrary(
+            library,
+            verdict,
+            judgement.licenses,
+            judgement.overridden,
+            if (judgedByNames) disagreement(library) else null,
+        )
+    }
+
+    // Judged per source without coordinates: an override would replace every source's names alike.
+    private fun disagreement(library: FoundLibrary): SourceDisagreement? {
+        if (library.licensesBySource.size < 2) return null
+        val bySource = library.licensesBySource.mapValues { (_, names) -> policy.judge(names) }
+        return bySource
+            .takeIf { judgements ->
+                judgements.values
+                    .map { it.verdict }
+                    .distinct()
+                    .size > 1
+            }?.let { judgements -> SourceDisagreement(judgements.mapValues { it.value.licenses }) }
     }
 
     private fun coordinates(id: PackageId) =

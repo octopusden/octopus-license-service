@@ -55,6 +55,12 @@ Today the plugins write these per Maven module, so each released war or jar carr
 - An `EXCLUDED` report never fails. Trust and missing texts never fail.
 - With every flag off, the runner exits 0 whatever happens, as today.
 
+**Part F: library license sources that disagree**
+
+- The scan keeps each source's license names apart (Xray's binary scan, an SBOM, Xray's license database), beside the joined set the policy reads.
+- Evaluation flags a library whose verdict depends on which source is believed: Xray's `GPL-3.0` against an SBOM's `MIT`. The verdict stays the policy's (one allowed name wins).
+- The summary lists them (`licenseDisagreements`) and the runner warns once each. This closes the license policy design's promise that the scan reports such a library.
+
 ### A note on comparing with the plugin
 
 - The files are not byte-identical to the plugin's: the name and URL differ by design, and the libraries are those the scan finds, which on the earlier comparison with the plugins' files was every plugin dependency plus the ones outside the Maven tree.
@@ -63,7 +69,9 @@ Today the plugins write these per Maven module, so each released war or jar carr
 ## Affected areas
 
 - **New module `engine/files` (`:license-files`):** depends on `:license-evaluation`, and through it on the inventory's and the policy's models. Never on `core`, `server`, Spring or a client.
-- **`core`:** `LicenseReportSummary.missingLicenseTexts`, `MissingLicenseText`, `MissingTextReason`; `Violation.preliminary`.
+- **`core`:** `LicenseReportSummary.missingLicenseTexts`, `MissingLicenseText`, `MissingTextReason`; `Violation.preliminary`; `LicenseReportSummary.licenseDisagreements`, `LicenseDisagreement`.
+- **`:license-inventory`:** `LicenseSource`, `FoundLibrary.licensesBySource`, filled by `LibraryTable`.
+- **`:license-evaluation`:** `SourceDisagreement`, `AssessedLibrary.disagreement`, set by `LibraryJudge`.
 - **`server`:**
   - `EvaluatingLicenseReportGenerator` writes the files;
   - new `LicenseTextDownloader` and `LicenseFilesZip`;

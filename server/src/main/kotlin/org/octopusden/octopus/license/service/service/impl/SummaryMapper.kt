@@ -2,6 +2,7 @@ package org.octopusden.octopus.license.service.service.impl
 
 import org.octopusden.octopus.license.core.dto.FileTrust
 import org.octopusden.octopus.license.core.dto.GenerationInputs
+import org.octopusden.octopus.license.core.dto.LicenseDisagreement
 import org.octopusden.octopus.license.core.dto.LicenseReportMode
 import org.octopusden.octopus.license.core.dto.LicenseReportSummary
 import org.octopusden.octopus.license.core.dto.MissingLicenseText
@@ -57,6 +58,17 @@ internal object SummaryMapper {
                             preliminary = mode == LicenseReportMode.CHECK && library.library.foundIn.none { it in scannedFiles },
                         )
                     },
+            licenseDisagreements =
+                thirdParty.mapNotNull { (library, verdict) ->
+                    library.disagreement?.let { disagreement ->
+                        LicenseDisagreement(
+                            library.library.id.toString(),
+                            verdict,
+                            disagreement.bySource.mapKeys { it.key.name },
+                            library.library.foundIn.sorted(),
+                        )
+                    }
+                },
             missingLicenseTexts =
                 missingTexts.map { MissingLicenseText(it.license, MissingTextReason.valueOf(it.reason.name), it.url) },
         )

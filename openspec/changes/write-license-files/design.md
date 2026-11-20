@@ -235,6 +235,18 @@ object LicenseFilesZip { fun zip(files: LicenseFiles): ByteArray }
 - A violation fails only when Xray has seen it: at least one released file it is found in was read by the binary scan (`Evidence.BINARY_SCAN` on the file). A violation found only in files Xray has not indexed yet is warned about as preliminary.
 - The server marks it, the runner reads it: `Violation.preliminary` is `true` in a `CHECK` report when none of the violation's files has `BINARY_SCAN` evidence, and always `false` in a `FULL` report. The runner never infers Xray's state from trust codes.
 
+### 12. A library whose sources disagree is reported, never re-judged
+
+- The policy judges a library on all its names together, and one allowed name wins (license policy design, Decision 5). It does not know where a name came from, so Xray's `GPL-3.0` next to an SBOM's `MIT` is a silent `ALLOWED`. That design accepted it because the scan would report such a library; this decision is that report.
+- Only two sources give names: Xray's binary scan and an SBOM. Xray's license database gives names only when neither did, so it is never one of two sources by itself, but it is kept apart all the same. A build record names packages, never licenses; a checksum match renames a file and drops the scan's names for it.
+- **Inventory** (`LibraryTable`, `FoundLibrary.licensesBySource`): each source's names are kept apart, beside the joined set the policy reads. The joined set is unchanged, so the scan's parity is unchanged.
+- **Evaluation** (`LibraryJudge`, `AssessedLibrary.disagreement`): each source's names are judged on their own. When the sources do not all get the same verdict, the library carries a `SourceDisagreement` with each source's canonical names. Different spellings of one license, and different licenses with the same verdict, are no disagreement: only what changes the verdict is reported.
+- Not for ours, for a file nobody could name, or when an override replaced the names: there the names do not decide the verdict.
+- The verdict stays the policy's on all names. Changing it on a disagreement is a separate decision, not taken here.
+- **Summary** (`licenseDisagreements`) and **runner** (one warning each): what a person sees. Not in the license files, which are a notice of what ships, and not a finding: findings are the scan's, and the scan does not judge.
+- Trust does not change on a disagreement: trust grades whether the list is complete, not whether a license is right.
+- **Parity:** the prototype has no such report. `licenseDisagreements` is a deliberate difference; the parity views compare the joined names and the verdict, which are unchanged.
+
 ## Risks / Trade-offs
 
 - **Failing on no answer:** with a flag on, a license service outage fails every RC and RELEASE build that passes one. Accepted, as asked: nothing ships unchecked. Regular builds are not affected.

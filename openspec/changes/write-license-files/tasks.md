@@ -121,6 +121,22 @@
 - [ ] 9.2 A component that releases several wars: every plugin line is in the matching folder, same canonical licenses; each extra line explained. Record the counts here, never the component's name.
 - [ ] 9.3 The other components of the earlier comparison: record the totals and any difference not explained by naming or by libraries outside the Maven tree.
 
+## 11. Library license sources that disagree (Decision 12, added on review)
+
+- [x] 11.1 Inventory, tests first: `LibraryTableTest`, each source's names kept apart beside the joined set; the license database is its own source; a rename drops the scan's names from both. The scan tests that compare whole libraries now state each library's source.
+- [x] 11.2 Implement `model/LicenseSource.kt`, `FoundLibrary.licensesBySource` (default empty), `LibraryTable` fills it.
+- [x] 11.3 Evaluation, tests first: `LibraryJudgeTest`:
+  - [x] 11.3.1 `GPL-3.0` against `MIT`: a disagreement, verdict still `ALLOWED`;
+  - [x] 11.3.2 two spellings of one license: none;
+  - [x] 11.3.3 two allowed licenses: none, the verdict does not depend on the source;
+  - [x] 11.3.4 `Unknown` against `MIT`: a disagreement;
+  - [x] 11.3.5 overridden, ours, a checksum-only file: none;
+  - [x] 11.3.6 one source: none.
+- [x] 11.4 Implement `model/SourceDisagreement.kt`, `AssessedLibrary.disagreement` (default null), `LibraryJudge`.
+- [x] 11.5 `core` `LicenseDisagreement` and `licenseDisagreements`; `SummaryMapper` maps them for third-party libraries; `BuildLog` warns once each; `BuildOutcome` does not read them. Tests in `SummaryMapperTest` and `BuildLogTest`.
+- [x] 11.6 The license policy design's risk "Any allowed name wins" points here.
+- [x] 11.7 Confirm: `./gradlew build qualityCheck` green, 756 tests, 0 skipped. The parity views read the joined names and the verdict only, so parity is unchanged.
+
 ## 10. Finalization
 
 - [x] 10.1 `./gradlew build qualityCheck` green. 742 tests, 0 skipped, every module.

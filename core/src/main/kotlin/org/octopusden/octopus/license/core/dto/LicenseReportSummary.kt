@@ -7,6 +7,8 @@ import java.time.Instant
  *
  * @param missingLicenseTexts the licenses a listed library uses whose text no license file holds,
  * each once; empty when every text was written.
+ * @param licenseDisagreements third-party libraries whose verdict depends on which source is
+ * believed; the verdict in [violations] and [libraryCounts] is the one on all names together.
  */
 data class LicenseReportSummary(
     val inputs: GenerationInputs,
@@ -14,6 +16,7 @@ data class LicenseReportSummary(
     val libraryCounts: Map<Verdict, Int>,
     val violations: List<Violation>,
     val missingLicenseTexts: List<MissingLicenseText> = emptyList(),
+    val licenseDisagreements: List<LicenseDisagreement> = emptyList(),
 )
 
 /**
@@ -109,3 +112,17 @@ enum class MissingTextReason {
     /** The registry gives the text only as a URL, and it could not be downloaded. */
     DOWNLOAD_FAILED,
 }
+
+/**
+ * A library whose sources name licenses that, judged apart, give different verdicts: Xray's
+ * `GPL-3.0` against an SBOM's `MIT`, for example. [verdict] is the one the report uses, on all names
+ * together, where one allowed name wins.
+ *
+ * @param bySource source (`BINARY_SCAN`, `SBOM`, `LICENSE_DATABASE`) to its canonical license names.
+ */
+data class LicenseDisagreement(
+    val library: String,
+    val verdict: Verdict,
+    val bySource: Map<String, List<String>>,
+    val files: List<String>,
+)
