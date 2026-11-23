@@ -5,3 +5,8 @@ spring:
 
 license-service:
   components-registry-url: ${COMPONENTS_REGISTRY_URL}
+  license-registry:
+    bitbucket-url: ${BITBUCKET_URL}
+    token: ${BITBUCKET_TOKEN}
+    project: ${LICENSE_REGISTRY_PROJECT}
+    repository: ${LICENSE_REGISTRY_REPOSITORY}

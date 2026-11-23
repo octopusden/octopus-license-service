@@ -18,6 +18,7 @@ import java.time.Duration
  * @param componentsRegistryDeadline how long starting a report waits for the components registry;
  * past it, the start answers unavailable. Below the published client's 60 s read timeout, so the
  * caller gets that answer instead of giving up on a start that may still register a report.
+ * @param licenseRegistry where the license policy is read from (D9).
  */
 @ConfigurationProperties("license-service")
 data class LicenseServiceProperties(
@@ -28,4 +29,22 @@ data class LicenseServiceProperties(
     val componentsRegistryUrl: String? = null,
     val exclusions: List<ConfiguredExclusion> = emptyList(),
     val componentsRegistryDeadline: Duration = Duration.ofSeconds(45),
+    val licenseRegistry: LicenseRegistryProperties = LicenseRegistryProperties(),
+)
+
+/**
+ * The license registry on Bitbucket. The four locations are required; nullable only so their
+ * absence is reported by name at startup. Project and repository come from Spring Cloud Config,
+ * never from this repository.
+ *
+ * @param refreshInterval how often the head commit is checked once a policy is loaded.
+ * @param retryInterval how often a load is tried until the first one succeeds.
+ */
+data class LicenseRegistryProperties(
+    val bitbucketUrl: String? = null,
+    val token: String? = null,
+    val project: String? = null,
+    val repository: String? = null,
+    val refreshInterval: Duration = Duration.ofMinutes(15),
+    val retryInterval: Duration = Duration.ofMinutes(1),
 )

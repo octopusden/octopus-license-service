@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
@@ -23,9 +24,15 @@ import org.octopusden.octopus.license.core.exception.InvalidRequestException
 import org.octopusden.octopus.license.core.exception.LicenseFilesNotAvailableException
 import org.octopusden.octopus.license.core.exception.NotFoundException
 import org.octopusden.octopus.license.core.exception.ServiceUnavailableException
+import org.octopusden.octopus.license.policy.LicensePolicySource
+import org.octopusden.octopus.license.policy.model.LicensePolicy
 import org.octopusden.octopus.license.service.service.GeneratedReport
 import org.octopusden.octopus.license.service.service.LicenseReportGenerator
 import org.octopusden.octopus.license.service.service.impl.EmptyLicenseReportGenerator
+import org.octopusden.octopus.license.service.state.policy.LicensePolicyHolder
+import org.octopusden.octopus.license.service.state.policy.LicensePolicyRefresherTest.Companion.samplePolicy
+import org.octopusden.octopus.license.service.state.policy.LicensePolicyRefresherTest.FakeLicensePolicySource
+import org.octopusden.octopus.license.service.state.policy.LoadedPolicy
 import org.octopusden.octopus.license.target.LicenseTargetResolver
 import org.octopusden.octopus.license.target.exception.ComponentVersionNotFoundException
 import org.octopusden.octopus.license.target.exception.ComponentsRegistryUnavailableException
@@ -58,7 +65,13 @@ import java.util.zip.ZipInputStream
 
 @SpringBootTest(
     webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
-    properties = ["license-service.components-registry-url=http://localhost:1"],
+    properties = [
+        "license-service.components-registry-url=http://localhost:1",
+        "license-service.license-registry.bitbucket-url=http://localhost:1",
+        "license-service.license-registry.token=token",
+        "license-service.license-registry.project=SAMPLE",
+        "license-service.license-registry.repository=sample-license-registry",
+    ],
 )
 class LicenseReportApiTest {
     @LocalServerPort
@@ -71,6 +84,9 @@ class LicenseReportApiTest {
     private lateinit var generator: ControllableGenerator
 
     @Autowired
+    private lateinit var policyHolder: LicensePolicyHolder
+
+    @Autowired
     private lateinit var meterRegistry: MeterRegistry
 
     private val client: LicenseServiceClient by lazy {
@@ -81,8 +97,52 @@ class LicenseReportApiTest {
         )
     }
 
+    @BeforeEach
+    fun awaitPolicyLoaded() {
+        val deadline = Instant.now().plus(AWAIT_TIMEOUT)
+        while (policyHolder.current() == null && Instant.now().isBefore(deadline)) {
+            TimeUnit.MILLISECONDS.sleep(POLL_INTERVAL_MS)
+        }
+        requireNotNull(policyHolder.current()) { "the license policy did not load within $AWAIT_TIMEOUT" }
+    }
+
     @AfterEach
     fun releaseSlowGenerations() = generator.release()
+
+    @Test
+    @DisplayName("SYS-007: the summary records the license registry commit the report was judged with")
+    fun summaryRecordsRegistryCommit() {
+        val done = awaitFinished(client.startReport(LicenseReportRequest(COMPONENT, VERSION)).id)
+
+        assertEquals(REGISTRY_COMMIT, requireNotNull(done.summary).inputs.licenseRegistryCommit)
+    }
+
+    @Test
+    @DisplayName("D7: a reload during a generation does not change the commit that generation records")
+    fun reloadDuringGeneration() {
+        val loaded = requireNotNull(policyHolder.current())
+        val started = client.startReport(LicenseReportRequest(SLOW_COMPONENT, RELOAD_VERSION))
+        awaitGenerationStarted("$SLOW_COMPONENT:$RELOAD_VERSION")
+        try {
+            policyHolder.replace(LoadedPolicy(samplePolicy("newer-commit"), Instant.now()))
+            generator.release()
+
+            assertEquals(REGISTRY_COMMIT, requireNotNull(awaitFinished(started.id).summary).inputs.licenseRegistryCommit)
+        } finally {
+            policyHolder.replace(loaded)
+        }
+    }
+
+    @Test
+    @DisplayName("D7: the health details show the loaded commit, licenses without text and problems")
+    fun healthShowsPolicy() {
+        val response = send(HttpRequest.newBuilder(URI("http://localhost:$port/actuator/health/licenseRegistry")).GET())
+
+        assertEquals(HTTP_OK, response.statusCode(), response.body())
+        assertTrue(response.body().contains(""""commit":"$REGISTRY_COMMIT""""), response.body())
+        assertTrue(response.body().contains(""""licensesWithoutText":["Apache-2.0","MIT"]"""), response.body())
+        assertTrue(response.body().contains(""""problems":[]"""), response.body())
+    }
 
     @Test
     @DisplayName("the generation receives the license target the registry resolved for the version")
@@ -284,7 +344,7 @@ class LicenseReportApiTest {
     }
 
     @ParameterizedTest(name = "{0}")
-    @ValueSource(strings = ["/actuator/health", "/actuator/prometheus"])
+    @ValueSource(strings = ["/actuator/health", "/actuator/health/liveness", "/actuator/health/readiness", "/actuator/prometheus"])
     @DisplayName("the OKD probes and the metrics scrape answer 200 without credentials")
     fun operationalEndpointsAreOpen(path: String) {
         val response = send(HttpRequest.newBuilder(URI("http://localhost:$port$path")).GET())
@@ -311,6 +371,7 @@ class LicenseReportApiTest {
     fun runningComponentVersionIsJoined() {
         val first = client.startReport(LicenseReportRequest(SLOW_COMPONENT, JOINED_VERSION))
         val second = client.startReport(LicenseReportRequest(SLOW_COMPONENT, JOINED_VERSION))
+        awaitGenerationStarted("$SLOW_COMPONENT:$JOINED_VERSION")
         generator.release()
 
         awaitFinished(first.id)
@@ -356,6 +417,15 @@ class LicenseReportApiTest {
     private fun send(request: HttpRequest.Builder): HttpResponse<String> =
         HttpClient.newHttpClient().send(request.build(), HttpResponse.BodyHandlers.ofString())
 
+    /** [ControllableGenerator.release] swaps the gate, so a generation not yet waiting on it would wait on the next one. */
+    private fun awaitGenerationStarted(componentVersion: String) {
+        val deadline = Instant.now().plus(AWAIT_TIMEOUT)
+        while (generator.generations(componentVersion) == 0 && Instant.now().isBefore(deadline)) {
+            TimeUnit.MILLISECONDS.sleep(POLL_INTERVAL_MS)
+        }
+        check(generator.generations(componentVersion) > 0) { "$componentVersion was not generated within $AWAIT_TIMEOUT" }
+    }
+
     private fun awaitFinished(id: String): LicenseReport {
         val deadline = Instant.now().plus(AWAIT_TIMEOUT)
         while (Instant.now().isBefore(deadline)) {
@@ -387,14 +457,17 @@ class LicenseReportApiTest {
         override fun generate(
             target: LicenseTarget,
             mode: LicenseReportMode,
+            policy: LicensePolicy,
         ): GeneratedReport {
             targets += target
             val (component, version) = target.componentVersion
+            val gate = slowGate
             generationCounts.computeIfAbsent("$component:$version") { AtomicInteger() }.incrementAndGet()
             return when (component) {
-                SLOW_COMPONENT -> slowGate.await(AWAIT_TIMEOUT.seconds, TimeUnit.SECONDS).let { delegate.generate(target, mode) }
+                SLOW_COMPONENT ->
+                    gate.await(AWAIT_TIMEOUT.seconds, TimeUnit.SECONDS).let { delegate.generate(target, mode, policy) }
                 BROKEN_COMPONENT -> error("Xray is unreachable")
-                else -> delegate.generate(target, mode)
+                else -> delegate.generate(target, mode, policy)
             }
         }
 
@@ -437,6 +510,10 @@ class LicenseReportApiTest {
         @Bean
         @Primary
         fun fakeTargetResolver(): LicenseTargetResolver = FakeTargetResolver()
+
+        @Bean
+        @Primary
+        fun fakeLicensePolicySource(): LicensePolicySource = FakeLicensePolicySource(REGISTRY_COMMIT)
     }
 
     private companion object {
@@ -450,6 +527,8 @@ class LicenseReportApiTest {
         const val REGISTRY_FORBIDDEN_COMPONENT = "registry-forbidden-component"
         const val UPSTREAM_DETAIL = "secret-upstream-detail"
         const val VERSION = "1.2.3"
+        const val RELOAD_VERSION = "1.2.9"
+        const val REGISTRY_COMMIT = "a1b2c3d"
         const val JOINED_VERSION = "2.0.0-joined"
         const val CHECK_VERSION = "3.0.0-check"
         val OUTCOMES = listOf("resolved", "excluded", "not_found", "unavailable", "error")
