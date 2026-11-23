@@ -1,7 +1,6 @@
 package org.octopusden.octopus.license.service.configuration
 
 import io.micrometer.core.instrument.MeterRegistry
-import org.octopusden.octopus.license.evaluation.LicenseEvaluator
 import org.octopusden.octopus.license.inventory.LicenseInventoryScanner
 import org.octopusden.octopus.license.inventory.impl.JfrogLicenseInventoryScanner
 import org.octopusden.octopus.license.inventory.model.OwnershipRules
@@ -74,9 +73,6 @@ class LicenseServiceConfig(
             ),
             properties.xray.scanPollInterval,
         )
-
-    @Bean
-    fun licenseEvaluator() = LicenseEvaluator()
 
     @Bean
     fun licenseReportExecutor() =

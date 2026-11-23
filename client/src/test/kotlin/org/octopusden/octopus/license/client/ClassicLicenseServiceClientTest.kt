@@ -12,6 +12,7 @@ import org.octopusden.octopus.license.client.impl.ClassicLicenseServiceClient
 import org.octopusden.octopus.license.client.impl.LicenseServiceClientParametersProvider
 import org.octopusden.octopus.license.core.dto.LicenseReportRequest
 import org.octopusden.octopus.license.core.dto.LicenseReportStatus
+import org.octopusden.octopus.license.core.dto.TrustLevel
 import org.octopusden.octopus.license.core.dto.Verdict
 import org.octopusden.octopus.license.core.exception.InvalidRequestException
 import org.octopusden.octopus.license.core.exception.LicenseFilesNotAvailableException
@@ -40,7 +41,7 @@ class ClassicLicenseServiceClientTest {
     fun stopServer() = server.stop(0)
 
     @Test
-    @DisplayName("a DONE report decodes with its summary, ignoring fields the client does not know")
+    @DisplayName("a DONE report decodes with its summary and trust, ignoring fields the client does not know")
     fun decodesDoneReport() {
         answer(
             "/rest/api/1/license-reports/$REPORT_ID",
@@ -48,7 +49,9 @@ class ClassicLicenseServiceClientTest {
             """
             {"id":"$REPORT_ID","component":"c","version":"1","status":"DONE","newField":true,
              "summary":{"inputs":{"licenseRegistryCommit":"abc123","generatedAt":"2026-11-04T10:00:00Z",
-             "serviceVersion":"1.0.0"},"trust":null,"libraryCounts":{"ALLOWED":3},"violations":[]}}
+             "serviceVersion":"1.0.0"},"trust":{"level":"MEDIUM","reasons":[{"code":"NO_BUILD_RECORD","level":"MEDIUM","title":"No build record",
+             "detail":"no build for: app.jar","meaning":"m","fix":"f"}],"files":[{"file":"app.jar","level":"MEDIUM",
+             "reasons":["NO_BUILD_RECORD"]}]},"libraryCounts":{"ALLOWED":3},"violations":[]}}
             """.trimIndent(),
         )
 
@@ -58,6 +61,13 @@ class ClassicLicenseServiceClientTest {
         val summary = requireNotNull(report.summary)
         assertEquals(Instant.parse("2026-11-04T10:00:00Z"), summary.inputs.generatedAt)
         assertEquals(mapOf(Verdict.ALLOWED to 3), summary.libraryCounts)
+        assertEquals(TrustLevel.MEDIUM, summary.trust.level)
+        assertEquals(
+            listOf("NO_BUILD_RECORD"),
+            summary.trust.files
+                .single()
+                .reasons,
+        )
     }
 
     @Test

@@ -1,3 +1,7 @@
+plugins {
+    `java-test-fixtures`
+}
+
 // Pure: the inventory and the policy are pushed in (design, Decision 1). Their own clients are
 // `implementation` there, so none of them reaches this module's sources.
 dependencies {
@@ -10,6 +14,13 @@ dependencies {
     // The inventory's parity view, and Jackson to read the prototype's JSON (design, Decision 11).
     testImplementation(testFixtures(project(":license-inventory")))
     testImplementation(
+        "org.octopusden.octopus.octopus-external-systems-clients:artifactory-client:" +
+            project.property("artifactory-client.version"),
+    )
+
+    // The evaluation's parity view and diff, shared with the trust parity check (trust design, D10).
+    // Jackson reads the prototype's JSON; it comes with the Artifactory client, as in the inventory's.
+    testFixturesImplementation(
         "org.octopusden.octopus.octopus-external-systems-clients:artifactory-client:" +
             project.property("artifactory-client.version"),
     )

@@ -13,13 +13,14 @@ import org.octopusden.octopus.license.inventory.LicenseInventoryScanner
 import org.octopusden.octopus.license.policy.LicensePolicySource
 import org.octopusden.octopus.license.target.LicenseTargetResolver
 import org.octopusden.octopus.license.target.model.ConfiguredExclusion
+import org.octopusden.octopus.license.trust.TrustGrader
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.boot.test.context.runner.ApplicationContextRunner
 import java.time.Duration
 
 class LicenseServiceConfigTest {
     private val contextRunner = ApplicationContextRunner()
-        .withUserConfiguration(PropertiesConfig::class.java, LicenseServiceConfig::class.java)
+        .withUserConfiguration(PropertiesConfig::class.java, LicenseServiceConfig::class.java, AssessmentConfig::class.java)
         .withBean(MeterRegistry::class.java, { SimpleMeterRegistry() })
 
     private fun withAllSettings() = contextRunner.withPropertyValues(*REQUIRED)
@@ -67,13 +68,14 @@ class LicenseServiceConfigTest {
     }
 
     @Test
-    @DisplayName("with every setting the resolver, the policy source, the scanner and the evaluator are wired")
+    @DisplayName("with every setting the resolver, the policy source, the scanner, the evaluator and the grader are wired")
     fun everythingIsWired() {
         withAllSettings().run { context ->
             assertEquals(1, context.getBeansOfType(LicenseTargetResolver::class.java).size)
             assertEquals(1, context.getBeansOfType(LicensePolicySource::class.java).size)
             assertEquals(1, context.getBeansOfType(LicenseInventoryScanner::class.java).size)
             assertEquals(1, context.getBeansOfType(LicenseEvaluator::class.java).size)
+            assertEquals(1, context.getBeansOfType(TrustGrader::class.java).size)
         }
     }
 
