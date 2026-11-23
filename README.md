@@ -12,6 +12,7 @@ Generates third-party license files for a component version from JFrog Xray and 
 | `license-runner` | `runner/` | Command-line runner (`-all` jar) and its TeamCity metarunner, GitHub Packages |
 | `license-target-registry` | `engine/target-registry/` | Not published; part of the service. Resolves what a component version releases, from the components registry |
 | `license-policy-registry` | `engine/policy-registry/` | Not published; part of the service. Reads the license policy from the license registry and judges a library's licenses |
+| `license-inventory` | `engine/inventory/` | Not published; not yet called by the service. Scans what a component version releases: the files, the libraries inside them and their licenses, from Artifactory and Xray |
 
 Which module may depend on which, and how a request flows: [docs/architecture.md](docs/architecture.md).
 
