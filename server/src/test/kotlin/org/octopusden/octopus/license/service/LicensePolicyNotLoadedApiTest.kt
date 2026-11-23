@@ -114,6 +114,7 @@ class LicensePolicyNotLoadedApiTest {
                         artifactVersions = listOf(version),
                         buildSystem = "GRADLE",
                         labels = emptySet(),
+                        explicit = true,
                         distribution = DistributionSpec(emptyList(), emptyList()),
                     ),
                 )
