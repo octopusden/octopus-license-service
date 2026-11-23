@@ -7,7 +7,9 @@ import org.octopusden.octopus.license.inventory.impl.OWNERSHIP
 import org.octopusden.octopus.license.inventory.model.Evidence.BINARY_SCAN
 import org.octopusden.octopus.license.inventory.model.Evidence.BUILD_RECORD
 import org.octopusden.octopus.license.inventory.model.Evidence.CHECKSUM_MATCH
+import org.octopusden.octopus.license.inventory.model.Evidence.SBOM
 import org.octopusden.octopus.license.inventory.model.FoundLibrary
+import org.octopusden.octopus.license.inventory.model.LicenseSource
 import org.octopusden.octopus.license.inventory.model.PackageId
 
 class LibraryTableTest {
@@ -53,6 +55,30 @@ class LibraryTableTest {
     }
 
     @Test
+    @DisplayName("each source's license names are kept apart, beside the joined set")
+    fun licensesBySource() {
+        val table = LibraryTable(Ownership(OWNERSHIP))
+        table.add(guava, setOf("GPL-3.0"), BINARY_SCAN, "zip")
+        table.add(guava, setOf("MIT"), SBOM, "image")
+        table.add(guava, emptySet(), BUILD_RECORD, "zip")
+
+        val library = table.libraries().single()
+        assertEquals(setOf("GPL-3.0", "MIT"), library.licenses)
+        assertEquals(mapOf(LicenseSource.BINARY_SCAN to setOf("GPL-3.0"), LicenseSource.SBOM to setOf("MIT")), library.licensesBySource)
+    }
+
+    @Test
+    @DisplayName("names from the license database are their own source; a rename drops the scan's names from both")
+    fun licensesBySourceAfterFillAndRename() {
+        val table = LibraryTable(Ownership(OWNERSHIP))
+        table.add(unnamed, setOf("Apache-2.0"), BINARY_SCAN, "zip")
+        table.rename(unnamed, netty)
+        table.addLicenses(netty, setOf("Apache-2.0"))
+
+        assertEquals(mapOf(LicenseSource.LICENSE_DATABASE to setOf("Apache-2.0")), table.libraries().single().licensesBySource)
+    }
+
+    @Test
     @DisplayName("one row per package: licenses, evidence and files are joined")
     fun merge() {
         val table = LibraryTable(Ownership(OWNERSHIP))
@@ -61,7 +87,16 @@ class LibraryTableTest {
         table.add(guava, setOf("Apache 2.0"), BINARY_SCAN, "image")
 
         assertEquals(
-            listOf(FoundLibrary(guava, setOf("Apache-2.0", "Apache 2.0"), setOf(BINARY_SCAN, BUILD_RECORD), setOf("zip", "image"), false)),
+            listOf(
+                FoundLibrary(
+                    guava,
+                    setOf("Apache-2.0", "Apache 2.0"),
+                    setOf(BINARY_SCAN, BUILD_RECORD),
+                    setOf("zip", "image"),
+                    false,
+                    mapOf(LicenseSource.BINARY_SCAN to setOf("Apache-2.0", "Apache 2.0")),
+                ),
+            ),
             table.libraries(),
         )
     }

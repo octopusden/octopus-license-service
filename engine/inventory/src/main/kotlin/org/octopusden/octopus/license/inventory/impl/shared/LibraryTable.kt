@@ -2,6 +2,7 @@ package org.octopusden.octopus.license.inventory.impl.shared
 
 import org.octopusden.octopus.license.inventory.model.Evidence
 import org.octopusden.octopus.license.inventory.model.FoundLibrary
+import org.octopusden.octopus.license.inventory.model.LicenseSource
 import org.octopusden.octopus.license.inventory.model.PackageId
 
 /**
@@ -13,11 +14,13 @@ internal class LibraryTable(
 ) {
     private class Row(
         val licenses: MutableSet<String> = linkedSetOf(),
+        val licensesBySource: MutableMap<LicenseSource, MutableSet<String>> = linkedMapOf(),
         val evidence: MutableSet<Evidence> = linkedSetOf(),
         val foundIn: MutableSet<String> = linkedSetOf(),
     )
 
     private val rows = linkedMapOf<PackageId, Row>()
+
     private val copiesInOwnRepository = mutableSetOf<String>()
 
     val ids: Set<PackageId> get() = rows.keys
@@ -29,7 +32,7 @@ internal class LibraryTable(
         foundIn: String,
     ) {
         rows.getOrPut(id, ::Row).apply {
-            this.licenses += licenses
+            addLicenses(licenses, SOURCE_OF[evidence])
             this.evidence += evidence
             this.foundIn += foundIn
         }
@@ -53,7 +56,16 @@ internal class LibraryTable(
         id: PackageId,
         licenses: Set<String>,
     ) {
-        rows[id]?.licenses?.addAll(licenses)
+        rows[id]?.addLicenses(licenses, LicenseSource.LICENSE_DATABASE)
+    }
+
+    private fun Row.addLicenses(
+        names: Set<String>,
+        source: LicenseSource?,
+    ) {
+        if (names.isEmpty()) return
+        licenses += names
+        source?.let { licensesBySource.getOrPut(it, ::linkedSetOf) += names }
     }
 
     /** Recorded by checksum naming, the one step that asks where a checksum-only file is stored. */
@@ -70,6 +82,11 @@ internal class LibraryTable(
                     row.evidence.toSet(),
                     row.foundIn.toSet(),
                     ownership.isOurs(id) { it in copiesInOwnRepository },
+                    row.licensesBySource.mapValues { it.value.toSet() },
                 )
             }.sortedBy { it.id.toString() }
+
+    private companion object {
+        val SOURCE_OF = mapOf(Evidence.BINARY_SCAN to LicenseSource.BINARY_SCAN, Evidence.SBOM to LicenseSource.SBOM)
+    }
 }

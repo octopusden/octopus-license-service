@@ -12,7 +12,9 @@ import java.time.Duration
  * @param maxQueuedReports how many generations wait for a thread; past it, a new report is refused
  * as busy.
  * @param maxStoredBytes how much license files the finished reports hold in memory; past it, the
- * oldest finished reports go before their TTL ends.
+ * oldest finished reports that hold files go before their TTL ends.
+ * @param maxStoredReports how many finished reports are kept; past it, the oldest go before their
+ * TTL ends. Bounds memory where the byte limit does not: reports without files.
  * @param exclusions components out of scope that no registry fact identifies, grouped by reason.
  * @param componentsRegistryDeadline how long starting a report waits for the components registry;
  * past it, the start answers unavailable. Below the published client's 60 s read timeout, so the
@@ -20,6 +22,7 @@ import java.time.Duration
  * @param licenseRegistry where the license policy is read from (D9).
  * @param xray how long a scan waits for Xray to finish scanning.
  * @param ownership what is ours, so the scan follows our archives and evaluation calls them internal.
+ * @param licenseTexts how the license texts the registry gives only as a URL are downloaded.
  */
 @ConfigurationProperties("license-service")
 data class LicenseServiceProperties(
@@ -27,11 +30,22 @@ data class LicenseServiceProperties(
     val generationThreads: Int = 4,
     val maxQueuedReports: Int = 50,
     val maxStoredBytes: DataSize = DataSize.ofMegabytes(512),
+    val maxStoredReports: Int = 500,
     val exclusions: List<ConfiguredExclusion> = emptyList(),
     val componentsRegistryDeadline: Duration = Duration.ofSeconds(45),
     val licenseRegistry: LicenseRegistryProperties = LicenseRegistryProperties(),
     val xray: XrayProperties = XrayProperties(),
     val ownership: OwnershipProperties = OwnershipProperties(),
+    val licenseTexts: LicenseTextsProperties = LicenseTextsProperties(),
+)
+
+/**
+ * @param downloadTimeout how long one text's download may take, connecting and its body included.
+ * @param failureRetryAfter how long a failed download is not tried again.
+ */
+data class LicenseTextsProperties(
+    val downloadTimeout: Duration = Duration.ofSeconds(10),
+    val failureRetryAfter: Duration = Duration.ofMinutes(5),
 )
 
 /**

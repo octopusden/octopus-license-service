@@ -7,10 +7,12 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.octopusden.octopus.license.core.dto.GenerationInputs
 import org.octopusden.octopus.license.core.dto.LicenseReportMode
+import org.octopusden.octopus.license.core.dto.MissingLicenseText
 import org.octopusden.octopus.license.core.dto.TrustLevel
 import org.octopusden.octopus.license.core.dto.Verdict
 import org.octopusden.octopus.license.core.dto.Violation
 import org.octopusden.octopus.license.evaluation.LicenseEvaluator
+import org.octopusden.octopus.license.files.LicenseFilesWriter
 import org.octopusden.octopus.license.inventory.LicenseInventoryScanner
 import org.octopusden.octopus.license.inventory.exception.InventorySourceUnavailableException
 import org.octopusden.octopus.license.inventory.model.Evidence
@@ -21,6 +23,7 @@ import org.octopusden.octopus.license.inventory.model.LicenseInventory
 import org.octopusden.octopus.license.inventory.model.PackageId
 import org.octopusden.octopus.license.inventory.model.ReleasedFile
 import org.octopusden.octopus.license.inventory.model.SelectionReason
+import org.octopusden.octopus.license.policy.impl.parser.LicenseRegistryParser
 import org.octopusden.octopus.license.service.configuration.LicenseServiceProperties
 import org.octopusden.octopus.license.service.configuration.XrayProperties
 import org.octopusden.octopus.license.service.state.policy.LicensePolicyRefresherTest.Companion.samplePolicy
@@ -34,6 +37,7 @@ import java.time.Duration
 import java.time.Instant
 import java.time.ZoneOffset
 import java.util.Properties
+import java.util.zip.ZipInputStream
 
 class EvaluatingLicenseReportGeneratorTest {
     private val now = Instant.parse("2026-11-11T10:00:00Z")
@@ -63,6 +67,8 @@ class EvaluatingLicenseReportGeneratorTest {
             },
             LicenseEvaluator(),
             TrustGrader(),
+            LicenseFilesWriter(),
+            LicenseTextDownloader(Duration.ofSeconds(1), Duration.ofMinutes(5), meterRegistry),
             LicenseServiceProperties(xray = XrayProperties(scanTimeout = FULL_WAIT)),
             Clock.fixed(now, ZoneOffset.UTC),
             BuildProperties(Properties().apply { setProperty("version", "1.0.0") }),
@@ -176,7 +182,93 @@ class EvaluatingLicenseReportGeneratorTest {
         assertEquals(listOf("ECOSYSTEM_NOT_DETECTED"), javascript.reasons.map { it.code })
     }
 
+    @Test
+    @DisplayName("the zip holds the license files of each read file; a text that cannot be downloaded is listed missing")
+    fun licenseFiles() {
+        val policy =
+            LicenseRegistryParser.parse(
+                mapOf(
+                    "licenses-whitelist.txt" to "MIT|GWT",
+                    "licenses.properties" to "MIT=licenses/MIT.txt\nGWT=$UNREACHABLE\nAPL=$UNREACHABLE/apl",
+                    "licenses/MIT.txt" to "MIT License",
+                ),
+                "a1b2c3d",
+            )
+        val zip =
+            ReleasedFile(
+                ZIP,
+                FileKind.MAVEN,
+                setOf(SelectionReason.DECLARED),
+                status = FileStatus.READ,
+                evidence = setOf(Evidence.BINARY_SCAN),
+            )
+        val scanned =
+            LicenseInventory(
+                target.componentVersion,
+                emptyList(),
+                listOf(zip),
+                listOf(library("pkg:maven/org.example/sample-lib@1.5", setOf("MIT", "GWT"))),
+                emptyList(),
+            )
+
+        val generated = generator { scanned }.generate(target, LicenseReportMode.FULL, policy)
+
+        val entries =
+            ZipInputStream(requireNotNull(generated.files) { "a FULL report has files" }.inputStream()).use { input ->
+                generateSequence { input.nextEntry }.map { it.name }.toList()
+            }
+        assertEquals(listOf("$FOLDER/THIRD-PARTY.txt", "$FOLDER/licenses.xml", "$FOLDER/mit - mit.txt"), entries)
+        assertEquals(
+            listOf(MissingLicenseText("GWT", "DOWNLOAD_FAILED", UNREACHABLE)),
+            generated.summary.missingLicenseTexts,
+        )
+        assertEquals(
+            1.0,
+            meterRegistry
+                .find("license.texts.downloads")
+                .tag("outcome", "failed")
+                .counter()
+                ?.count(),
+        )
+    }
+
+    @Test
+    @DisplayName("a CHECK writes no license files and downloads no text: a regular build gets no files (review)")
+    fun checkWritesNoFiles() {
+        val policy =
+            LicenseRegistryParser.parse(
+                mapOf("licenses-whitelist.txt" to "MIT|GWT", "licenses.properties" to "GWT=$UNREACHABLE"),
+                "a1b2c3d",
+            )
+        val zip =
+            ReleasedFile(
+                ZIP,
+                FileKind.MAVEN,
+                setOf(SelectionReason.DECLARED),
+                status = FileStatus.READ,
+                evidence = setOf(Evidence.BINARY_SCAN),
+            )
+        val scanned =
+            LicenseInventory(
+                target.componentVersion,
+                emptyList(),
+                listOf(zip),
+                listOf(library("pkg:maven/org.example/sample-lib@1.5", setOf("GWT"))),
+                emptyList(),
+            )
+
+        val generated = generator { scanned }.generate(target, LicenseReportMode.CHECK, policy)
+
+        assertEquals(null, generated.files)
+        assertEquals(emptyList<MissingLicenseText>(), generated.summary.missingLicenseTexts)
+        assertEquals(null, meterRegistry.find("license.texts.downloads").counter())
+    }
+
     private companion object {
+        const val UNREACHABLE = "http://127.0.0.1:1/terms.html"
+
+        // The file is read but has no Artifactory path here, so its folder is named after its entry.
+        const val FOLDER = "org.example.portal_sample-portal_zip"
         const val ZIP = "org.example.portal:sample-portal:zip"
         val FULL_WAIT: Duration = Duration.ofMinutes(5)
     }

@@ -35,6 +35,7 @@ import org.octopusden.octopus.license.inventory.model.FindingCode.NO_LIBRARIES_I
 import org.octopusden.octopus.license.inventory.model.FindingCode.SBOM_UNREADABLE
 import org.octopusden.octopus.license.inventory.model.FindingCode.UNRESOLVED_INTERNAL_ARCHIVE
 import org.octopusden.octopus.license.inventory.model.FoundLibrary
+import org.octopusden.octopus.license.inventory.model.LicenseSource
 import org.octopusden.octopus.license.inventory.model.PackageId
 import org.octopusden.octopus.license.inventory.model.SelectionReason
 
@@ -86,7 +87,8 @@ class FileContentReaderTest {
         licenses: Set<String> = emptySet(),
         vararg evidence: org.octopusden.octopus.license.inventory.model.Evidence,
         ours: Boolean = false,
-    ) = FoundLibrary(PackageId.parse(id), licenses, evidence.toSet(), setOf(entry), ours)
+        from: LicenseSource? = null,
+    ) = FoundLibrary(PackageId.parse(id), licenses, evidence.toSet(), setOf(entry), ours, from?.let { mapOf(it to licenses) }.orEmpty())
 
     /** Our own archive `name`, stored at its Maven path, built by its own build that depends on [dependencies]. */
     private fun ownArchive(
@@ -128,7 +130,7 @@ class FileContentReaderTest {
         assertEquals(
             listOf(
                 pkg("pkg:maven/com.fasterxml.jackson.core/jackson-databind@2.17.0", emptySet(), BUILD_RECORD),
-                pkg("pkg:maven/org.springframework/spring-core@6.1.4", setOf("Apache-2.0"), BINARY_SCAN),
+                pkg("pkg:maven/org.springframework/spring-core@6.1.4", setOf("Apache-2.0"), BINARY_SCAN, from = LicenseSource.BINARY_SCAN),
             ),
             table.libraries(),
         )
@@ -142,7 +144,15 @@ class FileContentReaderTest {
         read(zipBuild(dependency("org.springframework:spring-core:6.1.4", "runtime")))
 
         assertEquals(
-            listOf(pkg("pkg:maven/org.springframework/spring-core@6.1.4", setOf("Apache-2.0"), BINARY_SCAN, BUILD_RECORD)),
+            listOf(
+                pkg(
+                    "pkg:maven/org.springframework/spring-core@6.1.4",
+                    setOf("Apache-2.0"),
+                    BINARY_SCAN,
+                    BUILD_RECORD,
+                    from = LicenseSource.BINARY_SCAN,
+                ),
+            ),
             table.libraries(),
         )
     }
@@ -170,7 +180,7 @@ class FileContentReaderTest {
 
         val reading = read(record)
 
-        assertEquals(listOf(pkg("pkg:npm/lodash@4.17.21", setOf("MIT"), SBOM)), table.libraries())
+        assertEquals(listOf(pkg("pkg:npm/lodash@4.17.21", setOf("MIT"), SBOM, from = LicenseSource.SBOM)), table.libraries())
         assertEquals(listOf(SBOM_UNREADABLE to broken.fullPath), reading.findings.map { it.code to it.subject })
     }
 
@@ -219,8 +229,20 @@ class FileContentReaderTest {
 
         assertEquals(
             listOf(
-                pkg("pkg:maven/org.apache.commons/commons-text@1.11.0", setOf("Apache-2.0"), BINARY_SCAN, BUILD_RECORD),
-                pkg("pkg:maven/$GROUP/portal-plugins@$BUILD_VERSION", setOf("Unknown"), BINARY_SCAN, ours = true),
+                pkg(
+                    "pkg:maven/org.apache.commons/commons-text@1.11.0",
+                    setOf("Apache-2.0"),
+                    BINARY_SCAN,
+                    BUILD_RECORD,
+                    from = LicenseSource.BINARY_SCAN,
+                ),
+                pkg(
+                    "pkg:maven/$GROUP/portal-plugins@$BUILD_VERSION",
+                    setOf("Unknown"),
+                    BINARY_SCAN,
+                    ours = true,
+                    from = LicenseSource.BINARY_SCAN,
+                ),
             ),
             table.libraries(),
         )

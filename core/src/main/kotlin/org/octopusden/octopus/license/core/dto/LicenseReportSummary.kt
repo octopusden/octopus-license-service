@@ -2,12 +2,21 @@ package org.octopusden.octopus.license.core.dto
 
 import java.time.Instant
 
-/** Enough of the report for a caller to decide a build outcome without opening the license files. */
+/**
+ * Enough of the report for a caller to decide a build outcome without opening the license files.
+ *
+ * @param missingLicenseTexts the licenses a listed library uses whose text no license file holds,
+ * each once; empty when every text was written.
+ * @param licenseDisagreements third-party libraries whose verdict depends on which source is
+ * believed; the verdict in [violations] and [libraryCounts] is the one on all names together.
+ */
 data class LicenseReportSummary(
     val inputs: GenerationInputs,
     val trust: Trust,
     val libraryCounts: Map<Verdict, Int>,
     val violations: List<Violation>,
+    val missingLicenseTexts: List<MissingLicenseText> = emptyList(),
+    val licenseDisagreements: List<LicenseDisagreement> = emptyList(),
 )
 
 /**
@@ -75,10 +84,42 @@ enum class Verdict {
     UNIDENTIFIED,
 }
 
-/** A library whose verdict is anything but [Verdict.ALLOWED], and the released files it ships in. */
+/**
+ * A library whose verdict is anything but [Verdict.ALLOWED], and the released files it ships in.
+ *
+ * @param preliminary a CHECK report's violation found only in files Xray has not scanned yet; a
+ * build does not fail on it. Never set in a FULL report.
+ */
 data class Violation(
     val library: String,
     val verdict: Verdict,
     val licenses: List<String>,
+    val files: List<String>,
+    val preliminary: Boolean = false,
+)
+
+/**
+ * @param reason why, as text so a newer service can add a reason an older caller still reads:
+ * `NO_REGISTRY_ENTRY`, the license registry gives no text; `DOWNLOAD_FAILED`, the registry gives
+ * only a URL and it could not be downloaded.
+ * @param url the text's URL, for `DOWNLOAD_FAILED` only.
+ */
+data class MissingLicenseText(
+    val license: String,
+    val reason: String,
+    val url: String? = null,
+)
+
+/**
+ * A library whose sources name licenses that, judged apart, give different verdicts: Xray's
+ * `GPL-3.0` against an SBOM's `MIT`, for example. [verdict] is the one the report uses, on all names
+ * together, where one allowed name wins.
+ *
+ * @param bySource source (`BINARY_SCAN`, `SBOM`, `LICENSE_DATABASE`) to its canonical license names.
+ */
+data class LicenseDisagreement(
+    val library: String,
+    val verdict: Verdict,
+    val bySource: Map<String, List<String>>,
     val files: List<String>,
 )

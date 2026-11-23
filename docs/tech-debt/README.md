@@ -6,3 +6,5 @@ Deferred work, one file per item, numbered `TD-NNN`. Code points at an item by i
 | --- | --- | --- |
 | [TD-001](001-read-license-registry-through-vcs-facade.md) | Read the license registry through octopus-vcs-facade, not Bitbucket directly | Open, must do |
 | [TD-002](002-revisit-prototype-scan-rules.md) | Revisit the prototype's scan rules once parity is shown | Open, should do |
+| [TD-003](003-record-failed-license-lookups.md) | Record a failed license lookup, so it never reads as an unknown license | Open, should do |
+| [TD-004](004-store-link-only-license-texts.md) | Store the link-only license texts in the license registry | Open, should do |
