@@ -1,5 +1,6 @@
 package org.octopusden.octopus.license.service.service.impl
 
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
@@ -13,6 +14,11 @@ import org.octopusden.octopus.license.core.exception.ServiceBusyException
 import org.octopusden.octopus.license.service.service.GeneratedReport
 import org.octopusden.octopus.license.service.service.LicenseReportGenerator
 import org.octopusden.octopus.license.service.state.report.LicenseReportStore
+import org.octopusden.octopus.license.target.LicenseTargetResolver
+import org.octopusden.octopus.license.target.model.ComponentVersion
+import org.octopusden.octopus.license.target.model.DistributionSpec
+import org.octopusden.octopus.license.target.model.LicenseTarget
+import org.octopusden.octopus.license.target.model.TargetResolution
 import org.springframework.core.task.TaskExecutor
 import org.springframework.core.task.TaskRejectedException
 import java.time.Clock
@@ -27,12 +33,26 @@ class LicenseReportServiceImplTest {
     private val store = LicenseReportStore(clock, Duration.ofHours(1), Long.MAX_VALUE)
     private val generator = object : LicenseReportGenerator {
         override fun generate(
-            component: String,
-            version: String,
+            target: LicenseTarget,
             mode: LicenseReportMode,
         ) = GeneratedReport(
             LicenseReportSummary(GenerationInputs(null, Instant.EPOCH, "test"), null, emptyMap(), emptyList()),
             byteArrayOf(),
+        )
+    }
+
+    private val resolver = object : LicenseTargetResolver {
+        override fun resolve(
+            component: String,
+            version: String,
+        ) = TargetResolution.Resolved(
+            LicenseTarget(
+                componentVersion = ComponentVersion(component, version),
+                artifactVersions = listOf(version),
+                buildSystem = "GRADLE",
+                labels = emptySet(),
+                distribution = DistributionSpec(emptyList(), emptyList()),
+            ),
         )
     }
 
@@ -50,7 +70,7 @@ class LicenseReportServiceImplTest {
             }
             throw TaskRejectedException("queue full")
         }
-        service = LicenseReportServiceImpl(store, generator, fullExecutor, clock)
+        service = LicenseReportServiceImpl(store, generator, resolver, fullExecutor, clock, SimpleMeterRegistry())
 
         assertThrows<ServiceBusyException> { service.start(REQUEST) }
 

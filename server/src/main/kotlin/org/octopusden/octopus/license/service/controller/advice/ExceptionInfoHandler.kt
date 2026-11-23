@@ -6,6 +6,7 @@ import org.octopusden.octopus.license.core.exception.InvalidRequestException
 import org.octopusden.octopus.license.core.exception.LicenseFilesNotAvailableException
 import org.octopusden.octopus.license.core.exception.NotFoundException
 import org.octopusden.octopus.license.core.exception.ServiceBusyException
+import org.octopusden.octopus.license.core.exception.ServiceUnavailableException
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpStatus
@@ -27,6 +28,9 @@ class ExceptionInfoHandler {
     @ExceptionHandler(ServiceBusyException::class)
     fun handleBusy(e: ServiceBusyException) =
         errorResponse(HttpStatus.SERVICE_UNAVAILABLE, e) { header(HttpHeaders.RETRY_AFTER, RETRY_AFTER_SECONDS.toString()) }
+
+    @ExceptionHandler(ServiceUnavailableException::class)
+    fun handleServiceUnavailable(e: ServiceUnavailableException) = errorResponse(HttpStatus.SERVICE_UNAVAILABLE, e)
 
     @ExceptionHandler(InvalidRequestException::class, HttpMessageNotReadableException::class)
     fun handleBadRequest(e: Exception) = errorResponse(HttpStatus.BAD_REQUEST, e)

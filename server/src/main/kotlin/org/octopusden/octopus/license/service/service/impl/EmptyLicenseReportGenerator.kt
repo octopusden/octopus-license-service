@@ -5,6 +5,7 @@ import org.octopusden.octopus.license.core.dto.LicenseReportMode
 import org.octopusden.octopus.license.core.dto.LicenseReportSummary
 import org.octopusden.octopus.license.service.service.GeneratedReport
 import org.octopusden.octopus.license.service.service.LicenseReportGenerator
+import org.octopusden.octopus.license.target.model.LicenseTarget
 import org.springframework.boot.info.BuildProperties
 import org.springframework.stereotype.Component
 import java.io.ByteArrayOutputStream
@@ -18,8 +19,7 @@ class EmptyLicenseReportGenerator(
     private val buildProperties: BuildProperties,
 ) : LicenseReportGenerator {
     override fun generate(
-        component: String,
-        version: String,
+        target: LicenseTarget,
         mode: LicenseReportMode,
     ) = GeneratedReport(
         LicenseReportSummary(

@@ -7,6 +7,7 @@ import org.octopusden.octopus.license.core.dto.LicenseReportRequest
 import org.octopusden.octopus.license.core.dto.LicenseReportStatus
 import org.octopusden.octopus.license.core.exception.NotFoundException
 import org.octopusden.octopus.license.core.exception.ServiceBusyException
+import org.octopusden.octopus.license.core.exception.ServiceUnavailableException
 import org.octopusden.octopus.license.core.exception.ServiceUnreachableException
 import java.time.Clock
 import java.time.Duration
@@ -90,11 +91,17 @@ class LicenseReportRunner(
                     return withinDeadline(action).also { backoff = FIRST_BACKOFF }
                 } catch (e: ServiceBusyException) {
                     pause(e.retryAfter ?: MAX_BACKOFF, e)
+                } catch (e: ServiceUnavailableException) {
+                    waitOut(e)
                 } catch (e: ServiceUnreachableException) {
-                    pause(backoff, e)
-                    backoff = minOf(backoff.multipliedBy(2), MAX_BACKOFF)
+                    waitOut(e)
                 }
             }
+        }
+
+        private fun waitOut(cause: Exception) {
+            pause(backoff, cause)
+            backoff = minOf(backoff.multipliedBy(2), MAX_BACKOFF)
         }
 
         private fun <T> withinDeadline(action: () -> T): T {

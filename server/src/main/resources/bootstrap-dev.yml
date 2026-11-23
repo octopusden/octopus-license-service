@@ -2,3 +2,6 @@ spring:
   cloud:
     config:
       enabled: false
+
+license-service:
+  components-registry-url: ${COMPONENTS_REGISTRY_URL}

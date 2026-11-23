@@ -18,6 +18,7 @@ import org.octopusden.octopus.license.core.dto.LicenseReportStatus.RUNNING
 import org.octopusden.octopus.license.core.exception.InvalidRequestException
 import org.octopusden.octopus.license.core.exception.NotFoundException
 import org.octopusden.octopus.license.core.exception.ServiceBusyException
+import org.octopusden.octopus.license.core.exception.ServiceUnavailableException
 import org.octopusden.octopus.license.core.exception.ServiceUnreachableException
 import java.time.Clock
 import java.time.Duration
@@ -94,6 +95,16 @@ class LicenseReportRunnerTest {
 
         assertInstanceOf(RunOutcome.Finished::class.java, runner(client).run(COMPONENT, VERSION))
         assertEquals(listOf(POLL_INTERVAL, FIRST_BACKOFF), sleeps)
+    }
+
+    @Test
+    @DisplayName("a components registry outage at start is waited out like a network error, not the end of the run")
+    fun registryOutageAtStartIsRetried() {
+        val client = ScriptedClient(startAnswers = listOf(registryDown(), status(RUNNING)), pollAnswers = listOf(status(DONE)))
+
+        assertInstanceOf(RunOutcome.Finished::class.java, runner(client).run(COMPONENT, VERSION))
+        assertEquals(2, client.starts)
+        assertEquals(FIRST_BACKOFF, sleeps.first())
     }
 
     @Test
@@ -266,6 +277,8 @@ class LicenseReportRunnerTest {
         fun status(status: LicenseReportStatus): () -> LicenseReport = { LicenseReport(REPORT_ID, COMPONENT, VERSION, status) }
 
         fun unreachable(): () -> LicenseReport = { throw ServiceUnreachableException("Connection refused") }
+
+        fun registryDown(): () -> LicenseReport = { throw ServiceUnavailableException("Components registry is unavailable") }
 
         fun busy(retryAfter: Duration): () -> LicenseReport = { throw ServiceBusyException("busy", retryAfter) }
 

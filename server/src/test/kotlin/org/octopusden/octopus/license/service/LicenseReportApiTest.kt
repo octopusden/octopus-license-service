@@ -1,5 +1,6 @@
 package org.octopusden.octopus.license.service
 
+import io.micrometer.core.instrument.MeterRegistry
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -21,9 +22,18 @@ import org.octopusden.octopus.license.core.dto.LicenseReportStatus
 import org.octopusden.octopus.license.core.exception.InvalidRequestException
 import org.octopusden.octopus.license.core.exception.LicenseFilesNotAvailableException
 import org.octopusden.octopus.license.core.exception.NotFoundException
+import org.octopusden.octopus.license.core.exception.ServiceUnavailableException
 import org.octopusden.octopus.license.service.service.GeneratedReport
 import org.octopusden.octopus.license.service.service.LicenseReportGenerator
 import org.octopusden.octopus.license.service.service.impl.EmptyLicenseReportGenerator
+import org.octopusden.octopus.license.target.LicenseTargetResolver
+import org.octopusden.octopus.license.target.exception.ComponentVersionNotFoundException
+import org.octopusden.octopus.license.target.exception.ComponentsRegistryUnavailableException
+import org.octopusden.octopus.license.target.exception.UnexpectedRegistryAnswerException
+import org.octopusden.octopus.license.target.model.ComponentVersion
+import org.octopusden.octopus.license.target.model.DistributionSpec
+import org.octopusden.octopus.license.target.model.LicenseTarget
+import org.octopusden.octopus.license.target.model.TargetResolution
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.info.BuildProperties
 import org.springframework.boot.test.context.SpringBootTest
@@ -40,12 +50,16 @@ import java.time.Clock
 import java.time.Duration
 import java.time.Instant
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.zip.ZipInputStream
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@SpringBootTest(
+    webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
+    properties = ["license-service.components-registry-url=http://localhost:1"],
+)
 class LicenseReportApiTest {
     @LocalServerPort
     private var port: Int = 0
@@ -55,6 +69,9 @@ class LicenseReportApiTest {
 
     @Autowired
     private lateinit var generator: ControllableGenerator
+
+    @Autowired
+    private lateinit var meterRegistry: MeterRegistry
 
     private val client: LicenseServiceClient by lazy {
         ClassicLicenseServiceClient(
@@ -66,6 +83,86 @@ class LicenseReportApiTest {
 
     @AfterEach
     fun releaseSlowGenerations() = generator.release()
+
+    @Test
+    @DisplayName("the generation receives the license target the registry resolved for the version")
+    fun generationReceivesTarget() {
+        awaitFinished(client.startReport(LicenseReportRequest(COMPONENT, VERSION)).id)
+
+        assertTrue(targetOf(COMPONENT) in generator.targets, "generated for ${generator.targets}")
+    }
+
+    @Test
+    @DisplayName("an excluded component is EXCLUDED at once with the reason, and nothing is generated")
+    fun excludedComponent() {
+        val started = client.startReport(LicenseReportRequest(EXCLUDED_COMPONENT, VERSION))
+
+        assertEquals(LicenseReportStatus.EXCLUDED, started.status)
+        assertEquals(EXCLUSION_REASON, started.exclusionReason)
+        assertEquals(started, client.getReport(started.id))
+        assertTrue(generator.targets.none { it.componentVersion.component == EXCLUDED_COMPONENT })
+        assertThrows<LicenseFilesNotAvailableException> { client.downloadFiles(started.id) }
+    }
+
+    @Test
+    @DisplayName("an unknown component version answers 404 in the error envelope")
+    fun unknownComponentVersion() {
+        val response = send(
+            HttpRequest
+                .newBuilder(URI("http://localhost:$port/rest/api/1/license-reports"))
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString("""{"component":"$UNKNOWN_COMPONENT","version":"$VERSION"}""")),
+        )
+
+        assertEquals(HTTP_NOT_FOUND, response.statusCode())
+        assertTrue(response.body().startsWith("""{"error":{"code":404,"""), response.body())
+        assertThrows<NotFoundException> { client.startReport(LicenseReportRequest(UNKNOWN_COMPONENT, VERSION)) }
+    }
+
+    @Test
+    @DisplayName("an unexpected registry answer is a 500 that names neither the registry's URL nor its body")
+    fun unexpectedRegistryAnswer() {
+        val response = send(
+            HttpRequest
+                .newBuilder(URI("http://localhost:$port/rest/api/1/license-reports"))
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString("""{"component":"$REGISTRY_FORBIDDEN_COMPONENT","version":"$VERSION"}""")),
+        )
+
+        assertEquals(HTTP_INTERNAL_SERVER_ERROR, response.statusCode())
+        assertFalse(response.body().contains(UPSTREAM_DETAIL), response.body())
+    }
+
+    @Test
+    @DisplayName("an unreachable components registry answers 503, a ServiceUnavailableException for the client")
+    fun registryUnavailable() {
+        assertThrows<ServiceUnavailableException> {
+            client.startReport(LicenseReportRequest(REGISTRY_DOWN_COMPONENT, VERSION))
+        }
+    }
+
+    @Test
+    @DisplayName(
+        "every license target resolution is counted by its outcome, so a registry outage or a registry refusing us shows as a metric",
+    )
+    fun resolutionsCountedByOutcome() {
+        val before = OUTCOMES.associateWith { resolutions(it) }
+
+        client.startReport(LicenseReportRequest(COMPONENT, VERSION))
+        client.startReport(LicenseReportRequest(EXCLUDED_COMPONENT, VERSION))
+        assertThrows<NotFoundException> { client.startReport(LicenseReportRequest(UNKNOWN_COMPONENT, VERSION)) }
+        assertThrows<ServiceUnavailableException> { client.startReport(LicenseReportRequest(REGISTRY_DOWN_COMPONENT, VERSION)) }
+        assertThrows<RuntimeException> { client.startReport(LicenseReportRequest(REGISTRY_FORBIDDEN_COMPONENT, VERSION)) }
+
+        assertEquals(OUTCOMES.associateWith { before.getValue(it) + 1 }, OUTCOMES.associateWith { resolutions(it) })
+    }
+
+    private fun resolutions(outcome: String): Double =
+        meterRegistry
+            .find("license.target.resolutions")
+            .tag("outcome", outcome)
+            .counter()
+            ?.count() ?: 0.0
 
     @Test
     @DisplayName("a started report finishes DONE with an empty summary and an empty zip")
@@ -270,11 +367,13 @@ class LicenseReportApiTest {
 
     /**
      * The real generator for every component but two: [SLOW_COMPONENT] waits until the test
-     * releases it, and [BROKEN_COMPONENT] throws.
+     * releases it, and [BROKEN_COMPONENT] throws. Records every target it was given.
      */
     class ControllableGenerator(
         private val delegate: LicenseReportGenerator,
     ) : LicenseReportGenerator {
+        val targets = CopyOnWriteArrayList<LicenseTarget>()
+
         @Volatile
         private var slowGate = CountDownLatch(1)
 
@@ -285,31 +384,44 @@ class LicenseReportApiTest {
             slowGate = CountDownLatch(1)
         }
 
-        fun generations(componentVersion: String) = generationCounts[componentVersion]?.get() ?: 0
-
         override fun generate(
-            component: String,
-            version: String,
+            target: LicenseTarget,
             mode: LicenseReportMode,
         ): GeneratedReport {
+            targets += target
+            val (component, version) = target.componentVersion
             generationCounts.computeIfAbsent("$component:$version") { AtomicInteger() }.incrementAndGet()
-            return generateFor(component, version, mode)
+            return when (component) {
+                SLOW_COMPONENT -> slowGate.await(AWAIT_TIMEOUT.seconds, TimeUnit.SECONDS).let { delegate.generate(target, mode) }
+                BROKEN_COMPONENT -> error("Xray is unreachable")
+                else -> delegate.generate(target, mode)
+            }
         }
 
-        private fun generateFor(
+        fun generations(componentVersion: String) = generationCounts[componentVersion]?.get() ?: 0
+    }
+
+    /** Stands in for the components registry: two components fail, one is excluded, the rest resolve. */
+    class FakeTargetResolver : LicenseTargetResolver {
+        override fun resolve(
             component: String,
             version: String,
-            mode: LicenseReportMode,
-        ): GeneratedReport =
+        ): TargetResolution =
             when (component) {
-                SLOW_COMPONENT ->
-                    slowGate
-                        .await(
-                            AWAIT_TIMEOUT.seconds,
-                            TimeUnit.SECONDS,
-                        ).let { delegate.generate(component, version, mode) }
-                BROKEN_COMPONENT -> error("Xray is unreachable")
-                else -> delegate.generate(component, version, mode)
+                UNKNOWN_COMPONENT -> throw ComponentVersionNotFoundException(
+                    "Component version $component:$version is not found",
+                    IllegalStateException("registry answered 404"),
+                )
+                REGISTRY_DOWN_COMPONENT -> throw ComponentsRegistryUnavailableException(
+                    "Components registry is unavailable",
+                    IllegalStateException("connection refused"),
+                )
+                REGISTRY_FORBIDDEN_COMPONENT -> throw UnexpectedRegistryAnswerException(
+                    "Components registry answered 403 for $component:$version",
+                    IllegalStateException("http://registry.example/... answered <html>$UPSTREAM_DETAIL</html>"),
+                )
+                EXCLUDED_COMPONENT -> TargetResolution.Excluded(ComponentVersion(component, version), EXCLUSION_REASON)
+                else -> TargetResolution.Resolved(targetOf(component, version))
             }
     }
 
@@ -321,17 +433,29 @@ class LicenseReportApiTest {
             clock: Clock,
             buildProperties: BuildProperties,
         ) = ControllableGenerator(EmptyLicenseReportGenerator(clock, buildProperties))
+
+        @Bean
+        @Primary
+        fun fakeTargetResolver(): LicenseTargetResolver = FakeTargetResolver()
     }
 
     private companion object {
         const val COMPONENT = "some-component"
         const val SLOW_COMPONENT = "slow-component"
         const val BROKEN_COMPONENT = "broken-component"
+        const val EXCLUDED_COMPONENT = "doc_user_guide"
+        const val EXCLUSION_REASON = "Documentation component"
+        const val UNKNOWN_COMPONENT = "no-such-component"
+        const val REGISTRY_DOWN_COMPONENT = "registry-down-component"
+        const val REGISTRY_FORBIDDEN_COMPONENT = "registry-forbidden-component"
+        const val UPSTREAM_DETAIL = "secret-upstream-detail"
         const val VERSION = "1.2.3"
         const val JOINED_VERSION = "2.0.0-joined"
         const val CHECK_VERSION = "3.0.0-check"
+        val OUTCOMES = listOf("resolved", "excluded", "not_found", "unavailable", "error")
         const val UNKNOWN_ID = "00000000-0000-0000-0000-000000000000"
         const val HTTP_OK = 200
+        const val HTTP_INTERNAL_SERVER_ERROR = 500
         const val HTTP_ACCEPTED = 202
         const val HTTP_FOUND = 302
         const val HTTP_BAD_REQUEST = 400
@@ -339,5 +463,16 @@ class LicenseReportApiTest {
         const val HTTP_METHOD_NOT_ALLOWED = 405
         const val POLL_INTERVAL_MS = 50L
         val AWAIT_TIMEOUT: Duration = Duration.ofSeconds(10)
+
+        fun targetOf(
+            component: String,
+            version: String = VERSION,
+        ) = LicenseTarget(
+            componentVersion = ComponentVersion(component, version),
+            artifactVersions = listOf(version),
+            buildSystem = "GRADLE",
+            labels = emptySet(),
+            distribution = DistributionSpec(declared = emptyList(), patterns = emptyList()),
+        )
     }
 }

@@ -1,5 +1,6 @@
 package org.octopusden.octopus.license.service.configuration
 
+import org.octopusden.octopus.license.target.model.ConfiguredExclusion
 import org.springframework.boot.context.properties.ConfigurationProperties
 import org.springframework.util.unit.DataSize
 import java.time.Duration
@@ -12,6 +13,11 @@ import java.time.Duration
  * as busy.
  * @param maxStoredBytes how much license files the finished reports hold in memory; past it, the
  * oldest finished reports go before their TTL ends.
+ * @param componentsRegistryUrl required; nullable only so its absence is reported by name at startup.
+ * @param exclusions components out of scope that no registry fact identifies, grouped by reason.
+ * @param componentsRegistryDeadline how long starting a report waits for the components registry;
+ * past it, the start answers unavailable. Below the published client's 60 s read timeout, so the
+ * caller gets that answer instead of giving up on a start that may still register a report.
  */
 @ConfigurationProperties("license-service")
 data class LicenseServiceProperties(
@@ -19,4 +25,7 @@ data class LicenseServiceProperties(
     val generationThreads: Int = 4,
     val maxQueuedReports: Int = 50,
     val maxStoredBytes: DataSize = DataSize.ofMegabytes(512),
+    val componentsRegistryUrl: String? = null,
+    val exclusions: List<ConfiguredExclusion> = emptyList(),
+    val componentsRegistryDeadline: Duration = Duration.ofSeconds(45),
 )
