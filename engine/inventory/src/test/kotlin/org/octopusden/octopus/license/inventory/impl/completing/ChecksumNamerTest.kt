@@ -11,6 +11,7 @@ import org.octopusden.octopus.license.inventory.impl.stored
 import org.octopusden.octopus.license.inventory.model.Evidence.BINARY_SCAN
 import org.octopusden.octopus.license.inventory.model.Evidence.CHECKSUM_MATCH
 import org.octopusden.octopus.license.inventory.model.FoundLibrary
+import org.octopusden.octopus.license.inventory.model.LicenseSource
 import org.octopusden.octopus.license.inventory.model.PackageId
 
 class ChecksumNamerTest {
@@ -137,7 +138,16 @@ class ChecksumNamerTest {
         namer.name(table)
 
         assertEquals(
-            listOf(FoundLibrary(netty, setOf("Apache-2.0"), setOf(BINARY_SCAN, CHECKSUM_MATCH), setOf("image", "zip"), false)),
+            listOf(
+                FoundLibrary(
+                    netty,
+                    setOf("Apache-2.0"),
+                    setOf(BINARY_SCAN, CHECKSUM_MATCH),
+                    setOf("image", "zip"),
+                    false,
+                    mapOf(LicenseSource.BINARY_SCAN to setOf("Apache-2.0")),
+                ),
+            ),
             table.libraries(),
         )
     }

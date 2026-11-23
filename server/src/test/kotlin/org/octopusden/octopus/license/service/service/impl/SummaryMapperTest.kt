@@ -7,6 +7,9 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.EnumSource
 import org.octopusden.octopus.license.core.dto.FileTrust
 import org.octopusden.octopus.license.core.dto.GenerationInputs
+import org.octopusden.octopus.license.core.dto.LicenseDisagreement
+import org.octopusden.octopus.license.core.dto.LicenseReportMode
+import org.octopusden.octopus.license.core.dto.MissingLicenseText
 import org.octopusden.octopus.license.core.dto.Trust
 import org.octopusden.octopus.license.core.dto.TrustLevel
 import org.octopusden.octopus.license.core.dto.TrustReason
@@ -16,13 +19,21 @@ import org.octopusden.octopus.license.evaluation.model.AssessedLibrary
 import org.octopusden.octopus.license.evaluation.model.LibraryVerdict
 import org.octopusden.octopus.license.evaluation.model.LicenseAssessment
 import org.octopusden.octopus.license.evaluation.model.SkippedPackages
+import org.octopusden.octopus.license.evaluation.model.SourceDisagreement
+import org.octopusden.octopus.license.files.model.MissingText
 import org.octopusden.octopus.license.inventory.model.Evidence
+import org.octopusden.octopus.license.inventory.model.FileKind
+import org.octopusden.octopus.license.inventory.model.FileStatus
 import org.octopusden.octopus.license.inventory.model.FoundLibrary
 import org.octopusden.octopus.license.inventory.model.LicenseInventory
+import org.octopusden.octopus.license.inventory.model.LicenseSource
 import org.octopusden.octopus.license.inventory.model.PackageId
+import org.octopusden.octopus.license.inventory.model.ReleasedFile
+import org.octopusden.octopus.license.inventory.model.SelectionReason
 import org.octopusden.octopus.license.target.model.ComponentVersion
 import org.octopusden.octopus.license.trust.model.TrustGrade
 import java.time.Instant
+import org.octopusden.octopus.license.files.model.MissingTextReason as EngineMissingReason
 import org.octopusden.octopus.license.trust.model.FileTrust as GradedFile
 import org.octopusden.octopus.license.trust.model.TrustReason as GradedReason
 import org.octopusden.octopus.license.trust.model.TrustReasonCode as GradedCode
@@ -31,6 +42,9 @@ class SummaryMapperTest {
     private val high = TrustGrade(emptyList(), emptyList())
     private val inputs = GenerationInputs("a1b2c3d", Instant.parse("2026-11-11T10:00:00Z"), "1.0.0")
     private val checksumOnly = "generic://sha256:${"cd".repeat(32)}/vendor-blob.so"
+    private val leftPad = assessed("pkg:npm/left-pad@1.3.0", LibraryVerdict.UNKNOWN, foundIn = setOf(ZIP, IMAGE))
+    private val buildRecordOnly = setOf(Evidence.BUILD_RECORD)
+    private val scanned = setOf(Evidence.BINARY_SCAN, Evidence.BUILD_RECORD)
 
     // The design's worked example, as evaluation assesses it.
     private val workedExample =
@@ -159,6 +173,100 @@ class SummaryMapperTest {
     @DisplayName("the inputs are carried as given")
     fun inputs() {
         assertEquals(inputs, SummaryMapper.map(workedExample, high, inputs).inputs)
+    }
+
+    private fun withFiles(
+        library: AssessedLibrary,
+        vararg files: Pair<String, Set<Evidence>>,
+    ) = LicenseAssessment(
+        LicenseInventory(
+            ComponentVersion("sample-portal", "2.4.0"),
+            emptyList(),
+            files.map { (entry, evidence) ->
+                ReleasedFile(entry, FileKind.MAVEN, setOf(SelectionReason.DECLARED), status = FileStatus.READ, evidence = evidence)
+            },
+            listOf(library.library),
+            emptyList(),
+        ),
+        listOf(library),
+        SkippedPackages(0, 0, emptyMap()),
+    )
+
+    @Test
+    @DisplayName("CHECK: a violation in files Xray has not scanned yet is preliminary (D11)")
+    fun preliminary() {
+        val summary =
+            SummaryMapper.map(withFiles(leftPad, ZIP to buildRecordOnly, IMAGE to buildRecordOnly), high, inputs, LicenseReportMode.CHECK)
+        assertEquals(listOf(true), summary.violations.map { it.preliminary })
+    }
+
+    @Test
+    @DisplayName("CHECK: a violation in one file Xray has scanned is not preliminary (D11)")
+    fun seenByXray() {
+        val summary = SummaryMapper.map(withFiles(leftPad, ZIP to buildRecordOnly, IMAGE to scanned), high, inputs, LicenseReportMode.CHECK)
+        assertEquals(listOf(false), summary.violations.map { it.preliminary })
+    }
+
+    @Test
+    @DisplayName("FULL: a violation is never preliminary, whatever Xray saw (D11)")
+    fun fullNeverPreliminary() {
+        val summary = SummaryMapper.map(
+            withFiles(leftPad, ZIP to buildRecordOnly, IMAGE to buildRecordOnly),
+            high,
+            inputs,
+            LicenseReportMode.FULL,
+        )
+        assertEquals(listOf(false), summary.violations.map { it.preliminary })
+    }
+
+    @Test
+    @DisplayName("the missing license texts are carried one to one (D8)")
+    fun missingTexts() {
+        val missing =
+            listOf(
+                MissingText("GWT", EngineMissingReason.DOWNLOAD_FAILED, "http://www.gwtproject.org/terms.html"),
+                MissingText("SSPL-1.0", EngineMissingReason.NO_REGISTRY_ENTRY),
+            )
+        assertEquals(
+            listOf(
+                MissingLicenseText("GWT", "DOWNLOAD_FAILED", "http://www.gwtproject.org/terms.html"),
+                MissingLicenseText("SSPL-1.0", "NO_REGISTRY_ENTRY"),
+            ),
+            SummaryMapper.map(workedExample, high, inputs, missingTexts = missing).missingLicenseTexts,
+        )
+    }
+
+    @Test
+    @DisplayName(
+        "a third-party library whose sources disagree is listed with each source's names and its verdict (write-license-files D12)",
+    )
+    fun disagreements() {
+        val disagreeing =
+            AssessedLibrary(
+                FoundLibrary(
+                    PackageId.parse("pkg:npm/left-pad@1.3.0"),
+                    setOf("GPL-3.0", "MIT"),
+                    setOf(Evidence.BINARY_SCAN),
+                    setOf(ZIP, IMAGE),
+                    false,
+                ),
+                LibraryVerdict.ALLOWED,
+                listOf("GPL-3.0", "MIT"),
+                false,
+                SourceDisagreement(mapOf(LicenseSource.BINARY_SCAN to listOf("GPL-3.0"), LicenseSource.SBOM to listOf("MIT"))),
+            )
+
+        assertEquals(
+            listOf(
+                LicenseDisagreement(
+                    "pkg:npm/left-pad@1.3.0",
+                    Verdict.ALLOWED,
+                    mapOf("BINARY_SCAN" to listOf("GPL-3.0"), "SBOM" to listOf("MIT")),
+                    listOf(ZIP, IMAGE),
+                ),
+            ),
+            SummaryMapper.map(assessment(disagreeing), high, inputs).licenseDisagreements,
+        )
     }
 
     private companion object {

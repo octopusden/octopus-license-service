@@ -67,9 +67,21 @@ object BuildLog {
             .joinToString(", ") { "${it.key} ${it.value}" }
             .ifEmpty { "none" }
         val violations = summary.violations.map {
-            LogLine("${it.library} is ${it.verdict} (${it.licenses.joinToString(", ")}) in ${it.files.joinToString(", ")}", warning = true)
+            val note = if (it.preliminary) " (preliminary: Xray has not scanned these files yet)" else ""
+            LogLine(
+                "${it.library} is ${it.verdict} (${it.licenses.joinToString(", ")}) in ${it.files.joinToString(", ")}$note",
+                warning = true,
+            )
         }
-        return listOf(generated) + trustLines + LogLine("Libraries: $libraries") + violations
+        val missingTexts = summary.missingLicenseTexts.map {
+            LogLine("License text of ${it.license} missing: ${it.reason}" + (it.url?.let { url -> " ($url)" } ?: ""), warning = true)
+        }
+        val disagreements = summary.licenseDisagreements.map { disagreement ->
+            val sources = disagreement.bySource.entries.joinToString(", ") { (source, names) -> "$source (${names.joinToString(", ")})" }
+            val files = disagreement.files.joinToString(", ")
+            LogLine("${disagreement.library} is ${disagreement.verdict}, but its sources disagree: $sources in $files", warning = true)
+        }
+        return listOf(generated) + trustLines + LogLine("Libraries: $libraries") + violations + missingTexts + disagreements
     }
 
     private fun trustLines(

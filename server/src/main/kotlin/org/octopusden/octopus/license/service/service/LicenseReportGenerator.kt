@@ -20,8 +20,8 @@ interface LicenseReportGenerator {
     ): GeneratedReport
 }
 
-/** [files] is the zip of license files, ready to download. */
+/** [files] is the zip of license files, ready to download; null for a CHECK, which writes none. */
 class GeneratedReport(
     val summary: LicenseReportSummary,
-    val files: ByteArray,
+    val files: ByteArray?,
 )
