@@ -42,6 +42,7 @@ dependencies {
     implementation(project(":license-policy-registry"))
     implementation(project(":license-inventory"))
     implementation(project(":license-evaluation"))
+    implementation(project(":license-trust"))
 
     implementation(platform("org.springframework.boot:spring-boot-dependencies:${project.property("spring-boot.version")}"))
     implementation(platform("org.springframework.cloud:spring-cloud-dependencies:${project.property("spring-cloud.version")}"))

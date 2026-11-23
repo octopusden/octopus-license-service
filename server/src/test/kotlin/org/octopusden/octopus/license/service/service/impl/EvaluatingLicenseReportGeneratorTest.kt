@@ -7,21 +7,27 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.octopusden.octopus.license.core.dto.GenerationInputs
 import org.octopusden.octopus.license.core.dto.LicenseReportMode
+import org.octopusden.octopus.license.core.dto.TrustLevel
 import org.octopusden.octopus.license.core.dto.Verdict
 import org.octopusden.octopus.license.core.dto.Violation
 import org.octopusden.octopus.license.evaluation.LicenseEvaluator
 import org.octopusden.octopus.license.inventory.LicenseInventoryScanner
 import org.octopusden.octopus.license.inventory.exception.InventorySourceUnavailableException
 import org.octopusden.octopus.license.inventory.model.Evidence
+import org.octopusden.octopus.license.inventory.model.FileKind
+import org.octopusden.octopus.license.inventory.model.FileStatus
 import org.octopusden.octopus.license.inventory.model.FoundLibrary
 import org.octopusden.octopus.license.inventory.model.LicenseInventory
 import org.octopusden.octopus.license.inventory.model.PackageId
+import org.octopusden.octopus.license.inventory.model.ReleasedFile
+import org.octopusden.octopus.license.inventory.model.SelectionReason
 import org.octopusden.octopus.license.service.configuration.LicenseServiceProperties
 import org.octopusden.octopus.license.service.configuration.XrayProperties
 import org.octopusden.octopus.license.service.state.policy.LicensePolicyRefresherTest.Companion.samplePolicy
 import org.octopusden.octopus.license.target.model.ComponentVersion
 import org.octopusden.octopus.license.target.model.DistributionSpec
 import org.octopusden.octopus.license.target.model.LicenseTarget
+import org.octopusden.octopus.license.trust.TrustGrader
 import org.springframework.boot.info.BuildProperties
 import java.time.Clock
 import java.time.Duration
@@ -56,6 +62,7 @@ class EvaluatingLicenseReportGeneratorTest {
                 }
             },
             LicenseEvaluator(),
+            TrustGrader(),
             LicenseServiceProperties(xray = XrayProperties(scanTimeout = FULL_WAIT)),
             Clock.fixed(now, ZoneOffset.UTC),
             BuildProperties(Properties().apply { setProperty("version", "1.0.0") }),
@@ -132,6 +139,41 @@ class EvaluatingLicenseReportGeneratorTest {
         generator.generate(target, LicenseReportMode.CHECK, samplePolicy("a1b2c3d"))
 
         assertEquals(listOf(FULL_WAIT, Duration.ZERO), waits)
+    }
+
+    @Test
+    @DisplayName("the assessment is graded with the target's registry labels, and the grade is the summary's trust")
+    fun graded() {
+        val zip =
+            ReleasedFile(
+                ZIP,
+                FileKind.MAVEN,
+                setOf(SelectionReason.DECLARED),
+                status = FileStatus.READ,
+                evidence = setOf(Evidence.BINARY_SCAN, Evidence.BUILD_RECORD),
+            )
+        val scanned =
+            LicenseInventory(
+                target.componentVersion,
+                emptyList(),
+                listOf(zip),
+                listOf(library("pkg:maven/org.example/sample-lib@1.5", setOf("MIT"))),
+                emptyList(),
+            )
+
+        val unlabelled = generator { scanned }.generate(target, LicenseReportMode.FULL, samplePolicy("a1b2c3d")).summary.trust
+        val javascript =
+            generator { scanned }
+                .generate(
+                    target.copy(labels = setOf("javascript")),
+                    LicenseReportMode.FULL,
+                    samplePolicy("a1b2c3d"),
+                ).summary.trust
+
+        assertEquals(TrustLevel.HIGH, unlabelled.level)
+        assertEquals(listOf(ZIP), unlabelled.files.map { it.file })
+        assertEquals(TrustLevel.LOW, javascript.level)
+        assertEquals(listOf("ECOSYSTEM_NOT_DETECTED"), javascript.reasons.map { it.code })
     }
 
     private companion object {

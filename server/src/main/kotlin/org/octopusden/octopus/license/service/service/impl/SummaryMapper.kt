@@ -1,26 +1,33 @@
 package org.octopusden.octopus.license.service.service.impl
 
+import org.octopusden.octopus.license.core.dto.FileTrust
 import org.octopusden.octopus.license.core.dto.GenerationInputs
 import org.octopusden.octopus.license.core.dto.LicenseReportSummary
+import org.octopusden.octopus.license.core.dto.Trust
+import org.octopusden.octopus.license.core.dto.TrustLevel
+import org.octopusden.octopus.license.core.dto.TrustReason
 import org.octopusden.octopus.license.core.dto.Verdict
 import org.octopusden.octopus.license.core.dto.Violation
 import org.octopusden.octopus.license.evaluation.model.LibraryVerdict
 import org.octopusden.octopus.license.evaluation.model.LicenseAssessment
+import org.octopusden.octopus.license.trust.model.TrustGrade
+import org.octopusden.octopus.license.trust.model.TrustLevel as GradedLevel
 
 /**
- * Narrows an assessment to what a caller decides a build outcome on: third-party libraries only,
- * counted per verdict and listed when not allowed (evaluation design, D9). Trust stays null until
- * grading exists.
+ * Narrows an assessment and its grade to what a caller decides a build outcome on: third-party
+ * libraries only, counted per verdict and listed when not allowed (evaluation design, D9), and the
+ * grade one to one, each reason with its code's texts (trust design, D8).
  */
 internal object SummaryMapper {
     fun map(
         assessment: LicenseAssessment,
+        grade: TrustGrade,
         inputs: GenerationInputs,
     ): LicenseReportSummary {
         val thirdParty = assessment.libraries.mapNotNull { library -> wireVerdict(library.verdict)?.let { library to it } }
         return LicenseReportSummary(
             inputs = inputs,
-            trust = null,
+            trust = trust(grade),
             libraryCounts = Verdict.entries.associateWith { verdict -> thirdParty.count { it.second == verdict } },
             violations =
                 thirdParty
@@ -30,6 +37,18 @@ internal object SummaryMapper {
                     },
         )
     }
+
+    private fun trust(grade: TrustGrade) =
+        Trust(
+            level = wireLevel(grade.level),
+            reasons =
+                grade.reasons.map {
+                    TrustReason(it.code.name, wireLevel(it.code.level), it.code.title, it.detail, it.code.meaning, it.code.fix)
+                },
+            files = grade.files.map { FileTrust(it.entry, wireLevel(it.level), it.reasons.map { code -> code.name }) },
+        )
+
+    private fun wireLevel(level: GradedLevel) = TrustLevel.valueOf(level.name)
 
     /** Null for our own libraries: the wire speaks of third-party libraries only. */
     private fun wireVerdict(verdict: LibraryVerdict) =

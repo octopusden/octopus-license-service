@@ -11,6 +11,7 @@ import org.octopusden.octopus.license.service.configuration.LicenseServiceProper
 import org.octopusden.octopus.license.service.service.GeneratedReport
 import org.octopusden.octopus.license.service.service.LicenseReportGenerator
 import org.octopusden.octopus.license.target.model.LicenseTarget
+import org.octopusden.octopus.license.trust.TrustGrader
 import org.springframework.boot.info.BuildProperties
 import org.springframework.stereotype.Component
 import java.io.ByteArrayOutputStream
@@ -19,8 +20,9 @@ import java.time.Duration
 import java.util.zip.ZipOutputStream
 
 /**
- * Scans the target, evaluates the inventory with the policy the report started with, and maps the
- * assessment into the summary. The zip stays empty until the license files are written.
+ * Scans the target, evaluates the inventory with the policy the report started with, grades the
+ * assessment with the target's registry labels, and maps both into the summary. The zip stays empty
+ * until the license files are written.
  *
  * A FULL report waits for Xray up to `license-service.xray.scan-timeout`; a CHECK, a regular
  * build's optimistic check, does not wait at all (evaluation design, D10).
@@ -32,6 +34,7 @@ import java.util.zip.ZipOutputStream
 class EvaluatingLicenseReportGenerator(
     private val scanner: LicenseInventoryScanner,
     private val evaluator: LicenseEvaluator,
+    private val grader: TrustGrader,
     private val properties: LicenseServiceProperties,
     private val clock: Clock,
     private val buildProperties: BuildProperties,
@@ -58,7 +61,8 @@ class EvaluatingLicenseReportGenerator(
                 generatedAt = clock.instant(),
                 serviceVersion = requireNotNull(buildProperties.version) { "build-info carries no version" },
             )
-        return GeneratedReport(SummaryMapper.map(evaluator.evaluate(inventory, policy), inputs), emptyZip())
+        val assessment = evaluator.evaluate(inventory, policy)
+        return GeneratedReport(SummaryMapper.map(assessment, grader.grade(assessment, target.labels), inputs), emptyZip())
     }
 
     private fun countScan(outcome: String) = meterRegistry.counter(SCANS_METRIC, "outcome", outcome).increment()

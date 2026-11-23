@@ -3,6 +3,7 @@ package org.octopusden.octopus.license.runner
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
+import org.octopusden.octopus.license.core.dto.FileTrust
 import org.octopusden.octopus.license.core.dto.GenerationInputs
 import org.octopusden.octopus.license.core.dto.LicenseReport
 import org.octopusden.octopus.license.core.dto.LicenseReportMode
@@ -16,6 +17,16 @@ import org.octopusden.octopus.license.core.dto.Violation
 import java.time.Instant
 
 class BuildLogTest {
+    private val notIndexed =
+        TrustReason(
+            "BUILD_LIST_ONLY",
+            TrustLevel.LOW,
+            "Only the build's list used",
+            "not indexed in Xray: app.jar",
+            "what it means",
+            "Add the repository to Xray's indexed resources, or reindex the file.",
+        )
+
     @Test
     @DisplayName("a clean DONE report gives no warning")
     fun cleanReportHasNoWarning() {
@@ -25,7 +36,7 @@ class BuildLogTest {
             listOf(
                 LogLine("License report for some-component:1.2.3: DONE"),
                 LogLine("Generated 2026-11-04T10:00:00Z by license service 1.0.0, license registry commit unknown"),
-                LogLine("Trust: not computed"),
+                LogLine("Trust: HIGH"),
                 LogLine("Libraries: none"),
             ),
             lines,
@@ -49,15 +60,134 @@ class BuildLogTest {
     }
 
     @Test
-    @DisplayName("Build outcome: trust LOW is a warning with its reasons and fixes")
+    @DisplayName("Build outcome: trust LOW is a warning: each reason with its detail and fix, then each file below HIGH")
     fun lowTrustIsWarning() {
-        val summary = summary(trust = Trust(TrustLevel.LOW, listOf(TrustReason("app.jar has no build-info", "publish build-info"))))
+        val trust =
+            Trust(
+                TrustLevel.LOW,
+                listOf(
+                    reason(
+                        "PARTIAL_ARTIFACTS",
+                        TrustLevel.LOW,
+                        "Only some files checked",
+                        "1 of 2 registered artifacts checked",
+                    ),
+                ),
+                listOf(
+                    FileTrust("app.jar", TrustLevel.HIGH, emptyList()),
+                    FileTrust("app.war", TrustLevel.NONE, listOf("ARTIFACT_NOT_FOUND")),
+                ),
+            )
 
-        val lines = BuildLog.lines(COMPONENT, VERSION, finished(summary))
+        val lines = BuildLog.lines(COMPONENT, VERSION, finished(summary(trust = trust)))
 
-        assertEquals(LogLine("Trust: LOW", warning = true), lines[2])
-        assertEquals(LogLine("  app.jar has no build-info; fix: publish build-info", warning = true), lines[3])
+        assertEquals(
+            listOf(
+                LogLine("Trust: LOW", warning = true),
+                LogLine("  LOW Only some files checked: 1 of 2 registered artifacts checked. Fix: fix it.", warning = true),
+                LogLine("  app.war: NONE (ARTIFACT_NOT_FOUND)", warning = true),
+                LogLine("Libraries: none"),
+            ),
+            lines.subList(2, 6),
+        )
     }
+
+    @Test
+    @DisplayName("trust MEDIUM is shown, but not as a warning")
+    fun mediumTrustIsNoWarning() {
+        val trust =
+            Trust(
+                TrustLevel.MEDIUM,
+                listOf(reason("NO_BUILD_RECORD", TrustLevel.MEDIUM, "No build record", "no build for: app.jar")),
+                listOf(FileTrust("app.jar", TrustLevel.MEDIUM, listOf("NO_BUILD_RECORD"))),
+            )
+
+        val lines = BuildLog.lines(COMPONENT, VERSION, finished(summary(trust = trust)))
+
+        assertEquals(
+            listOf(
+                LogLine("Trust: MEDIUM"),
+                LogLine("  MEDIUM No build record: no build for: app.jar. Fix: fix it."),
+                LogLine("  app.jar: MEDIUM (NO_BUILD_RECORD)"),
+            ),
+            lines.subList(2, 5),
+        )
+    }
+
+    private fun checked(trust: Trust) =
+        BuildLog.lines(
+            COMPONENT,
+            VERSION,
+            RunOutcome.Finished(
+                LicenseReport(REPORT_ID, COMPONENT, VERSION, LicenseReportStatus.DONE, LicenseReportMode.CHECK, summary(trust = trust)),
+                byteArrayOf(),
+            ),
+        )
+
+    @Test
+    @DisplayName("a check whose only doubt is a file Xray has not indexed yet warns about nothing, and says the full report waits for it")
+    fun checkNotIndexedYet() {
+        val trust =
+            Trust(TrustLevel.LOW, listOf(notIndexed), listOf(FileTrust("app.jar", TrustLevel.LOW, listOf("BUILD_LIST_ONLY"))))
+
+        assertEquals(
+            listOf(
+                LogLine("Trust: LOW"),
+                LogLine(
+                    "  LOW Only the build's list used: not indexed in Xray: app.jar. " +
+                        "Xray has not indexed it yet; the full report at RC or RELEASE waits for it.",
+                ),
+                LogLine("  app.jar: LOW (BUILD_LIST_ONLY)"),
+            ),
+            checked(trust).subList(2, 5),
+        )
+    }
+
+    @Test
+    @DisplayName("a check with another LOW reason still warns, except on the file Xray has not indexed yet")
+    fun checkWithAnotherReason() {
+        val partial =
+            reason("PARTIAL_ARTIFACTS", TrustLevel.LOW, "Only some files checked", "1 of 2 registered artifacts checked")
+        val trust =
+            Trust(
+                TrustLevel.LOW,
+                listOf(partial, notIndexed),
+                listOf(
+                    FileTrust("app.jar", TrustLevel.LOW, listOf("BUILD_LIST_ONLY")),
+                    FileTrust("app.war", TrustLevel.NONE, listOf("ARTIFACT_NOT_FOUND")),
+                ),
+            )
+
+        assertEquals(
+            listOf(true, true, false, false, true),
+            checked(trust).subList(2, 7).map { it.warning },
+        )
+    }
+
+    @Test
+    @DisplayName("a full report keeps warning on a file Xray has not indexed, with the registry's fix: it waited for Xray")
+    fun fullNotIndexed() {
+        val trust =
+            Trust(TrustLevel.LOW, listOf(notIndexed), listOf(FileTrust("app.jar", TrustLevel.LOW, listOf("BUILD_LIST_ONLY"))))
+
+        val lines = BuildLog.lines(COMPONENT, VERSION, finished(summary(trust = trust)))
+
+        assertEquals(
+            LogLine(
+                "  LOW Only the build's list used: not indexed in Xray: app.jar. " +
+                    "Fix: Add the repository to Xray's indexed resources, or reindex the file.",
+                warning = true,
+            ),
+            lines[3],
+        )
+    }
+
+    private fun reason(
+        code: String,
+        level: TrustLevel,
+        title: String,
+        detail: String,
+    ) = TrustReason(code, level, title, detail, "what it means", "fix it.")
 
     @Test
     @DisplayName("a quick check says it is preliminary: it judged only what Xray knew at that moment")
@@ -127,7 +257,7 @@ class BuildLogTest {
         RunOutcome.Finished(LicenseReport(REPORT_ID, COMPONENT, VERSION, LicenseReportStatus.DONE, summary = summary), byteArrayOf())
 
     private fun summary(
-        trust: Trust? = null,
+        trust: Trust = Trust(TrustLevel.HIGH, emptyList(), emptyList()),
         libraryCounts: Map<Verdict, Int> = emptyMap(),
         violations: List<Violation> = emptyList(),
     ) = LicenseReportSummary(
