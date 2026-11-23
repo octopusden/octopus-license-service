@@ -1,0 +1,110 @@
+## Purpose
+
+What a finished license report's summary says about the libraries of a component version, and how a generation fails when the systems it reads cannot be asked. Trust levels and the license files are outside this spec.
+
+## ADDED Requirements
+
+### Requirement: A generation scans and evaluates the component version
+
+The service SHALL generate a report by scanning the license target's released files, then evaluating the inventory with the license policy current when the report started.
+
+#### Scenario: Report of a scanned component
+
+- **WHEN** a report for `sample-portal:2.4.0` finishes
+- **THEN** its summary is built from the scan of `sample-portal:2.4.0` and the policy commit the report started with
+
+### Requirement: The summary counts third-party libraries per verdict
+
+The summary's `libraryCounts` SHALL hold every verdict (`ALLOWED`, `NOT_ALLOWED`, `UNKNOWN`, `UNIDENTIFIED`) with the number of counted libraries of that verdict that are not ours, zero included. Internal libraries and skipped packages SHALL NOT be counted.
+
+#### Scenario: Counts
+
+- **WHEN** the assessment holds three `ALLOWED`, one `UNKNOWN`, one `UNIDENTIFIED` and one `INTERNAL` library
+- **THEN** `libraryCounts` is `ALLOWED 3, NOT_ALLOWED 0, UNKNOWN 1, UNIDENTIFIED 1`
+
+#### Scenario: No library
+
+- **WHEN** the assessment holds no counted library
+- **THEN** every verdict is counted 0
+
+### Requirement: The summary lists every third-party library that is not allowed
+
+The summary's `violations` SHALL list each counted library that is not ours and whose verdict is not `ALLOWED`, in the assessment's order, with its id as written by the inventory, its verdict, its canonical license names and the entries of the released files it was found in, sorted.
+
+#### Scenario: Unknown license
+
+- **WHEN** `pkg:npm/left-pad@1.3.0` is `UNKNOWN` and was found in `org.example.portal:sample-portal:zip`
+- **THEN** a violation lists `pkg:npm/left-pad@1.3.0`, `UNKNOWN`, no license, and that file
+
+#### Scenario: Unidentified file
+
+- **WHEN** a checksum-only file is `UNIDENTIFIED`
+- **THEN** it is listed as a violation
+
+#### Scenario: Internal library
+
+- **WHEN** a library is `INTERNAL`
+- **THEN** it is not listed as a violation
+
+### Requirement: Trust is not computed yet
+
+The summary's `trust` SHALL be null.
+
+#### Scenario: Finished report
+
+- **WHEN** a report finishes
+- **THEN** its summary's `trust` is null
+
+### Requirement: An unreachable Artifactory or Xray fails the report
+
+The service SHALL finish a report as `FAILED` when Artifactory or Xray cannot be asked during the scan, including build-info Artifactory cannot serve. As for any failed generation, the report's error SHALL point to the service log, which holds the scan's message; the message itself can carry internal URLs and is not served. No summary and no license files SHALL be kept for it.
+
+A license lookup Xray fails for some libraries, after the scan found them, SHALL NOT fail the report: those libraries have no licenses found and are judged as in the prototype: `UNKNOWN`, a violation, unless the license registry overrides the library. An override replaces Xray's licenses whether the lookup answered or not, so such a library gets the verdict a successful lookup would give it.
+
+#### Scenario: Xray down
+
+- **WHEN** Xray answers every try with a server error during a scan
+- **THEN** the report is `FAILED`, its error names the report id to look up in the log, and the scan is counted `unavailable`
+
+#### Scenario: Build-info unreadable
+
+- **WHEN** Artifactory answers a build-info request with `503`, `401` or `403`
+- **THEN** the report is `FAILED` as for an unreachable Xray, not `DONE` with fewer libraries
+
+#### Scenario: License lookup fails for some libraries
+
+- **WHEN** Xray answers every try of one license lookup with a server error, and the rest of the scan succeeds
+- **THEN** the report is `DONE`, the libraries of that lookup the license registry does not override are `UNKNOWN` violations with no licenses, and the scan is counted `scanned`
+
+#### Scenario: License lookup fails for an overridden library
+
+- **WHEN** a license lookup fails for a Maven library the license registry overrides with an allowed license
+- **THEN** the library is `ALLOWED` with the override's licenses, as it would be had the lookup answered
+
+### Requirement: Every scan is counted by its outcome
+
+The service SHALL count each scan in `license.inventory.scans`, tagged `outcome`: `scanned` when it gave an inventory, `unavailable` when Artifactory or Xray could not be asked, `failed` for any other error.
+
+#### Scenario: Unavailable
+
+- **WHEN** a scan fails because Artifactory cannot be asked
+- **THEN** `license.inventory.scans{outcome="unavailable"}` increases by one
+
+### Requirement: The systems read are configured under the keys every service shares
+
+The service SHALL read the components registry from `components-registry-service.url`, Bitbucket from `bitbucket.host` and `bitbucket.token`, and Artifactory and Xray from `artifactory.url` and `artifactory.token`. It SHALL NOT start without any of them, or without at least one internal group and one own repository prefix; the startup error SHALL name the missing setting.
+
+#### Scenario: Missing token
+
+- **WHEN** `artifactory.token` is not set
+- **THEN** the service does not start and the error names `artifactory.token`
+
+#### Scenario: Shared URL
+
+- **WHEN** Spring Cloud Config's `application.yml` sets `artifactory.url` for every service
+- **THEN** the license service scans through that URL, with nothing set under `license-service`
+
+#### Scenario: Missing internal groups
+
+- **WHEN** `license-service.ownership.internal-groups` is empty
+- **THEN** the service does not start and the error names it

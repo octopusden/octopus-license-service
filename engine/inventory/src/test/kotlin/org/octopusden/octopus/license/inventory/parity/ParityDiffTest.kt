@@ -91,11 +91,18 @@ class ParityDiffTest {
                     setOf("Apache-2.0"),
                     setOf(BUILD_RECORD),
                     setOf(zip.entry),
+                    false,
                 ),
-                FoundLibrary(id("pkg:maven/org.example.portal/sample-portal@2.4.0-118"), emptySet(), setOf(BINARY_SCAN), setOf(zip.entry)),
-                FoundLibrary(id("pkg:docker/sha256__abc@latest"), emptySet(), setOf(BINARY_SCAN), setOf(image.entry)),
-                FoundLibrary(id("pkg:rpm/openssl-libs@3.0.7"), setOf("OpenSSL"), setOf(BINARY_SCAN), setOf(image.entry)),
-                FoundLibrary(id("pkg:pypi/subscription-manager@1.29"), setOf("GPL-2.0"), setOf(BINARY_SCAN), setOf(image.entry)),
+                FoundLibrary(
+                    id("pkg:maven/org.example.portal/sample-portal@2.4.0-118"),
+                    emptySet(),
+                    setOf(BINARY_SCAN),
+                    setOf(zip.entry),
+                    true,
+                ),
+                FoundLibrary(id("pkg:docker/sha256__abc@latest"), emptySet(), setOf(BINARY_SCAN), setOf(image.entry), false),
+                FoundLibrary(id("pkg:rpm/openssl-libs@3.0.7"), setOf("OpenSSL"), setOf(BINARY_SCAN), setOf(image.entry), false),
+                FoundLibrary(id("pkg:pypi/subscription-manager@1.29"), setOf("GPL-2.0"), setOf(BINARY_SCAN), setOf(image.entry), false),
             ),
             listOf(
                 Finding(
@@ -148,7 +155,7 @@ class ParityDiffTest {
     @Test
     @DisplayName("a package only on one side, or with other licenses, sources or files")
     fun packages() {
-        val extra = FoundLibrary(id("pkg:npm/react@18.2.0"), emptySet(), setOf(BUILD_RECORD), setOf(zip.entry))
+        val extra = FoundLibrary(id("pkg:npm/react@18.2.0"), emptySet(), setOf(BUILD_RECORD), setOf(zip.entry), false)
         val changed = inventory.libraries.first().copy(licenses = setOf("MIT"), evidence = setOf(BINARY_SCAN, BUILD_RECORD))
 
         assertEquals(
