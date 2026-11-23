@@ -9,7 +9,7 @@ on:
 
 jobs:
   sonar:
-    uses: octopusden/octopus-base/.github/workflows/common-java-gradle-sonar.yml@v3.3.0
+    uses: octopusden/octopus-base/.github/workflows/common-java-gradle-sonar.yml@v3.4.1
     with:
-      java-version: '21'
+      java-version: '25'
     secrets: inherit
