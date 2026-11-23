@@ -8,7 +8,9 @@ import org.octopusden.octopus.license.inventory.model.PackageId
  * The libraries of one scan, one row per id, filled by every source of every file and then renamed
  * and given licenses. Not thread-safe: one scan, one table.
  */
-internal class LibraryTable {
+internal class LibraryTable(
+    private val ownership: Ownership,
+) {
     private class Row(
         val licenses: MutableSet<String> = linkedSetOf(),
         val evidence: MutableSet<Evidence> = linkedSetOf(),
@@ -16,6 +18,7 @@ internal class LibraryTable {
     )
 
     private val rows = linkedMapOf<PackageId, Row>()
+    private val copiesInOwnRepository = mutableSetOf<String>()
 
     val ids: Set<PackageId> get() = rows.keys
 
@@ -53,8 +56,20 @@ internal class LibraryTable {
         rows[id]?.licenses?.addAll(licenses)
     }
 
+    /** Recorded by checksum naming, the one step that asks where a checksum-only file is stored. */
+    fun recordCopyInOwnRepository(sha256: String) {
+        copiesInOwnRepository += sha256
+    }
+
     fun libraries(): List<FoundLibrary> =
         rows
-            .map { (id, row) -> FoundLibrary(id, row.licenses.toSet(), row.evidence.toSet(), row.foundIn.toSet()) }
-            .sortedBy { it.id.toString() }
+            .map { (id, row) ->
+                FoundLibrary(
+                    id,
+                    row.licenses.toSet(),
+                    row.evidence.toSet(),
+                    row.foundIn.toSet(),
+                    ownership.isOurs(id) { it in copiesInOwnRepository },
+                )
+            }.sortedBy { it.id.toString() }
 }
